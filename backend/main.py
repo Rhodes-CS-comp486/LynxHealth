@@ -2,8 +2,11 @@ from fastapi import FastAPI
 from backend.database import engine
 from backend.models import user, appointment, availability
 from backend.routes import auth_routes
+from backend.core import config
 
 app = FastAPI()
+
+config.validate_runtime_config()
 
 user.Base.metadata.create_all(bind=engine)
 appointment.Base.metadata.create_all(bind=engine)
@@ -15,3 +18,6 @@ def root():
     return {"status": "Health Center API Running"}
 
 app.include_router(auth_routes.router, prefix="/auth")
+
+
+

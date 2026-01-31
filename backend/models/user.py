@@ -9,3 +9,5 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String)  # student/admin
+    sso_provider = Column(String, nullable=True)
+    sso_subject = Column(String, nullable=True)
