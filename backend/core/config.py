@@ -27,7 +27,7 @@ SAML_IDP_ENTITY_ID = os.getenv("SAML_IDP_ENTITY_ID", "")
 SAML_IDP_SSO_URL = os.getenv("SAML_IDP_SSO_URL", "")
 SAML_IDP_SLO_URL = os.getenv("SAML_IDP_SLO_URL", "")
 SAML_IDP_X509CERT = os.getenv("SAML_IDP_X509CERT", "")
-SAML_IDP_METADATA_PATH = os.getenv("SAML_IDP_METADATA_PATH", "")
+SAML_IDP_METADATA_PATH = os.getenv("https://rhodes.onelogin.com/saml/metadata/784e58e9-c3fe-4e8f-8bbf-e9a11c3f1dd4")
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
