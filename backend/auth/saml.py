@@ -15,10 +15,6 @@ def _base_settings() -> dict:
                 "url": config.SAML_SP_ACS_URL,
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
             },
-            "singleLogoutService": {
-                "url": config.SAML_SP_SLO_URL,
-                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
-            },
             "x509cert": config.SAML_SP_X509CERT,
             "privateKey": config.SAML_SP_PRIVATE_KEY,
             "NameIDFormat": config.SAML_SP_NAMEID_FORMAT,

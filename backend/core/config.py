@@ -13,9 +13,9 @@ APP_ENV = os.getenv("APP_ENV", "development")
 SAML_STRICT = _get_bool(os.getenv("SAML_STRICT"), default=True)
 SAML_DEBUG = _get_bool(os.getenv("SAML_DEBUG"), default=False)
 
-SAML_SP_ENTITY_ID = os.getenv("SAML_SP_ENTITY_ID", "https://localhost:8000/auth/sso/metadata")
-SAML_SP_ACS_URL = os.getenv("SAML_SP_ACS_URL", "https://localhost:8000/auth/sso/acs")
-SAML_SP_SLO_URL = os.getenv("SAML_SP_SLO_URL", "https://localhost:8000/auth/sso/logout")
+SAML_SP_BASE_URL = os.getenv("SAML_SP_BASE_URL", "https://localhost:8000")
+SAML_SP_ENTITY_ID = os.getenv("SAML_SP_ENTITY_ID", f"{SAML_SP_BASE_URL}/auth/sso/metadata")
+SAML_SP_ACS_URL = os.getenv("SAML_SP_ACS_URL", f"{SAML_SP_BASE_URL}/auth/sso/acs")
 SAML_SP_X509CERT = os.getenv("SAML_SP_X509CERT", "")
 SAML_SP_PRIVATE_KEY = os.getenv("SAML_SP_PRIVATE_KEY", "")
 SAML_SP_NAMEID_FORMAT = os.getenv(
