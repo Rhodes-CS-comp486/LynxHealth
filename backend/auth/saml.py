@@ -5,8 +5,8 @@ from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from backend.core import config
 
 
-def build_saml_settings() -> dict:
-    base_settings = {
+def _base_settings() -> dict:
+    return {
         "strict": config.SAML_STRICT,
         "debug": config.SAML_DEBUG,
         "sp": {
@@ -36,11 +36,15 @@ def build_saml_settings() -> dict:
             "x509cert": config.SAML_IDP_X509CERT,
         },
     }
+
+
+def build_saml_settings() -> dict:
+    base_settings = _base_settings()
     if config.SAML_IDP_METADATA_PATH:
-        return OneLogin_Saml2_IdPMetadataParser.parse(
+        idp_data = OneLogin_Saml2_IdPMetadataParser.parse_remote(
             config.SAML_IDP_METADATA_PATH,
-            base_settings,
         )
+        return OneLogin_Saml2_IdPMetadataParser.merge_settings(base_settings, idp_data)
     return base_settings
 
 
@@ -61,7 +65,7 @@ def build_request_data(url: str, host: str, query_params: dict, form_data: dict)
 
 
 def generate_sp_metadata() -> tuple[str, list[str]]:
-    settings = OneLogin_Saml2_Settings(build_saml_settings(), sp_validation_only=True)
+    settings = OneLogin_Saml2_Settings(_base_settings(), sp_validation_only=True)
     metadata = settings.get_sp_metadata()
     errors = settings.validate_metadata(metadata)
     return metadata, errors
