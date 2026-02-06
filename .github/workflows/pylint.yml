@@ -21,6 +21,41 @@ jobs:
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
     - name: Analysing the code with pylint
+      id: pylint
       run: |
-        pylint $(git ls-files '*.py') || true
+        set +e
+        pylint $(git ls-files '*.py') | tee pylint.log
+        score=$(python - <<'PY'
+import re
+from pathlib import Path
+text = Path("pylint.log").read_text()
+m = re.search(r"rated at ([0-9]+(?:\\.[0-9]+)?)/10", text)
+print(m.group(1) if m else "0")
+PY
+)
+        echo "score=$score" >> $GITHUB_OUTPUT
+        exit 0
+
+    - name: Generate pylint badge
+      if: matrix.python-version == '3.10'
+      run: |
+        mkdir -p assets/images
+        RAW_SCORE=${{ steps.pylint.outputs.score }}
+        SCORE=$(printf "%.0f" "$RAW_SCORE")
+        COLOR="red"
+        if [ "$SCORE" -ge 9 ]; then COLOR="brightgreen"; \
+        elif [ "$SCORE" -ge 7 ]; then COLOR="yellow"; \
+        elif [ "$SCORE" -ge 5 ]; then COLOR="orange"; fi
+
+        curl -s "https://img.shields.io/badge/pylint-$SCORE/10-$COLOR" -o assets/images/pylint-badge.svg
+
+    - name: Commit badges
+      if: github.event_name == 'push' && matrix.python-version == '3.10'
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add assets/images/*badge.svg
+        git add assets/reports/pylint-report.html
+        git commit -m "Update test & coverage badges [skip ci]" || echo "No changes to commit"
+        git push
       
