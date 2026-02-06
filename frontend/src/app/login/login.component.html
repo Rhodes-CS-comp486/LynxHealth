@@ -1,0 +1,26 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="brand-mark">LH</div>
+    <h1>Welcome to Lynx Health</h1>
+    <p>Choose a role to continue into the demo portal.</p>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <label for="email">Email (optional)</label>
+      <input
+        id="email"
+        type="email"
+        name="email"
+        placeholder="name@lynx.edu"
+        [(ngModel)]="email"
+      />
+
+      <label for="role">Privilege level</label>
+      <select id="role" name="role" [(ngModel)]="role">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <button type="submit" class="button">Continue to Home</button>
+    </form>
+  </div>
+</div>
