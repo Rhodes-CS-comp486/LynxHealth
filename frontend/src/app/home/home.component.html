@@ -9,12 +9,9 @@
         <a href="#availability">Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#hours">Hours</a>
-        <a *ngIf="role === 'admin'" href="#admin">Admin</a>
       </nav>
       <div class="nav-actions">
-        <a class="link" href="#">Help</a>
-        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <a class="button small" routerLink="/login">Sign In</a>
       </div>
     </div>
   </header>

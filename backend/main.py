@@ -10,9 +10,8 @@ appointment.Base.metadata.create_all(bind=engine)
 availability.Base.metadata.create_all(bind=engine)
 
 
-@app.get('/')
+@app.get("/")
 def root():
-    return {'status': 'Health Center API Running'}
+    return {"status": "Health Center API Running"}
 
-
-app.include_router(auth_routes.router, prefix='/auth')
+app.include_router(auth_routes.router, prefix="/auth")
