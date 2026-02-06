@@ -1,4 +1,5 @@
 # LynxHealth
+[![Pylint](https://github.com/Rhodes-CS-comp486/LynxHealth/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/Rhodes-CS-comp486/LynxHealth/actions/workflows/pylint.yml)
 An app for Rhodes Health Center
 
 
