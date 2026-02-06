@@ -24,7 +24,9 @@ jobs:
         id: pylint
         run: |
           set +e
+          mkdir -p assets/reports
           pylint $(git ls-files '*.py') | tee pylint.log
+          pylint $(git ls-files '*.py') --output-format=html > assets/reports/pylint-report.html
           score=$(python -c "import re; from pathlib import Path; text=Path('pylint.log').read_text(); m=re.search(r'rated at ([0-9]+(?:\\.[0-9]+)?)/10', text); print(m.group(1) if m else '0')")
           echo "score=$score" >> $GITHUB_OUTPUT
           exit 0
