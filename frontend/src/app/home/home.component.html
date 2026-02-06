@@ -3,16 +3,14 @@
     <div class="container nav">
       <div class="brand">
         <span class="brand-mark">LH</span>
-        <span class="brand-text">Lynx Health Center</span>
+        <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
         <a href="#availability">Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#hours">Hours</a>
-        <a href="#admin">Admin</a>
       </nav>
       <div class="nav-actions">
-        <a class="link" href="#">Help</a>
         <a class="button small" routerLink="/login">Sign In</a>
       </div>
     </div>
@@ -22,270 +20,68 @@
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <div class="eyebrow">Student-first care, right on campus</div>
-          <h1>Book health appointments in minutes, not days.</h1>
+          <div class="eyebrow">Welcome to Lynx Health</div>
+          <h1>Book health center appointments and view wellness resources today!</h1>
           <p>
-            Lynx Health Center keeps scheduling simple and confidential. View real-time
+            Lynx Health Center keeps scheduling simple. View real-time
             availability, manage upcoming visits, and discover wellness resources in one place.
           </p>
           <div class="hero-actions">
             <a class="button" href="#availability">Check availability</a>
             <a class="button ghost" href="#resources">Explore resources</a>
           </div>
-          <div class="trust-row">
-            <div class="trust-item">
-              <span class="trust-value">12</span>
-              <span class="trust-label">Same-day slots</span>
-            </div>
-            <div class="trust-item">
-              <span class="trust-value">20</span>
-              <span class="trust-label">Avg. minute visits</span>
-            </div>
-            <div class="trust-item">
-              <span class="trust-value">24/7</span>
-              <span class="trust-label">Resource access</span>
-            </div>
-          </div>
         </div>
-        <div class="hero-card">
-          <div class="card-header">
-            <div>
-              <p class="card-title">Next Available</p>
-              <h3>Today, 2:30 PM</h3>
-            </div>
-            <span class="status">Open</span>
-          </div>
-          <div class="mini-calendar">
-            <div class="calendar-header">
-              <span>February</span>
-              <span>Week View</span>
-            </div>
-            <div class="calendar-grid">
-              <div class="day">Mon</div>
-              <div class="day">Tue</div>
-              <div class="day">Wed</div>
-              <div class="day">Thu</div>
-              <div class="day">Fri</div>
-              <div class="slot">9:00 AM</div>
-              <div class="slot busy">10:30 AM</div>
-              <div class="slot">12:15 PM</div>
-              <div class="slot busy">1:00 PM</div>
-              <div class="slot highlight">2:30 PM</div>
-            </div>
-          </div>
-          <div class="card-footer">
-            <div>
-              <p class="label">Visit type</p>
-              <p class="value">General Health</p>
-            </div>
-            <button class="button small">Schedule</button>
-          </div>
+        <div class="hero-image">
+          <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
         </div>
-      </div>
+    </div>
     </section>
 
-    <section class="strip">
-      <div class="container strip-grid">
-        <div class="strip-card">
-          <h3>Confidential care</h3>
-          <p>HIPAA-aligned workflows with role-based access and secure data handling.</p>
-        </div>
-        <div class="strip-card">
-          <h3>Real-time updates</h3>
-          <p>Availability refreshes immediately so students can book with confidence.</p>
-        </div>
-        <div class="strip-card">
-          <h3>Built for campus</h3>
-          <p>Designed for student needs with streamlined scheduling and resources.</p>
-        </div>
-      </div>
-    </section>
 
-    <section id="availability" class="section">
-      <div class="container section-grid">
-        <div>
-          <h2>Appointments at a glance</h2>
-          <p>
-            See open appointments by day, schedule with a click, and manage upcoming visits
-            directly from your dashboard.
-          </p>
-          <div class="feature-list">
-            <div class="feature">
-              <span class="dot"></span>
-              <span>Calendar view of availability</span>
-            </div>
-            <div class="feature">
-              <span class="dot"></span>
-              <span>Easy rescheduling and cancellation</span>
-            </div>
-            <div class="feature">
-              <span class="dot"></span>
-              <span>Visit reminders and confirmations</span>
-            </div>
-          </div>
-          <a class="button" href="#">Go to scheduling</a>
-        </div>
-        <div class="availability-panel">
-          <div class="panel-header">
-            <h3>This Week</h3>
-            <span class="pill">8 open slots</span>
-          </div>
-          <div class="panel-list">
-            <div class="panel-row">
-              <div>
-                <p class="label">Tuesday</p>
-                <p class="value">2:30 PM, 3:15 PM</p>
-              </div>
-              <span class="tag">General</span>
-            </div>
-            <div class="panel-row">
-              <div>
-                <p class="label">Wednesday</p>
-                <p class="value">9:00 AM, 12:45 PM</p>
-              </div>
-              <span class="tag">Mental Health</span>
-            </div>
-            <div class="panel-row">
-              <div>
-                <p class="label">Thursday</p>
-                <p class="value">11:30 AM</p>
-              </div>
-              <span class="tag">Nutrition</span>
-            </div>
-            <div class="panel-row">
-              <div>
-                <p class="label">Friday</p>
-                <p class="value">10:00 AM, 1:30 PM</p>
-              </div>
-              <span class="tag">Wellness</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="resources" class="section muted">
-      <div class="container">
-        <div class="section-head">
-          <h2>Health center offerings</h2>
-          <p>Explore services available through Lynx Health Center.</p>
-        </div>
-        <div class="card-grid">
-          <article class="card">
-            <h3>Primary Care</h3>
-            <p>General health checkups, immunizations, and treatment plans.</p>
-            <a class="link" href="#">Learn more</a>
-          </article>
-          <article class="card">
-            <h3>Mental Health</h3>
-            <p>Confidential counseling, stress management, and support groups.</p>
-            <a class="link" href="#">Learn more</a>
-          </article>
-          <article class="card">
-            <h3>Nutrition</h3>
-            <p>Personalized nutrition guidance and wellness coaching.</p>
-            <a class="link" href="#">Learn more</a>
-          </article>
-          <article class="card">
-            <h3>Wellness Programs</h3>
-            <p>Workshops, mindfulness sessions, and prevention education.</p>
-            <a class="link" href="#">Learn more</a>
-          </article>
-        </div>
-      </div>
-    </section>
 
     <section id="hours" class="section">
       <div class="container hours-grid">
         <div>
-          <h2>Health center hours</h2>
-          <p>Plan ahead with clear hours and holiday notices.</p>
+          <h2>Rhodes Health Center Hours</h2>
           <div class="notice">
             <span>Notice</span>
-            <p>Same-day appointments are released at 8:00 AM each weekday.</p>
+            <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
+            <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
           </div>
         </div>
         <div class="hours-card">
           <div class="hours-row">
             <span>Monday</span>
-            <strong>8:00 AM - 6:00 PM</strong>
+            <strong>8:30 AM - 5:00 PM</strong>
           </div>
           <div class="hours-row">
             <span>Tuesday</span>
-            <strong>8:00 AM - 6:00 PM</strong>
+            <strong>8:30 AM - 5:00 PM</strong>
           </div>
           <div class="hours-row">
             <span>Wednesday</span>
-            <strong>8:00 AM - 5:00 PM</strong>
+            <strong>8:30 AM - 5:00 PM</strong>
           </div>
           <div class="hours-row">
             <span>Thursday</span>
-            <strong>8:00 AM - 6:00 PM</strong>
+            <strong>8:30 AM - 5:00 PM</strong>
           </div>
           <div class="hours-row">
             <span>Friday</span>
-            <strong>8:00 AM - 4:00 PM</strong>
+            <strong>8:30 AM - 5:00 PM</strong>
           </div>
           <div class="hours-row muted">
-            <span>Weekend</span>
+            <span>Saturday</span>
+            <strong>Closed</strong>
+          </div>
+          <div class="hours-row muted">
+            <span>Sunday</span>
             <strong>Closed</strong>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section how">
-      <div class="container">
-        <div class="section-head">
-          <h2>How it works</h2>
-          <p>From scheduling to follow-up, the flow stays clean and fast.</p>
-        </div>
-        <div class="steps">
-          <div class="step">
-            <div class="step-number">01</div>
-            <h3>Sign in with campus SSO</h3>
-            <p>Secure access with your student credentials and role-based permissions.</p>
-          </div>
-          <div class="step">
-            <div class="step-number">02</div>
-            <h3>Select a time</h3>
-            <p>Choose from open appointments in the live calendar view.</p>
-          </div>
-          <div class="step">
-            <div class="step-number">03</div>
-            <h3>Manage visits</h3>
-            <p>Reschedule or cancel with immediate confirmation.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="admin" class="section admin">
-      <div class="container admin-grid">
-        <div>
-          <h2>Admin controls, simplified</h2>
-          <p>
-            Administrators can update hours, manage offerings, and keep appointment
-            availability accurate in real time.
-          </p>
-        </div>
-        <div class="admin-card">
-          <div class="admin-row">
-            <span>Update hours</span>
-            <strong>Instant publish</strong>
-          </div>
-          <div class="admin-row">
-            <span>Edit offerings</span>
-            <strong>Structured templates</strong>
-          </div>
-          <div class="admin-row">
-            <span>Manage slots</span>
-            <strong>Calendar editor</strong>
-          </div>
-          <a class="button ghost" href="#">Open admin tools</a>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="site-footer">
@@ -293,18 +89,13 @@
       <div>
         <div class="brand">
           <span class="brand-mark">LH</span>
-          <span class="brand-text">Lynx Health Center</span>
+          <span class="brand-text">Lynx Health</span>
         </div>
-        <p>Supporting student health with secure, modern scheduling.</p>
+        <p>Supporting student health with modern scheduling.</p>
       </div>
       <div class="footer-links">
         <a href="#availability">Appointments</a>
         <a href="#resources">Resources</a>
-        <a href="#hours">Hours</a>
-      </div>
-      <div class="footer-links">
-        <a href="#">Privacy</a>
-        <a href="#">Accessibility</a>
         <a href="#">Contact</a>
       </div>
     </div>
