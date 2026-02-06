@@ -1,8 +1,11 @@
+"""Availability model definitions."""
+
 from sqlalchemy import Column, Integer, DateTime, Boolean
 from backend.database import Base
 
 
 class Availability(Base):
+    """Represents available appointment slots."""
     __tablename__ = "availability"
 
     id = Column(Integer, primary_key=True)

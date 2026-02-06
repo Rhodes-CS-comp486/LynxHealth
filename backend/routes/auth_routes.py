@@ -1,3 +1,5 @@
+"""API routes related to authentication."""
+
 from fastapi import APIRouter
 
 router = APIRouter()
