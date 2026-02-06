@@ -76,3 +76,16 @@ select {
   transform: translateY(-2px);
   box-shadow: 0 22px 40px rgba(226, 72, 59, 0.35);
 }
+
+.hint {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.error {
+  margin: 0.1rem 0 0;
+  color: #b42318;
+  font-weight: 600;
+  font-size: 0.9rem;
+}

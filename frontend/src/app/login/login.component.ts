@@ -1,3 +1,4 @@
+import { NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -5,19 +6,29 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, NgIf],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
   email = '';
   role: 'admin' | 'user' = 'user';
+  errorMessage = '';
 
   constructor(private readonly router: Router) {}
 
   onSubmit(): void {
+    const normalizedEmail = this.email.trim().toLowerCase();
+
+    if (this.role === 'admin' && !normalizedEmail.endsWith('@admin.edu')) {
+      this.errorMessage = 'Admin login requires an email ending in @admin.edu.';
+      return;
+    }
+
+    this.errorMessage = '';
+
     const session = {
-      email: this.email.trim() || `${this.role}@lynxhealth.local`,
+      email: normalizedEmail || `${this.role}@lynxhealth.local`,
       role: this.role
     };
 

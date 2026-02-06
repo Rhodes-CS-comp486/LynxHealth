@@ -5,7 +5,7 @@
     <p>Choose a role to continue into the demo portal.</p>
 
     <form (ngSubmit)="onSubmit()" class="login-form">
-      <label for="email">Email (optional)</label>
+      <label for="email">Email (required for admin)</label>
       <input
         id="email"
         type="email"
@@ -19,6 +19,9 @@
         <option value="user">User</option>
         <option value="admin">Admin</option>
       </select>
+
+      <p class="hint">To use admin privileges, your email must end with <strong>@admin.edu</strong>.</p>
+      <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
 
       <button type="submit" class="button">Continue to Home</button>
     </form>
