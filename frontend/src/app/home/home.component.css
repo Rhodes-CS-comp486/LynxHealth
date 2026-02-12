@@ -722,3 +722,37 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
+.section-copy {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.notice-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.slot-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.slot-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 1rem;
+}
+
+.slot-state {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--red-600);
+}
+
