@@ -18,6 +18,11 @@ ALLOWED_APPOINTMENT_TYPES = {
 }
 
 
+
+OPEN_TIME = time(9, 0)
+LAST_START_TIME = time(15, 45)
+
+
 class CreateAvailabilitySlotRequest(BaseModel):
     admin_email: str
     date: date
@@ -80,6 +85,24 @@ def get_db():
 def create_availability_slot(data: CreateAvailabilitySlotRequest, db: Session = Depends(get_db)):
     start_time = datetime.combine(data.date, data.time)
     end_time = start_time + timedelta(minutes=data.duration_minutes)
+
+    if data.date.weekday() >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Slots cannot be created on Saturday or Sunday.',
+        )
+
+    if data.time < OPEN_TIME or data.time > LAST_START_TIME:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Slots can only start between 9:00 AM and 3:45 PM.',
+        )
+
+    if start_time <= datetime.now():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Slots must be created for a future date and time.',
+        )
 
     overlapping_slot = db.query(Availability).filter(
         Availability.start_time < end_time,
