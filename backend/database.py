@@ -1,7 +1,9 @@
 import os
+from threading import Lock
 
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
+
 
 def resolve_database_url() -> str:
     raw_url = os.getenv('DATABASE_URL', '').strip()
@@ -25,27 +27,42 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
 Base = declarative_base()
 
+_schema_lock = Lock()
+_schema_checked = False
+
 
 def ensure_availability_schema() -> None:
-    inspector = inspect(engine)
+    global _schema_checked
 
-    if 'availability' not in inspector.get_table_names():
+    if _schema_checked:
         return
 
-    existing_columns = {column['name'] for column in inspector.get_columns('availability')}
-    migration_steps = [
-        ('date', 'ALTER TABLE availability ADD COLUMN date DATE'),
-        ('time', 'ALTER TABLE availability ADD COLUMN time TIME'),
-        ('duration_minutes', 'ALTER TABLE availability ADD COLUMN duration_minutes INTEGER'),
-        ('appointment_type', 'ALTER TABLE availability ADD COLUMN appointment_type VARCHAR'),
-    ]
+    with _schema_lock:
+        if _schema_checked:
+            return
 
-    with engine.begin() as connection:
-        for column_name, statement in migration_steps:
-            if column_name not in existing_columns:
-                connection.execute(text(statement))
+        inspector = inspect(engine)
+
+        if 'availability' not in inspector.get_table_names():
+            _schema_checked = True
+            return
+
+        existing_columns = {column['name'] for column in inspector.get_columns('availability')}
+        migration_steps = [
+            ('date', 'ALTER TABLE availability ADD COLUMN date DATE'),
+            ('time', 'ALTER TABLE availability ADD COLUMN time TIME'),
+            ('duration_minutes', 'ALTER TABLE availability ADD COLUMN duration_minutes INTEGER'),
+            ('appointment_type', 'ALTER TABLE availability ADD COLUMN appointment_type VARCHAR'),
+        ]
+
+        with engine.begin() as connection:
+            for column_name, statement in migration_steps:
+                if column_name not in existing_columns:
+                    connection.execute(text(statement))
+
+        _schema_checked = True

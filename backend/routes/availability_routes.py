@@ -91,8 +91,6 @@ def get_db():
 
 @router.post('/slots', response_model=AvailabilitySlotResponse, status_code=status.HTTP_201_CREATED)
 def create_availability_slot(data: CreateAvailabilitySlotRequest, db: Session = Depends(get_db)):
-    ensure_database_ready()
-
     start_time = datetime.combine(data.date, data.time)
     end_time = start_time + timedelta(minutes=data.duration_minutes)
 
@@ -113,6 +111,8 @@ def create_availability_slot(data: CreateAvailabilitySlotRequest, db: Session = 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Slots must be created for a future date and time.',
         )
+
+    ensure_database_ready()
 
     try:
         overlapping_slot = db.query(Availability).filter(
