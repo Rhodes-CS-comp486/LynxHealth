@@ -106,6 +106,11 @@ export class CreateAppointmentsComponent implements OnInit {
       }
 
       this.adminMessage = 'Appointment slot created successfully.';
+      
+      // Navigate calendar to the week containing the newly created slot
+      const createdSlotDate = new Date(this.slotDate);
+      this.weekStart = this.getWeekStart(createdSlotDate);
+      
       this.slotDate = '';
       this.slotTime = '';
       this.durationMinutes = 30;
