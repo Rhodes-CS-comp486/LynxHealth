@@ -1,5 +1,5 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -44,8 +44,6 @@ export class CreateAppointmentsComponent implements OnInit {
   calendarDays: CalendarDay[] = [];
 
   readonly appointmentTypes = ['immunization', 'testing', 'counseling', 'other', 'prescription'];
-
-  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.buildCalendar();
@@ -113,7 +111,6 @@ export class CreateAppointmentsComponent implements OnInit {
       this.durationMinutes = 30;
       this.appointmentType = 'immunization';
       await this.loadSlots();
-      this.cdr.detectChanges();
     } catch {
       this.adminError = 'Could not connect to API. Start the backend on port 8000.';
     } finally {
