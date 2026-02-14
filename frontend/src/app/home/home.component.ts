@@ -1,19 +1,55 @@
-import { Component } from '@angular/core';
-import { NgIf } from '@angular/common';
+import { DatePipe, NgFor, NgIf } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+type SessionRole = 'admin' | 'user';
+
+interface AvailabilitySlot {
+  id: number;
+  date: string;
+  time: string;
+  duration_minutes: number;
+  appointment_type: string;
+  start_time: string;
+  end_time: string;
+  is_booked: boolean;
+}
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NgIf],
+  imports: [RouterLink, NgIf, NgFor, DatePipe],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit {
   readonly role = this.getRole();
 
-  private getRole(): 'admin' | 'user' {
-    const data = localStorage.getItem('lynxSession');
+  slots: AvailabilitySlot[] = [];
+
+  ngOnInit(): void {
+    this.loadSlots();
+  }
+
+  private async loadSlots(): Promise<void> {
+    try {
+      const endpoint = this.role === 'user'
+        ? 'http://localhost:8000/availability/slots?students_only=true'
+        : 'http://localhost:8000/availability/slots';
+
+      const response = await fetch(endpoint);
+      if (!response.ok) {
+        return;
+      }
+
+      this.slots = await response.json() as AvailabilitySlot[];
+    } catch {
+      this.slots = [];
+    }
+  }
+
+  private getRole(): SessionRole {
+    const data = this.getSessionStorageItem();
 
     if (!data) {
       return 'user';
@@ -26,4 +62,12 @@ export class HomeComponent {
       return 'user';
     }
   }
+  private getSessionStorageItem(): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('lynxSession');
+  }
+
 }
