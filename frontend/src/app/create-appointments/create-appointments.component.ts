@@ -1,5 +1,5 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -30,6 +30,8 @@ interface CalendarDay {
 export class CreateAppointmentsComponent implements OnInit {
   readonly role = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   slots: AvailabilitySlot[] = [];
   slotDate = '';
@@ -111,6 +113,7 @@ export class CreateAppointmentsComponent implements OnInit {
       this.durationMinutes = 30;
       this.appointmentType = 'immunization';
       await this.loadSlots();
+      this.cdr.detectChanges();
     } catch {
       this.adminError = 'Could not connect to API. Start the backend on port 8000.';
     } finally {
@@ -173,6 +176,10 @@ export class CreateAppointmentsComponent implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  trackByKey(_index: number, day: CalendarDay): string {
+    return day.key;
   }
 
   private getRole(): 'admin' | 'user' {

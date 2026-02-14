@@ -31,7 +31,7 @@
         </div>
 
         <div class="calendar-grid week-view">
-          <article class="calendar-day" *ngFor="let day of calendarDays" [ngClass]="{ 'has-slots': day.slots.length > 0 }">
+          <article class="calendar-day" *ngFor="let day of calendarDays; trackBy: trackByKey" [ngClass]="{ 'has-slots': day.slots.length > 0 }">
             <header>
               <strong>{{ day.date | date: 'EEE' }}</strong>
               <span>{{ day.date | date: 'MMM d' }}</span>
