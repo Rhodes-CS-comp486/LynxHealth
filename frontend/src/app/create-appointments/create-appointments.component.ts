@@ -101,16 +101,23 @@ export class CreateAppointmentsComponent implements OnInit {
         })
       });
 
-      let payload: { detail?: string } | null = null;
+      let payload: AvailabilitySlot | { detail?: string } | null = null;
       try {
-        payload = await response.json() as { detail?: string };
+        payload = await response.json() as AvailabilitySlot | { detail?: string };
       } catch {
         payload = null;
       }
 
       if (!response.ok) {
-        this.adminError = payload?.detail || `Unable to create slot (HTTP ${response.status}).`;
+        this.adminError = (payload as { detail?: string } | null)?.detail || `Unable to create slot (HTTP ${response.status}).`;
         return;
+      }
+
+      const createdSlot = payload as AvailabilitySlot | null;
+      if (createdSlot?.start_time) {
+        this.weekStart = this.getWeekStart(new Date(createdSlot.start_time));
+        this.slots = [createdSlot, ...this.slots.filter((slot) => slot.id !== createdSlot.id)];
+        this.buildCalendar();
       }
 
       this.adminMessage = 'Appointment slot created successfully.';
@@ -118,7 +125,8 @@ export class CreateAppointmentsComponent implements OnInit {
       this.slotTime = '';
       this.durationMinutes = 30;
       this.appointmentType = 'immunization';
-      await this.loadSlots();
+
+      void this.loadSlots();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         this.adminError = 'Request timed out. Ensure backend (8000) and Postgres are running, then try again.';
@@ -134,7 +142,9 @@ export class CreateAppointmentsComponent implements OnInit {
 
   private async loadSlots(): Promise<void> {
     try {
-      const response = await fetch('http://localhost:8000/availability/slots');
+      const response = await fetch(`http://localhost:8000/availability/slots?ts=${Date.now()}`, {
+        cache: 'no-store'
+      });
       if (!response.ok) {
         this.slots = [];
         this.buildCalendar();
