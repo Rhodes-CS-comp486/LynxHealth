@@ -1,0 +1,271 @@
+import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+
+interface AvailabilitySlot {
+  id: number;
+  date: string;
+  time: string;
+  duration_minutes: number;
+  appointment_type: string;
+  start_time: string;
+  end_time: string;
+  is_booked: boolean;
+}
+
+interface CalendarDay {
+  date: Date;
+  key: string;
+  slots: AvailabilitySlot[];
+}
+
+@Component({
+  selector: 'app-create-appointments',
+  standalone: true,
+  imports: [RouterLink, NgIf, NgFor, FormsModule, DatePipe, NgClass],
+  templateUrl: './create-appointments.component.html',
+  styleUrl: './create-appointments.component.css'
+})
+export class CreateAppointmentsComponent implements OnInit {
+  readonly role = this.getRole();
+  readonly sessionEmail = this.getSessionEmail();
+
+  slots: AvailabilitySlot[] = [];
+  slotDate = '';
+  slotTime = '';
+  durationMinutes = 30;
+  appointmentType = 'immunization';
+  adminMessage = '';
+  adminError = '';
+  isSaving = false;
+
+  weekStart = this.getWeekStart(new Date());
+  calendarDays: CalendarDay[] = [];
+
+  readonly appointmentTypes = ['immunization', 'testing', 'counseling', 'other', 'prescription'];
+
+  ngOnInit(): void {
+    this.buildCalendar();
+    this.loadSlots();
+
+    if (this.role !== 'admin') {
+      this.adminError = 'Only admins can create appointment slots.';
+    }
+  }
+
+  previousWeek(): void {
+    const next = new Date(this.weekStart);
+    next.setDate(next.getDate() - 7);
+    this.weekStart = this.getWeekStart(next);
+    this.buildCalendar();
+  }
+
+  nextWeek(): void {
+    const next = new Date(this.weekStart);
+    next.setDate(next.getDate() + 7);
+    this.weekStart = this.getWeekStart(next);
+    this.buildCalendar();
+  }
+
+  async createSlot(): Promise<void> {
+    if (this.role !== 'admin') {
+      this.adminError = 'Only admins can create appointment slots.';
+      return;
+    }
+
+    if (!this.slotDate || !this.slotTime || !this.durationMinutes || !this.appointmentType) {
+      this.adminError = 'Date, time, duration, and appointment type are required.';
+      return;
+    }
+
+    const requestedDate = this.slotDate;
+    const requestedTime = this.slotTime;
+    const requestedDuration = Number(this.durationMinutes);
+    const requestedType = this.appointmentType;
+
+    this.isSaving = true;
+    this.adminError = '';
+    this.adminMessage = '';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch('http://localhost:8000/availability/slots', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          admin_email: this.sessionEmail,
+          date: requestedDate,
+          time: requestedTime,
+          duration_minutes: requestedDuration,
+          appointment_type: requestedType
+        })
+      });
+
+      let payload: AvailabilitySlot | { detail?: string } | null = null;
+      try {
+        payload = await response.json() as AvailabilitySlot | { detail?: string };
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        this.adminError = (payload as { detail?: string } | null)?.detail || `Unable to create slot (HTTP ${response.status}).`;
+        return;
+      }
+
+      const createdSlot = payload as AvailabilitySlot | null;
+      this.previewCreatedSlot(createdSlot, requestedDate, requestedTime, requestedDuration, requestedType);
+
+      this.adminMessage = 'Appointment slot created successfully.';
+      this.slotDate = '';
+      this.slotTime = '';
+      this.durationMinutes = 30;
+      this.appointmentType = 'immunization';
+
+      await this.loadSlots();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        this.adminError = 'Request timed out. Ensure backend (8000) and Postgres are running, then try again.';
+        return;
+      }
+
+      this.adminError = 'Could not connect to API. Start backend on port 8000 and confirm Postgres is running.';
+    } finally {
+      clearTimeout(timeoutId);
+      this.isSaving = false;
+    }
+  }
+
+
+  private previewCreatedSlot(
+    createdSlot: AvailabilitySlot | null,
+    requestedDate: string,
+    requestedTime: string,
+    requestedDuration: number,
+    requestedType: string
+  ): void {
+    const [year, month, day] = requestedDate.split('-').map((part) => Number(part));
+    const [hour, minute] = requestedTime.split(':').map((part) => Number(part));
+
+    const start = new Date(year, month - 1, day, hour, minute, 0, 0);
+    const end = new Date(start.getTime() + requestedDuration * 60_000);
+
+    this.weekStart = this.getWeekStart(start);
+
+    const slotToRender: AvailabilitySlot = createdSlot ?? {
+      id: -Date.now(),
+      date: requestedDate,
+      time: requestedTime,
+      duration_minutes: requestedDuration,
+      appointment_type: requestedType,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      is_booked: false
+    };
+
+    this.slots = [slotToRender, ...this.slots.filter((slot) => slot.id !== slotToRender.id)];
+    this.buildCalendar();
+  }
+
+  private async loadSlots(): Promise<void> {
+    try {
+      const response = await fetch(`http://localhost:8000/availability/slots?ts=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      if (!response.ok) {
+        this.slots = [];
+        this.buildCalendar();
+        return;
+      }
+
+      this.slots = await response.json() as AvailabilitySlot[];
+      this.buildCalendar();
+    } catch {
+      this.slots = [];
+      this.buildCalendar();
+    }
+  }
+
+  private buildCalendar(): void {
+    const slotMap = new Map<string, AvailabilitySlot[]>();
+    for (const slot of this.slots) {
+      const key = this.formatDateKey(new Date(slot.start_time));
+      const existing = slotMap.get(key) || [];
+      existing.push(slot);
+      slotMap.set(key, existing);
+    }
+
+    this.calendarDays = [];
+    for (let i = 0; i < 7; i += 1) {
+      const dayDate = new Date(this.weekStart);
+      dayDate.setDate(this.weekStart.getDate() + i);
+      const key = this.formatDateKey(dayDate);
+      const daySlots = (slotMap.get(key) || []).slice().sort((a, b) =>
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
+
+      this.calendarDays.push({
+        date: dayDate,
+        key,
+        slots: daySlots
+      });
+    }
+  }
+
+  private getWeekStart(date: Date): Date {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay());
+    return start;
+  }
+
+  private formatDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private getRole(): 'admin' | 'user' {
+    const data = this.getSessionStorageItem();
+
+    if (!data) {
+      return 'user';
+    }
+
+    try {
+      const parsed = JSON.parse(data) as { role?: string };
+      return parsed.role === 'admin' ? 'admin' : 'user';
+    } catch {
+      return 'user';
+    }
+  }
+
+  private getSessionEmail(): string {
+    const data = this.getSessionStorageItem();
+
+    if (!data) {
+      return 'user@lynxhealth.local';
+    }
+
+    try {
+      const parsed = JSON.parse(data) as { email?: string };
+      return parsed.email || 'user@lynxhealth.local';
+    } catch {
+      return 'user@lynxhealth.local';
+    }
+  }
+
+  private getSessionStorageItem(): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('lynxSession');
+  }
+}

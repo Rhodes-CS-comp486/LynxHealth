@@ -9,7 +9,7 @@
         <a href="#availability">Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#hours">Hours</a>
-        <a *ngIf="role === 'admin'" href="#admin">Admin</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Create Appointments</a>
       </nav>
       <div class="nav-actions">
         <a class="link" href="#">Help</a>
@@ -37,9 +37,28 @@
         <div class="hero-image">
           <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
         </div>
-    </div>
+      </div>
     </section>
 
+    <section id="availability" class="section">
+      <div class="container">
+        <h2>Available Appointment Slots</h2>
+        <p class="section-copy">Students can schedule into any unbooked slot listed below.</p>
+
+        <div *ngIf="slots.length === 0" class="notice-card">
+          No slots are currently available.
+        </div>
+
+        <div *ngIf="slots.length > 0" class="slot-list">
+          <article class="slot-card" *ngFor="let slot of slots">
+            <p>{{ slot.start_time | date: 'EEE, MMM d, y, h:mm a' }}</p>
+            <p>to {{ slot.end_time | date: 'h:mm a' }}</p>
+            <p>{{ slot.duration_minutes }} mins · {{ slot.appointment_type }}</p>
+            <span class="slot-state">{{ slot.is_booked ? 'Booked' : 'Available' }}</span>
+          </article>
+        </div>
+      </div>
+    </section>
 
 
     <section id="hours" class="section">
@@ -84,7 +103,6 @@
         </div>
       </div>
     </section>
-
   </main>
 
   <footer class="site-footer">

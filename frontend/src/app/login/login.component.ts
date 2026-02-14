@@ -32,7 +32,9 @@ export class LoginComponent {
       role: this.role
     };
 
-    localStorage.setItem('lynxSession', JSON.stringify(session));
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem('lynxSession', JSON.stringify(session));
+    }
     this.router.navigate(['/home']);
   }
 }
