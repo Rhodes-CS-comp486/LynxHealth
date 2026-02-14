@@ -31,8 +31,6 @@ export class CreateAppointmentsComponent implements OnInit {
   readonly role = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
-  constructor(private cdr: ChangeDetectorRef) {}
-
   slots: AvailabilitySlot[] = [];
   slotDate = '';
   slotTime = '';
@@ -46,6 +44,8 @@ export class CreateAppointmentsComponent implements OnInit {
   calendarDays: CalendarDay[] = [];
 
   readonly appointmentTypes = ['immunization', 'testing', 'counseling', 'other', 'prescription'];
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.buildCalendar();
