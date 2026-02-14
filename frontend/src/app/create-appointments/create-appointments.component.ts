@@ -79,6 +79,11 @@ export class CreateAppointmentsComponent implements OnInit {
       return;
     }
 
+    const requestedDate = this.slotDate;
+    const requestedTime = this.slotTime;
+    const requestedDuration = Number(this.durationMinutes);
+    const requestedType = this.appointmentType;
+
     this.isSaving = true;
     this.adminError = '';
     this.adminMessage = '';
@@ -94,10 +99,10 @@ export class CreateAppointmentsComponent implements OnInit {
         signal: controller.signal,
         body: JSON.stringify({
           admin_email: this.sessionEmail,
-          date: this.slotDate,
-          time: this.slotTime,
-          duration_minutes: Number(this.durationMinutes),
-          appointment_type: this.appointmentType
+          date: requestedDate,
+          time: requestedTime,
+          duration_minutes: requestedDuration,
+          appointment_type: requestedType
         })
       });
 
@@ -114,11 +119,7 @@ export class CreateAppointmentsComponent implements OnInit {
       }
 
       const createdSlot = payload as AvailabilitySlot | null;
-      if (createdSlot?.start_time) {
-        this.weekStart = this.getWeekStart(new Date(createdSlot.start_time));
-        this.slots = [createdSlot, ...this.slots.filter((slot) => slot.id !== createdSlot.id)];
-        this.buildCalendar();
-      }
+      this.previewCreatedSlot(createdSlot, requestedDate, requestedTime, requestedDuration, requestedType);
 
       this.adminMessage = 'Appointment slot created successfully.';
       this.slotDate = '';
@@ -126,7 +127,7 @@ export class CreateAppointmentsComponent implements OnInit {
       this.durationMinutes = 30;
       this.appointmentType = 'immunization';
 
-      void this.loadSlots();
+      await this.loadSlots();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         this.adminError = 'Request timed out. Ensure backend (8000) and Postgres are running, then try again.';
@@ -138,6 +139,37 @@ export class CreateAppointmentsComponent implements OnInit {
       clearTimeout(timeoutId);
       this.isSaving = false;
     }
+  }
+
+
+  private previewCreatedSlot(
+    createdSlot: AvailabilitySlot | null,
+    requestedDate: string,
+    requestedTime: string,
+    requestedDuration: number,
+    requestedType: string
+  ): void {
+    const [year, month, day] = requestedDate.split('-').map((part) => Number(part));
+    const [hour, minute] = requestedTime.split(':').map((part) => Number(part));
+
+    const start = new Date(year, month - 1, day, hour, minute, 0, 0);
+    const end = new Date(start.getTime() + requestedDuration * 60_000);
+
+    this.weekStart = this.getWeekStart(start);
+
+    const slotToRender: AvailabilitySlot = createdSlot ?? {
+      id: -Date.now(),
+      date: requestedDate,
+      time: requestedTime,
+      duration_minutes: requestedDuration,
+      appointment_type: requestedType,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      is_booked: false
+    };
+
+    this.slots = [slotToRender, ...this.slots.filter((slot) => slot.id !== slotToRender.id)];
+    this.buildCalendar();
   }
 
   private async loadSlots(): Promise<void> {
