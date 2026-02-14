@@ -1,7 +1,9 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://postgres:seniorsem@localhost/health_center_db"
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres@localhost:5432/postgres')
 
 engine = create_engine(DATABASE_URL)
 
