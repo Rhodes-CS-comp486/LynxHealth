@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, field_validator
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.database import SessionLocal, ensure_availability_schema
@@ -16,8 +17,6 @@ ALLOWED_APPOINTMENT_TYPES = {
     'other',
     'prescription',
 }
-
-
 
 OPEN_TIME = time(9, 0)
 LAST_START_TIME = time(15, 45)
@@ -72,6 +71,15 @@ class AvailabilitySlotResponse(BaseModel):
         from_attributes = True
 
 
+def ensure_database_ready() -> None:
+    try:
+        ensure_availability_schema()
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
 
 def get_db():
     db = SessionLocal()
@@ -83,7 +91,7 @@ def get_db():
 
 @router.post('/slots', response_model=AvailabilitySlotResponse, status_code=status.HTTP_201_CREATED)
 def create_availability_slot(data: CreateAvailabilitySlotRequest, db: Session = Depends(get_db)):
-    ensure_availability_schema()
+    ensure_database_ready()
 
     start_time = datetime.combine(data.date, data.time)
     end_time = start_time + timedelta(minutes=data.duration_minutes)
@@ -106,32 +114,39 @@ def create_availability_slot(data: CreateAvailabilitySlotRequest, db: Session = 
             detail='Slots must be created for a future date and time.',
         )
 
-    overlapping_slot = db.query(Availability).filter(
-        Availability.start_time < end_time,
-        Availability.end_time > start_time,
-    ).first()
+    try:
+        overlapping_slot = db.query(Availability).filter(
+            Availability.start_time < end_time,
+            Availability.end_time > start_time,
+        ).first()
 
-    if overlapping_slot:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='This appointment slot overlaps with an existing slot.',
+        if overlapping_slot:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='This appointment slot overlaps with an existing slot.',
+            )
+
+        slot = Availability(
+            date=data.date,
+            time=data.time,
+            duration_minutes=data.duration_minutes,
+            appointment_type=data.appointment_type,
+            start_time=start_time,
+            end_time=end_time,
+            is_booked=False,
         )
 
-    slot = Availability(
-        date=data.date,
-        time=data.time,
-        duration_minutes=data.duration_minutes,
-        appointment_type=data.appointment_type,
-        start_time=start_time,
-        end_time=end_time,
-        is_booked=False,
-    )
+        db.add(slot)
+        db.commit()
+        db.refresh(slot)
 
-    db.add(slot)
-    db.commit()
-    db.refresh(slot)
-
-    return slot
+        return slot
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
 
 
 @router.get('/slots', response_model=list[AvailabilitySlotResponse])
@@ -139,12 +154,18 @@ def list_availability_slots(
     students_only: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
-    ensure_availability_schema()
+    ensure_database_ready()
 
-    query = db.query(Availability)
+    try:
+        query = db.query(Availability)
 
-    if students_only:
-        query = query.filter(Availability.is_booked.is_(False))
+        if students_only:
+            query = query.filter(Availability.is_booked.is_(False))
 
-    slots = query.order_by(Availability.start_time.asc()).all()
-    return slots
+        slots = query.order_by(Availability.start_time.asc()).all()
+        return slots
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
