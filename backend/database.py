@@ -1,26 +1,13 @@
 import os
+from dotenv import load_dotenv
 from threading import Lock
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-def resolve_database_url() -> str:
-    raw_url = os.getenv('DATABASE_URL', '').strip()
-
-    if raw_url.startswith('jdbc:'):
-        raw_url = raw_url.replace('jdbc:', '', 1)
-
-    has_placeholder_credentials = '<user>' in raw_url or '<password>' in raw_url
-    if not raw_url or has_placeholder_credentials:
-        # Default without explicit username/password so local Postgres can use
-        # the current OS account in common developer setups.
-        return 'postgresql://localhost:5432/postgres'
-
-    return raw_url
-
-
-DATABASE_URL = resolve_database_url()
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
 
