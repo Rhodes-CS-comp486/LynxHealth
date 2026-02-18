@@ -9,7 +9,7 @@
         <a routerLink="/home">Home</a>
         <a routerLink="/home" fragment="availability">Appointments</a>
         <a routerLink="/home" fragment="hours">Hours</a>
-        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Create Appointments</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
@@ -22,56 +22,48 @@
     <section class="section">
       <div class="container calendar-panel">
         <div class="calendar-header">
-          <h1>Weekly Availability Calendar</h1>
+          <div>
+            <h1>Block Off Appointment Times</h1>
+            <p class="section-copy">Weekdays only · 9:00 AM to 3:45 PM. Click an available cell to block it, or a blocked cell to reopen it.</p>
+          </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>
-            <strong>{{ weekStart | date: 'MMM d' }} - {{ calendarDays[6]?.date | date: 'MMM d, y' }}</strong>
+            <strong>{{ calendarDays[0]?.date | date: 'MMM d' }} - {{ calendarDays[4]?.date | date: 'MMM d, y' }}</strong>
             <button class="button ghost" type="button" (click)="nextWeek()">Next week</button>
           </div>
         </div>
 
-        <div class="calendar-grid week-view">
-          <article class="calendar-day" *ngFor="let day of calendarDays" [ngClass]="{ 'has-slots': day.slots.length > 0 }">
-            <header>
-              <strong>{{ day.date | date: 'EEE' }}</strong>
-              <span>{{ day.date | date: 'MMM d' }}</span>
-            </header>
-
-            <ul *ngIf="day.slots.length > 0" class="day-slots">
-              <li *ngFor="let slot of day.slots">
-                <span>{{ slot.start_time | date: 'h:mm a' }}</span>
-                <span>{{ slot.duration_minutes }} mins</span>
-                <span class="type-pill">{{ slot.appointment_type }}</span>
-              </li>
-            </ul>
-            <p *ngIf="day.slots.length === 0" class="empty-day">No slots</p>
-          </article>
+        <div class="table-wrap" *ngIf="role === 'admin'; else nonAdmin">
+          <table class="calendar-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th *ngFor="let day of calendarDays">{{ day.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of calendarRows; let rowIndex = index">
+                <th>
+                  <span *ngIf="row[0].hourLabel">{{ row[0].hourLabel }}</span>
+                </th>
+                <td *ngFor="let cell of row">
+                  <button
+                    type="button"
+                    class="cell"
+                    [ngClass]="{ blocked: !!cell.blockedId }"
+                    [disabled]="isSaving"
+                    (click)="toggleBlocked(cell)">
+                    {{ cell.blockedId ? 'Blocked' : 'Available' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-    </section>
 
-    <section class="section">
-      <div class="container admin-panel">
-        <h2>Create Appointment Slots</h2>
-        <p class="section-copy">Admins can set Date, Time, Duration, and Appointment Type.</p>
-
-        <form class="admin-form" (ngSubmit)="createSlot()" *ngIf="role === 'admin'">
-          <label for="slotDate">Date</label>
-          <input id="slotDate" type="date" name="slotDate" [(ngModel)]="slotDate" />
-
-          <label for="slotTime">Time</label>
-          <input id="slotTime" type="time" name="slotTime" [(ngModel)]="slotTime" />
-
-          <label for="durationMinutes">Duration (minutes)</label>
-          <input id="durationMinutes" type="number" min="5" step="5" name="durationMinutes" [(ngModel)]="durationMinutes" />
-
-          <label for="appointmentType">Appointment Type</label>
-          <select id="appointmentType" name="appointmentType" [(ngModel)]="appointmentType">
-            <option *ngFor="let type of appointmentTypes" [value]="type">{{ type }}</option>
-          </select>
-
-          <button class="button" type="submit" [disabled]="isSaving">{{ isSaving ? 'Saving...' : 'Create slot' }}</button>
-        </form>
+        <ng-template #nonAdmin>
+          <p class="error">Only admins can manage blocked times.</p>
+        </ng-template>
 
         <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
         <p class="error" *ngIf="adminError">{{ adminError }}</p>
