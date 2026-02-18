@@ -20,23 +20,24 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 _schema_lock = Lock()
-_schema_checked = False
+_availability_schema_checked = False
+_appointment_schema_checked = False
 
 
 def ensure_availability_schema() -> None:
-    global _schema_checked
+    global _availability_schema_checked
 
-    if _schema_checked:
+    if _availability_schema_checked:
         return
 
     with _schema_lock:
-        if _schema_checked:
+        if _availability_schema_checked:
             return
 
         inspector = inspect(engine)
 
         if 'availability' not in inspector.get_table_names():
-            _schema_checked = True
+            _availability_schema_checked = True
             return
 
         existing_columns = {column['name'] for column in inspector.get_columns('availability')}
@@ -51,5 +52,50 @@ def ensure_availability_schema() -> None:
             for column_name, statement in migration_steps:
                 if column_name not in existing_columns:
                     connection.execute(text(statement))
+            connection.execute(
+                text('CREATE INDEX IF NOT EXISTS idx_availability_time_range ON availability(start_time, end_time)')
+            )
+            connection.execute(
+                text('CREATE INDEX IF NOT EXISTS idx_availability_type_start ON availability(appointment_type, start_time)')
+            )
+            connection.execute(
+                text('CREATE INDEX IF NOT EXISTS idx_availability_booked_start ON availability(is_booked, start_time)')
+            )
 
-        _schema_checked = True
+        _availability_schema_checked = True
+
+
+def ensure_appointment_schema() -> None:
+    global _appointment_schema_checked
+
+    if _appointment_schema_checked:
+        return
+
+    with _schema_lock:
+        if _appointment_schema_checked:
+            return
+
+        inspector = inspect(engine)
+
+        if 'appointments' not in inspector.get_table_names():
+            _appointment_schema_checked = True
+            return
+
+        existing_columns = {column['name'] for column in inspector.get_columns('appointments')}
+        migration_steps = [
+            ('student_email', 'ALTER TABLE appointments ADD COLUMN student_email VARCHAR'),
+            ('appointment_type', 'ALTER TABLE appointments ADD COLUMN appointment_type VARCHAR'),
+        ]
+
+        with engine.begin() as connection:
+            for column_name, statement in migration_steps:
+                if column_name not in existing_columns:
+                    connection.execute(text(statement))
+            connection.execute(
+                text('CREATE INDEX IF NOT EXISTS idx_appointments_time_range ON appointments(start_time, end_time)')
+            )
+            connection.execute(
+                text('CREATE INDEX IF NOT EXISTS idx_appointments_type_start ON appointments(appointment_type, start_time)')
+            )
+
+        _appointment_schema_checked = True
