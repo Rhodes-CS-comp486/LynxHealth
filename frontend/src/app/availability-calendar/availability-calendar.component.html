@@ -1,0 +1,92 @@
+<div class="page">
+  <header class="site-header">
+    <div class="container nav">
+      <div class="brand">
+        <span class="brand-mark">LH</span>
+        <span class="brand-text">Lynx Health</span>
+      </div>
+      <nav class="nav-links">
+        <a routerLink="/home">Home</a>
+        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/home" fragment="hours">Hours</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
+      </nav>
+      <div class="nav-actions">
+        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
+        <a class="button small" routerLink="/login">Switch Role</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container calendar-panel">
+        <h1>Appointment Availability Calendar</h1>
+        <p class="section-copy">Choose an appointment type first, then view and book open slots for the next 2 weeks.</p>
+
+        <div class="filters">
+          <label>
+            Appointment type
+            <select [(ngModel)]="selectedAppointmentType" (change)="onAppointmentTypeChange()">
+              <option value="">Choose type</option>
+              <option *ngFor="let option of appointmentTypeOptions" [value]="option.appointment_type">
+                {{ formatAppointmentType(option.appointment_type) }} ({{ option.duration_minutes }} mins)
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Time of day
+            <select [(ngModel)]="selectedTimeOfDay" (change)="onTimeOfDayChange()">
+              <option value="all">All day</option>
+              <option value="morning">Morning</option>
+              <option value="afternoon">Afternoon</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="error" *ngIf="error">{{ error }}</p>
+
+        <div class="calendar-week-header" *ngIf="selectedAppointmentType">
+          <h2>Weekly Calendar</h2>
+          <div class="calendar-week-actions">
+            <button class="button ghost week-toggle" type="button" (click)="showCurrentWeek()" [disabled]="!canShowCurrentWeek">
+              Current Week
+            </button>
+            <strong>{{ weekRangeLabel }}</strong>
+            <button class="button week-toggle" type="button" (click)="showNextWeek()" [disabled]="!canShowNextWeek">
+              Next Week
+            </button>
+          </div>
+        </div>
+
+        <div class="notice-card" *ngIf="!selectedAppointmentType">
+          Select an appointment type to view matching slots.
+        </div>
+
+        <div class="notice-card" *ngIf="selectedAppointmentType && filteredSlots.length === 0">
+          No available slots match your selected criteria.
+        </div>
+
+        <div class="week-grid" *ngIf="selectedAppointmentType && filteredSlots.length > 0">
+          <article class="week-day" *ngFor="let day of visibleWeekDays">
+            <h3>{{ day.label }}</h3>
+            <div class="day-slot-list" *ngIf="slotsForDay(day.key).length > 0; else noDaySlots">
+              <article class="slot-card" *ngFor="let slot of slotsForDay(day.key)">
+                <p>{{ slot.start_time | date: 'h:mm a' }} to {{ slot.end_time | date: 'h:mm a' }}</p>
+                <p>{{ slot.duration_minutes }} mins · {{ formatAppointmentType(slot.appointment_type) }}</p>
+                <span class="slot-state">Available</span>
+                <button class="button book-button" type="button" disabled>
+                  Book Appointment (Coming Soon)
+                </button>
+              </article>
+            </div>
+            <ng-template #noDaySlots>
+              <p class="empty-day">No slots</p>
+            </ng-template>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

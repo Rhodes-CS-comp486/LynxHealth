@@ -6,7 +6,7 @@
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a href="#availability">Appointments</a>
+        <a routerLink="/availability-calendar">Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
@@ -30,7 +30,7 @@
             availability, manage upcoming visits, and discover wellness resources in one place.
           </p>
           <div class="hero-actions">
-            <a class="button" href="#availability">Check availability</a>
+            <a class="button" routerLink="/availability-calendar">Check availability</a>
             <a class="button ghost" href="#resources">Explore resources</a>
           </div>
         </div>
@@ -115,7 +115,7 @@
         <p>Supporting student health with modern scheduling.</p>
       </div>
       <div class="footer-links">
-        <a href="#availability">Appointments</a>
+        <a routerLink="/availability-calendar">Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#">Contact</a>
       </div>
