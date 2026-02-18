@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <div class="table-wrap" *ngIf="role === 'admin'; else nonAdmin">
+        <div class="table-wrap" *ngIf="role === 'admin' && calendarDays.length > 0; else nonAdmin">
           <table class="calendar-table">
             <thead>
               <tr>
@@ -48,6 +48,7 @@
                 </th>
                 <td *ngFor="let cell of row">
                   <button
+                    *ngIf="!cell.isPast"
                     type="button"
                     class="cell"
                     [ngClass]="{ blocked: !!cell.blockedId }"
@@ -62,7 +63,8 @@
         </div>
 
         <ng-template #nonAdmin>
-          <p class="error">Only admins can manage blocked times.</p>
+          <p class="error" *ngIf="role !== 'admin'">Only admins can manage blocked times.</p>
+          <p class="error" *ngIf="role === 'admin'">No future slots are available in this week.</p>
         </ng-template>
 
         <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>

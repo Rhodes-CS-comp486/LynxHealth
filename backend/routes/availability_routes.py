@@ -16,6 +16,8 @@ DEFAULT_SLOT_DURATION_MINUTES = 15
 SLOT_INCREMENT_MINUTES = 15
 SLOT_RANGE_DAYS = 28
 BLOCKED_APPOINTMENT_TYPE = 'blocked'
+LUNCH_BREAK_START_HOUR = 12
+LUNCH_BREAK_END_HOUR = 13
 
 
 class CreateBlockedTimeRequest(BaseModel):
@@ -77,6 +79,10 @@ def get_db():
         db.close()
 
 
+def is_lunch_break_slot(slot_time: time) -> bool:
+    return LUNCH_BREAK_START_HOUR <= slot_time.hour < LUNCH_BREAK_END_HOUR
+
+
 def validate_slot_datetime(slot_date: date, slot_time: time) -> tuple[datetime, datetime]:
     start_time = datetime.combine(slot_date, slot_time)
     end_time = start_time + timedelta(minutes=DEFAULT_SLOT_DURATION_MINUTES)
@@ -97,6 +103,12 @@ def validate_slot_datetime(slot_date: date, slot_time: time) -> tuple[datetime, 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Times must be on 15-minute boundaries.',
+        )
+
+    if is_lunch_break_slot(slot_time):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='12:00 PM to 1:00 PM is reserved for lunch and is always blocked.',
         )
 
     return start_time, end_time
@@ -229,7 +241,11 @@ def list_availability_slots(
                 last_start = datetime.combine(current_day, LAST_START_TIME)
 
                 while current_start <= last_start:
-                    if current_start > now and current_start not in blocked_start_times:
+                    if (
+                        current_start > now
+                        and current_start not in blocked_start_times
+                        and not is_lunch_break_slot(current_start.time())
+                    ):
                         generated_slots.append(
                             AvailabilitySlotResponse(
                                 id=generated_id,
