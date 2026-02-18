@@ -40,8 +40,7 @@ interface CalendarDay {
 })
 export class AvailabilityCalendarComponent implements OnInit {
   readonly role = this.getRole();
-  readonly sessionEmail = this.getSessionEmail();
-  readonly today = this.getStartOfDay(new Date());
+  readonly currentWeekStart = this.getStartOfWeek(new Date());
 
   slots: CalendarSlot[] = [];
   filteredSlots: CalendarSlot[] = [];
@@ -49,8 +48,6 @@ export class AvailabilityCalendarComponent implements OnInit {
   visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
   appointmentTypeOptions: AppointmentTypeOption[] = [];
   error = '';
-  success = '';
-  isBooking = false;
   weekIndex = 0;
 
   selectedTimeOfDay: TimeOfDayFilter = 'all';
@@ -80,7 +77,6 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   async onAppointmentTypeChange(): Promise<void> {
     this.weekIndex = 0;
-    this.success = '';
     await this.loadCalendar();
   }
 
@@ -104,43 +100,6 @@ export class AvailabilityCalendarComponent implements OnInit {
 
     this.weekIndex = 0;
     this.updateWeekView();
-  }
-
-  async bookSlot(slot: CalendarSlot): Promise<void> {
-    if (this.isBooking) {
-      return;
-    }
-
-    this.isBooking = true;
-    this.error = '';
-    this.success = '';
-
-    try {
-      const response = await fetch('http://localhost:8000/availability/appointments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          student_email: this.sessionEmail,
-          appointment_type: this.selectedAppointmentType,
-          start_time: slot.start_time
-        })
-      });
-
-      if (!response.ok) {
-        const message = await this.tryReadError(response);
-        this.error = message || 'Unable to create appointment right now.';
-        return;
-      }
-
-      this.success = `Appointment booked for ${new Date(slot.start_time).toLocaleString()}.`;
-      await this.loadCalendar();
-    } catch {
-      this.error = 'Unable to create appointment right now.';
-    } finally {
-      this.isBooking = false;
-    }
   }
 
   formatAppointmentType(value: string): string {
@@ -207,15 +166,6 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
   }
 
-  private async tryReadError(response: Response): Promise<string | null> {
-    try {
-      const payload = await response.json() as { detail?: string };
-      return payload.detail || null;
-    } catch {
-      return null;
-    }
-  }
-
   private matchesCriteria(slot: CalendarSlot): boolean {
     if (slot.appointment_type !== this.selectedAppointmentType) {
       return false;
@@ -246,7 +196,7 @@ export class AvailabilityCalendarComponent implements OnInit {
   }
 
   private updateWeekView(): void {
-    const start = new Date(this.today);
+    const start = new Date(this.currentWeekStart);
     start.setDate(start.getDate() + (this.weekIndex * 7));
 
     this.visibleWeekDays = [];
@@ -284,6 +234,14 @@ export class AvailabilityCalendarComponent implements OnInit {
     return date;
   }
 
+  private getStartOfWeek(input: Date): Date {
+    const date = this.getStartOfDay(input);
+    const day = date.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diffToMonday);
+    return date;
+  }
+
   private getRole(): SessionRole {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return 'user';
@@ -302,21 +260,4 @@ export class AvailabilityCalendarComponent implements OnInit {
     }
   }
 
-  private getSessionEmail(): string {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return 'user@lynxhealth.local';
-    }
-
-    const data = localStorage.getItem('lynxSession');
-    if (!data) {
-      return 'user@lynxhealth.local';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email || 'user@lynxhealth.local';
-    } catch {
-      return 'user@lynxhealth.local';
-    }
-  }
 }

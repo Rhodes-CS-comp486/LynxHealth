@@ -35,7 +35,6 @@ h2 { margin: 0; }
 .book-button { margin-top: 0.75rem; width: 100%; padding: 0.65rem 1rem; }
 .empty-day { margin: 0; color: var(--muted); font-size: 0.9rem; }
 
-.success { margin-top: 1rem; color: #2f7d41; font-weight: 600; }
 .error { margin-top: 1rem; color: #b4332b; font-weight: 600; }
 
 @media (max-width: 900px) {

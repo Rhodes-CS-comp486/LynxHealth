@@ -338,13 +338,8 @@ def list_availability_slots(
         now = datetime.now()
         range_end = now + timedelta(days=SLOT_RANGE_DAYS)
 
-        blocked_slots = db.query(Availability).filter(
-            Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,
-            Availability.start_time >= now,
-            Availability.start_time < range_end,
-        ).all()
-
-        blocked_start_times = {blocked_slot.start_time for blocked_slot in blocked_slots}
+        blocked_start_times = get_blocked_slot_starts(now, range_end, db)
+        booked_start_times = get_booked_slot_starts(now, range_end, db)
 
         generated_slots: list[AvailabilitySlotResponse] = []
         current_day = date.today()
@@ -356,9 +351,11 @@ def list_availability_slots(
                 last_start = datetime.combine(current_day, LAST_START_TIME)
 
                 while current_start <= last_start:
+                    normalized_start = current_start.replace(second=0, microsecond=0)
                     if (
                         current_start > now
-                        and current_start not in blocked_start_times
+                        and normalized_start not in blocked_start_times
+                        and normalized_start not in booked_start_times
                         and not is_lunch_break_slot(current_start.time())
                     ):
                         generated_slots.append(
@@ -472,8 +469,17 @@ def list_calendar_slots(
         ) from exc
 
 
-@router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post('/appointments', status_code=status.HTTP_403_FORBIDDEN)
 def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
+    del data
+    del db
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail='Appointment booking is not enabled in this release.',
+    )
+
+    # Booking flow intentionally disabled for current visibility-only user story.
+    # Keep implementation below for future enablement.
     ensure_database_ready()
 
     try:

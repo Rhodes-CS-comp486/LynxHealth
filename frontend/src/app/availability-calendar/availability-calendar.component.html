@@ -45,7 +45,6 @@
           </label>
         </div>
 
-        <p class="success" *ngIf="success">{{ success }}</p>
         <p class="error" *ngIf="error">{{ error }}</p>
 
         <div class="calendar-week-header" *ngIf="selectedAppointmentType">
@@ -77,8 +76,8 @@
                 <p>{{ slot.start_time | date: 'h:mm a' }} to {{ slot.end_time | date: 'h:mm a' }}</p>
                 <p>{{ slot.duration_minutes }} mins · {{ formatAppointmentType(slot.appointment_type) }}</p>
                 <span class="slot-state">Available</span>
-                <button class="button book-button" type="button" [disabled]="isBooking" (click)="bookSlot(slot)">
-                  Book Appointment
+                <button class="button book-button" type="button" disabled>
+                  Book Appointment (Coming Soon)
                 </button>
               </article>
             </div>
