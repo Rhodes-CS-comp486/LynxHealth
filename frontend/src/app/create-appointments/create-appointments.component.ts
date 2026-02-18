@@ -20,6 +20,8 @@ interface TimeCell {
   date: string;
   time: string;
   blockedId?: number;
+  isLunchBreak: boolean;
+  isPast: boolean;
 }
 
 @Component({
@@ -75,6 +77,18 @@ export class CreateAppointmentsComponent implements OnInit {
       return;
     }
 
+    if (cell.isPast) {
+      this.adminMessage = '';
+      this.adminError = 'Past time slots cannot be updated.';
+      return;
+    }
+
+    if (cell.isLunchBreak) {
+      this.adminMessage = '';
+      this.adminError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
+      return;
+    }
+
     this.isSaving = true;
     this.adminError = '';
     this.adminMessage = '';
@@ -82,12 +96,15 @@ export class CreateAppointmentsComponent implements OnInit {
     try {
       if (cell.blockedId) {
         await this.unblockTime(cell.blockedId);
+        this.blockedMap.delete(cell.key);
         this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
       } else {
-        await this.blockTime(cell.date, cell.time);
+        const blockedId = await this.blockTime(cell.date, cell.time);
+        this.blockedMap.set(cell.key, blockedId);
         this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
       }
 
+      this.buildCalendar();
       await this.loadBlockedTimes();
     } catch (error) {
       if (error instanceof Error) {
@@ -100,7 +117,7 @@ export class CreateAppointmentsComponent implements OnInit {
     }
   }
 
-  private async blockTime(date: string, time: string): Promise<void> {
+  private async blockTime(date: string, time: string): Promise<number> {
     const response = await fetch('http://localhost:8000/availability/slots', {
       method: 'POST',
       headers: {
@@ -117,6 +134,9 @@ export class CreateAppointmentsComponent implements OnInit {
       const payload = await this.tryReadError(response);
       throw new Error(payload || `Unable to block time (HTTP ${response.status}).`);
     }
+
+    const payload = await response.json() as { id: number };
+    return payload.id;
   }
 
   private async unblockTime(id: number): Promise<void> {
@@ -168,9 +188,19 @@ export class CreateAppointmentsComponent implements OnInit {
   private buildCalendar(): void {
     this.calendarDays = [];
 
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
     for (let i = 0; i < 5; i += 1) {
       const dayDate = new Date(this.weekStart);
       dayDate.setDate(this.weekStart.getDate() + i);
+      dayDate.setHours(0, 0, 0, 0);
+
+      if (dayDate < today) {
+        continue;
+      }
+
       this.calendarDays.push({
         date: dayDate,
         key: this.formatDateKey(dayDate),
@@ -182,6 +212,9 @@ export class CreateAppointmentsComponent implements OnInit {
       this.calendarDays.map((day) => {
         const key = `${day.key}T${slot}`;
         const blockedId = this.blockedMap.get(key);
+        const isLunchBreak = this.isLunchBreakSlot(slot);
+        const slotDateTime = new Date(`${day.key}T${slot}`);
+        const isPast = slotDateTime < now;
 
         return {
           key,
@@ -189,10 +222,12 @@ export class CreateAppointmentsComponent implements OnInit {
           hourLabel: slot.endsWith(':00') ? this.formatTime(slot) : '',
           date: day.key,
           time: slot,
-          blockedId
+          blockedId: isLunchBreak ? -1 : blockedId,
+          isLunchBreak,
+          isPast
         };
       })
-    );
+    ).filter((row) => row.some((cell) => !cell.isPast));
   }
 
   private getWeekStart(date: Date): Date {
@@ -217,6 +252,13 @@ export class CreateAppointmentsComponent implements OnInit {
     }
 
     return slots;
+  }
+
+
+  private isLunchBreakSlot(slot: string): boolean {
+    const [hourString] = slot.split(':');
+    const hour = Number(hourString);
+    return hour === 12;
   }
 
   private formatTime(value: string): string {
