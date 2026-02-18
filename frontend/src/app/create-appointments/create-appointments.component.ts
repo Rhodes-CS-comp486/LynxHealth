@@ -1,29 +1,31 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-interface AvailabilitySlot {
+interface BlockedTime {
   id: number;
-  date: string;
-  time: string;
-  duration_minutes: number;
-  appointment_type: string;
   start_time: string;
-  end_time: string;
-  is_booked: boolean;
 }
 
 interface CalendarDay {
   date: Date;
   key: string;
-  slots: AvailabilitySlot[];
+  label: string;
+}
+
+interface TimeCell {
+  key: string;
+  timeLabel: string;
+  hourLabel: string;
+  date: string;
+  time: string;
+  blockedId?: number;
 }
 
 @Component({
   selector: 'app-create-appointments',
   standalone: true,
-  imports: [RouterLink, NgIf, NgFor, FormsModule, DatePipe, NgClass],
+  imports: [RouterLink, NgIf, NgFor, DatePipe, NgClass],
   templateUrl: './create-appointments.component.html',
   styleUrl: './create-appointments.component.css'
 })
@@ -31,26 +33,25 @@ export class CreateAppointmentsComponent implements OnInit {
   readonly role = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
-  slots: AvailabilitySlot[] = [];
-  slotDate = '';
-  slotTime = '';
-  durationMinutes = 30;
-  appointmentType = 'immunization';
+  readonly timeSlots = this.buildTimeSlots();
+
+  weekStart = this.getWeekStart(new Date());
+  calendarDays: CalendarDay[] = [];
+  calendarRows: TimeCell[][] = [];
+
+  blockedTimes: BlockedTime[] = [];
+  blockedMap = new Map<string, number>();
+
   adminMessage = '';
   adminError = '';
   isSaving = false;
 
-  weekStart = this.getWeekStart(new Date());
-  calendarDays: CalendarDay[] = [];
-
-  readonly appointmentTypes = ['immunization', 'testing', 'counseling', 'other', 'prescription'];
-
   ngOnInit(): void {
     this.buildCalendar();
-    this.loadSlots();
+    this.loadBlockedTimes();
 
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can create appointment slots.';
+      this.adminError = 'Only admins can block appointment times.';
     }
   }
 
@@ -68,160 +69,169 @@ export class CreateAppointmentsComponent implements OnInit {
     this.buildCalendar();
   }
 
-  async createSlot(): Promise<void> {
+  async toggleBlocked(cell: TimeCell): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can create appointment slots.';
+      this.adminError = 'Only admins can block appointment times.';
       return;
     }
-
-    if (!this.slotDate || !this.slotTime || !this.durationMinutes || !this.appointmentType) {
-      this.adminError = 'Date, time, duration, and appointment type are required.';
-      return;
-    }
-
-    const requestedDate = this.slotDate;
-    const requestedTime = this.slotTime;
-    const requestedDuration = Number(this.durationMinutes);
-    const requestedType = this.appointmentType;
 
     this.isSaving = true;
     this.adminError = '';
     this.adminMessage = '';
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch('http://localhost:8000/availability/slots', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          admin_email: this.sessionEmail,
-          date: requestedDate,
-          time: requestedTime,
-          duration_minutes: requestedDuration,
-          appointment_type: requestedType
-        })
-      });
-
-      let payload: AvailabilitySlot | { detail?: string } | null = null;
-      try {
-        payload = await response.json() as AvailabilitySlot | { detail?: string };
-      } catch {
-        payload = null;
+      if (cell.blockedId) {
+        await this.unblockTime(cell.blockedId);
+        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
+      } else {
+        await this.blockTime(cell.date, cell.time);
+        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
       }
 
-      if (!response.ok) {
-        this.adminError = (payload as { detail?: string } | null)?.detail || `Unable to create slot (HTTP ${response.status}).`;
-        return;
-      }
-
-      const createdSlot = payload as AvailabilitySlot | null;
-      this.previewCreatedSlot(createdSlot, requestedDate, requestedTime, requestedDuration, requestedType);
-
-      this.adminMessage = 'Appointment slot created successfully.';
-      this.slotDate = '';
-      this.slotTime = '';
-      this.durationMinutes = 30;
-      this.appointmentType = 'immunization';
-
-      await this.loadSlots();
+      await this.loadBlockedTimes();
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        this.adminError = 'Request timed out. Ensure backend (8000) and Postgres are running, then try again.';
-        return;
+      if (error instanceof Error) {
+        this.adminError = error.message;
+      } else {
+        this.adminError = 'Unable to update blocked time.';
       }
-
-      this.adminError = 'Could not connect to API. Start backend on port 8000 and confirm Postgres is running.';
     } finally {
-      clearTimeout(timeoutId);
       this.isSaving = false;
     }
   }
 
+  private async blockTime(date: string, time: string): Promise<void> {
+    const response = await fetch('http://localhost:8000/availability/slots', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        admin_email: this.sessionEmail,
+        date,
+        time
+      })
+    });
 
-  private previewCreatedSlot(
-    createdSlot: AvailabilitySlot | null,
-    requestedDate: string,
-    requestedTime: string,
-    requestedDuration: number,
-    requestedType: string
-  ): void {
-    const [year, month, day] = requestedDate.split('-').map((part) => Number(part));
-    const [hour, minute] = requestedTime.split(':').map((part) => Number(part));
-
-    const start = new Date(year, month - 1, day, hour, minute, 0, 0);
-    const end = new Date(start.getTime() + requestedDuration * 60_000);
-
-    this.weekStart = this.getWeekStart(start);
-
-    const slotToRender: AvailabilitySlot = createdSlot ?? {
-      id: -Date.now(),
-      date: requestedDate,
-      time: requestedTime,
-      duration_minutes: requestedDuration,
-      appointment_type: requestedType,
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-      is_booked: false
-    };
-
-    this.slots = [slotToRender, ...this.slots.filter((slot) => slot.id !== slotToRender.id)];
-    this.buildCalendar();
+    if (!response.ok) {
+      const payload = await this.tryReadError(response);
+      throw new Error(payload || `Unable to block time (HTTP ${response.status}).`);
+    }
   }
 
-  private async loadSlots(): Promise<void> {
+  private async unblockTime(id: number): Promise<void> {
+    const response = await fetch(`http://localhost:8000/availability/slots/${id}?admin_email=${encodeURIComponent(this.sessionEmail)}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      const payload = await this.tryReadError(response);
+      throw new Error(payload || `Unable to unblock time (HTTP ${response.status}).`);
+    }
+  }
+
+  private async tryReadError(response: Response): Promise<string | null> {
     try {
-      const response = await fetch(`http://localhost:8000/availability/slots?ts=${Date.now()}`, {
+      const payload = await response.json() as { detail?: string };
+      return payload.detail || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async loadBlockedTimes(): Promise<void> {
+    try {
+      const response = await fetch(`http://localhost:8000/availability/blocked-times?ts=${Date.now()}`, {
         cache: 'no-store'
       });
       if (!response.ok) {
-        this.slots = [];
+        this.blockedTimes = [];
+        this.blockedMap = new Map<string, number>();
         this.buildCalendar();
         return;
       }
 
-      this.slots = await response.json() as AvailabilitySlot[];
+      this.blockedTimes = await response.json() as BlockedTime[];
+      this.blockedMap = new Map<string, number>();
+      for (const blocked of this.blockedTimes) {
+        this.blockedMap.set(this.getSlotKey(new Date(blocked.start_time)), blocked.id);
+      }
+
       this.buildCalendar();
     } catch {
-      this.slots = [];
+      this.blockedTimes = [];
+      this.blockedMap = new Map<string, number>();
       this.buildCalendar();
     }
   }
 
   private buildCalendar(): void {
-    const slotMap = new Map<string, AvailabilitySlot[]>();
-    for (const slot of this.slots) {
-      const key = this.formatDateKey(new Date(slot.start_time));
-      const existing = slotMap.get(key) || [];
-      existing.push(slot);
-      slotMap.set(key, existing);
-    }
-
     this.calendarDays = [];
-    for (let i = 0; i < 7; i += 1) {
+
+    for (let i = 0; i < 5; i += 1) {
       const dayDate = new Date(this.weekStart);
       dayDate.setDate(this.weekStart.getDate() + i);
-      const key = this.formatDateKey(dayDate);
-      const daySlots = (slotMap.get(key) || []).slice().sort((a, b) =>
-        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-      );
-
       this.calendarDays.push({
         date: dayDate,
-        key,
-        slots: daySlots
+        key: this.formatDateKey(dayDate),
+        label: dayDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
       });
     }
+
+    this.calendarRows = this.timeSlots.map((slot) =>
+      this.calendarDays.map((day) => {
+        const key = `${day.key}T${slot}`;
+        const blockedId = this.blockedMap.get(key);
+
+        return {
+          key,
+          timeLabel: this.formatTime(slot),
+          hourLabel: slot.endsWith(':00') ? this.formatTime(slot) : '',
+          date: day.key,
+          time: slot,
+          blockedId
+        };
+      })
+    );
   }
 
   private getWeekStart(date: Date): Date {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - start.getDay());
+
+    const day = start.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + offset);
+
     return start;
+  }
+
+  private buildTimeSlots(): string[] {
+    const slots: string[] = [];
+    const current = new Date(2000, 0, 1, 9, 0, 0, 0);
+    const end = new Date(2000, 0, 1, 15, 45, 0, 0);
+
+    while (current <= end) {
+      slots.push(`${String(current.getHours()).padStart(2, '0')}:${String(current.getMinutes()).padStart(2, '0')}:00`);
+      current.setMinutes(current.getMinutes() + 15);
+    }
+
+    return slots;
+  }
+
+  private formatTime(value: string): string {
+    const [hourString, minuteString] = value.split(':');
+    const hour = Number(hourString);
+    const minute = Number(minuteString);
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    const normalizedHour = hour % 12 || 12;
+    return `${normalizedHour}:${String(minute).padStart(2, '0')} ${suffix}`;
+  }
+
+  private getSlotKey(date: Date): string {
+    const dateKey = this.formatDateKey(date);
+    const timeKey = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:00`;
+    return `${dateKey}T${timeKey}`;
   }
 
   private formatDateKey(date: Date): string {
