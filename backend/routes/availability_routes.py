@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -55,8 +55,7 @@ class AvailabilitySlotResponse(BaseModel):
     end_time: datetime
     is_booked: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BlockedTimeResponse(BaseModel):
@@ -66,8 +65,7 @@ class BlockedTimeResponse(BaseModel):
     start_time: datetime
     end_time: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CalendarSlotResponse(BaseModel):
@@ -119,8 +117,7 @@ class AppointmentResponse(BaseModel):
     end_time: datetime
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 def ensure_database_ready() -> None:
