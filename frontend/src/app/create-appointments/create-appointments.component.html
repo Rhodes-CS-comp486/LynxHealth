@@ -24,7 +24,7 @@
         <div class="calendar-header">
           <div>
             <h1>Block Off Appointment Times</h1>
-            <p class="section-copy">Weekdays only · 9:00 AM to 3:45 PM. Click an available cell to block it, or a blocked cell to reopen it.</p>
+            <p class="section-copy">Weekdays only · 9:00 AM to 3:45 PM. Booked slots are marked and cannot be blocked.</p>
           </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>
@@ -51,10 +51,10 @@
                     *ngIf="!cell.isPast"
                     type="button"
                     class="cell"
-                    [ngClass]="{ blocked: !!cell.blockedId }"
-                    [disabled]="isSaving"
+                    [ngClass]="{ blocked: !cell.isBooked && !!cell.blockedId, booked: cell.isBooked }"
+                    [disabled]="isSaving || cell.isBooked"
                     (click)="toggleBlocked(cell)">
-                    {{ cell.blockedId ? 'Blocked' : 'Available' }}
+                    {{ cell.isBooked ? 'Booked' : (cell.blockedId ? 'Blocked' : 'Available') }}
                   </button>
                 </td>
               </tr>
@@ -69,6 +69,22 @@
 
         <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
         <p class="error" *ngIf="adminError">{{ adminError }}</p>
+
+        <div class="booked-panel" *ngIf="role === 'admin'">
+          <h2>Upcoming Student Appointments</h2>
+          <p class="section-copy">Student comments/notes for the currently viewed week are listed here.</p>
+
+          <p class="empty-state" *ngIf="bookedAppointmentsForVisibleWeek.length === 0">No upcoming appointments in this week.</p>
+
+          <div class="booked-list" *ngIf="bookedAppointmentsForVisibleWeek.length > 0">
+            <article class="booked-card" *ngFor="let appointment of bookedAppointmentsForVisibleWeek">
+              <p><strong>{{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}</strong> to {{ appointment.end_time | date: 'h:mm a' }}</p>
+              <p>{{ appointment.duration_minutes }} mins · {{ appointment.appointment_type }}</p>
+              <p>Student: {{ appointment.student_email }}</p>
+              <p class="notes"><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+            </article>
+          </div>
+        </div>
       </div>
     </section>
   </main>

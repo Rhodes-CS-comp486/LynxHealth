@@ -31,6 +31,25 @@ interface CalendarDay {
   label: string;
 }
 
+interface AppointmentBookingResponse {
+  id: number;
+  student_email: string;
+  appointment_type: string;
+  duration_minutes: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  notes: string | null;
+}
+
+const DEFAULT_APPOINTMENT_TYPE_OPTIONS: AppointmentTypeOption[] = [
+  { appointment_type: 'immunization', duration_minutes: 15 },
+  { appointment_type: 'testing', duration_minutes: 30 },
+  { appointment_type: 'counseling', duration_minutes: 60 },
+  { appointment_type: 'other', duration_minutes: 60 },
+  { appointment_type: 'prescription', duration_minutes: 15 }
+];
+
 @Component({
   selector: 'app-availability-calendar',
   standalone: true,
@@ -40,18 +59,24 @@ interface CalendarDay {
 })
 export class AvailabilityCalendarComponent implements OnInit {
   readonly role = this.getRole();
+  readonly sessionEmail = this.getSessionEmail();
   readonly currentWeekStart = this.getStartOfWeek(new Date());
 
   slots: CalendarSlot[] = [];
   filteredSlots: CalendarSlot[] = [];
   visibleWeekDays: CalendarDay[] = [];
   visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
-  appointmentTypeOptions: AppointmentTypeOption[] = [];
+  appointmentTypeOptions: AppointmentTypeOption[] = [...DEFAULT_APPOINTMENT_TYPE_OPTIONS];
   error = '';
   weekIndex = 0;
 
   selectedTimeOfDay: TimeOfDayFilter = 'all';
   selectedAppointmentType = '';
+  selectedBookingSlot: CalendarSlot | null = null;
+  bookingNotes = '';
+  bookingError = '';
+  confirmedBooking: AppointmentBookingResponse | null = null;
+  isBooking = false;
 
   ngOnInit(): void {
     this.loadAppointmentTypes();
@@ -77,6 +102,7 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   async onAppointmentTypeChange(): Promise<void> {
     this.weekIndex = 0;
+    this.clearBookingState();
     await this.loadCalendar();
   }
 
@@ -106,22 +132,82 @@ export class AvailabilityCalendarComponent implements OnInit {
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
-  private async loadAppointmentTypes(): Promise<void> {
-    this.error = '';
+  beginBooking(slot: CalendarSlot): void {
+    if (this.role !== 'user') {
+      return;
+    }
 
+    this.selectedBookingSlot = slot;
+    this.bookingNotes = '';
+    this.bookingError = '';
+    this.confirmedBooking = null;
+  }
+
+  cancelBooking(): void {
+    this.selectedBookingSlot = null;
+    this.bookingNotes = '';
+    this.bookingError = '';
+  }
+
+  async submitBooking(): Promise<void> {
+    if (!this.selectedBookingSlot || !this.selectedAppointmentType) {
+      return;
+    }
+
+    this.isBooking = true;
+    this.bookingError = '';
+    this.confirmedBooking = null;
+
+    try {
+      const response = await fetch('http://localhost:8000/availability/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          student_email: this.sessionEmail,
+          appointment_type: this.selectedAppointmentType,
+          start_time: this.selectedBookingSlot.start_time,
+          notes: this.bookingNotes.trim() || null
+        })
+      });
+
+      if (!response.ok) {
+        const detail = await this.tryReadError(response);
+        throw new Error(detail || `Unable to book appointment (HTTP ${response.status}).`);
+      }
+
+      const appointment = await response.json() as AppointmentBookingResponse;
+      await this.loadCalendar();
+      this.cancelBooking();
+      this.confirmedBooking = appointment;
+    } catch (error) {
+      if (error instanceof Error) {
+        this.bookingError = error.message;
+      } else {
+        this.bookingError = 'Unable to book appointment right now.';
+      }
+    } finally {
+      this.isBooking = false;
+    }
+  }
+
+  private async loadAppointmentTypes(): Promise<void> {
     try {
       const response = await fetch('http://localhost:8000/availability/appointment-types', {
         cache: 'no-store'
       });
 
       if (!response.ok) {
-        this.error = 'Unable to load appointment types right now.';
         return;
       }
 
-      this.appointmentTypeOptions = await response.json() as AppointmentTypeOption[];
+      const payload = await response.json() as AppointmentTypeOption[];
+      if (payload.length > 0) {
+        this.appointmentTypeOptions = payload;
+      }
     } catch {
-      this.error = 'Unable to load appointment types right now.';
+      // Keep default appointment types so students can always choose a type.
     }
   }
 
@@ -192,6 +278,13 @@ export class AvailabilityCalendarComponent implements OnInit {
     }
 
     this.filteredSlots = this.slots.filter((slot) => slot.is_available && this.matchesCriteria(slot));
+    if (
+      this.selectedBookingSlot
+      && !this.filteredSlots.some((slot) => slot.start_time === this.selectedBookingSlot?.start_time)
+    ) {
+      this.selectedBookingSlot = null;
+      this.bookingNotes = '';
+    }
     this.updateWeekView();
   }
 
@@ -243,11 +336,7 @@ export class AvailabilityCalendarComponent implements OnInit {
   }
 
   private getRole(): SessionRole {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return 'user';
-    }
-
-    const data = localStorage.getItem('lynxSession');
+    const data = this.getSessionStorageItem();
     if (!data) {
       return 'user';
     }
@@ -260,4 +349,42 @@ export class AvailabilityCalendarComponent implements OnInit {
     }
   }
 
+  private getSessionEmail(): string {
+    const data = this.getSessionStorageItem();
+    if (!data) {
+      return 'student@lynxhealth.local';
+    }
+
+    try {
+      const parsed = JSON.parse(data) as { email?: string };
+      const normalized = parsed.email?.trim().toLowerCase();
+      return normalized || 'student@lynxhealth.local';
+    } catch {
+      return 'student@lynxhealth.local';
+    }
+  }
+
+  private getSessionStorageItem(): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('lynxSession');
+  }
+
+  private clearBookingState(): void {
+    this.selectedBookingSlot = null;
+    this.bookingNotes = '';
+    this.bookingError = '';
+    this.confirmedBooking = null;
+  }
+
+  private async tryReadError(response: Response): Promise<string | null> {
+    try {
+      const payload = await response.json() as { detail?: string };
+      return payload.detail || null;
+    } catch {
+      return null;
+    }
+  }
 }

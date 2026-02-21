@@ -28,11 +28,21 @@
 
 .cell { width: 100%; border: 1px solid #d6efe1; border-radius: 8px; background: #f3fcf7; color: #19653f; font-weight: 600; font-size: 0.75rem; padding: 0.45rem; cursor: pointer; }
 .cell.blocked { border-color: var(--red-200); background: var(--red-100); color: var(--red-700); }
+.cell.booked { border-color: #c9d8f4; background: #eff4ff; color: #24427f; }
 .cell:disabled { opacity: 0.65; cursor: not-allowed; }
 
 .success { margin-top: 1rem; color: #2f7d41; font-weight: 600; }
 .error { margin-top: 1rem; color: #b4332b; font-weight: 600; }
 
+.booked-panel { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.booked-panel h2 { margin: 0 0 0.35rem; font-size: 1.2rem; }
+.booked-list { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 0.75rem; margin-top: 0.9rem; }
+.booked-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 0.85rem; }
+.booked-card p { margin: 0 0 0.35rem; }
+.booked-card .notes { margin-top: 0.55rem; color: #433631; }
+.empty-state { margin-top: 0.85rem; color: var(--muted); }
+
 @media (max-width: 1024px) {
   .calendar-header { flex-direction: column; }
+  .booked-list { grid-template-columns: 1fr; }
 }

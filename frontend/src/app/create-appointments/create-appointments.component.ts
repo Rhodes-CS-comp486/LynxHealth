@@ -7,6 +7,17 @@ interface BlockedTime {
   start_time: string;
 }
 
+interface BookedAppointment {
+  id: number;
+  student_email: string;
+  appointment_type: string;
+  duration_minutes: number;
+  start_time: string;
+  end_time: string;
+  status: string;
+  notes: string | null;
+}
+
 interface CalendarDay {
   date: Date;
   key: string;
@@ -20,6 +31,7 @@ interface TimeCell {
   date: string;
   time: string;
   blockedId?: number;
+  isBooked: boolean;
   isLunchBreak: boolean;
   isPast: boolean;
 }
@@ -43,14 +55,32 @@ export class CreateAppointmentsComponent implements OnInit {
 
   blockedTimes: BlockedTime[] = [];
   blockedMap = new Map<string, number>();
+  bookedAppointments: BookedAppointment[] = [];
+  bookedSlotKeys = new Set<string>();
 
   adminMessage = '';
   adminError = '';
   isSaving = false;
 
+  get bookedAppointmentsForVisibleWeek(): BookedAppointment[] {
+    const weekStart = this.getStartOfDay(this.weekStart);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    return this.bookedAppointments.filter((appointment) => {
+      const appointmentStart = new Date(appointment.start_time);
+      return (
+        !Number.isNaN(appointmentStart.getTime())
+        && appointmentStart >= weekStart
+        && appointmentStart < weekEnd
+      );
+    });
+  }
+
   ngOnInit(): void {
     this.buildCalendar();
     this.loadBlockedTimes();
+    this.loadBookedAppointments();
 
     if (this.role !== 'admin') {
       this.adminError = 'Only admins can block appointment times.';
@@ -83,6 +113,12 @@ export class CreateAppointmentsComponent implements OnInit {
       return;
     }
 
+    if (cell.isBooked) {
+      this.adminMessage = '';
+      this.adminError = 'Booked appointment times cannot be blocked.';
+      return;
+    }
+
     if (cell.isLunchBreak) {
       this.adminMessage = '';
       this.adminError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
@@ -106,6 +142,7 @@ export class CreateAppointmentsComponent implements OnInit {
 
       this.buildCalendar();
       await this.loadBlockedTimes();
+      await this.loadBookedAppointments();
     } catch (error) {
       if (error instanceof Error) {
         this.adminError = error.message;
@@ -185,6 +222,53 @@ export class CreateAppointmentsComponent implements OnInit {
     }
   }
 
+  private async loadBookedAppointments(): Promise<void> {
+    if (this.role !== 'admin') {
+      this.bookedAppointments = [];
+      this.bookedSlotKeys = new Set<string>();
+      this.buildCalendar();
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/availability/appointments?admin_email=${encodeURIComponent(this.sessionEmail)}&ts=${Date.now()}`,
+        {
+          cache: 'no-store'
+        }
+      );
+
+      if (!response.ok) {
+        this.bookedAppointments = [];
+        this.bookedSlotKeys = new Set<string>();
+        this.buildCalendar();
+        return;
+      }
+
+      this.bookedAppointments = await response.json() as BookedAppointment[];
+      this.bookedSlotKeys = new Set<string>();
+
+      for (const appointment of this.bookedAppointments) {
+        const start = new Date(appointment.start_time);
+        const end = new Date(appointment.end_time);
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+          continue;
+        }
+
+        for (const slotKey of this.getSlotKeysInRange(start, end)) {
+          this.bookedSlotKeys.add(slotKey);
+        }
+      }
+
+      this.buildCalendar();
+    } catch {
+      this.bookedAppointments = [];
+      this.bookedSlotKeys = new Set<string>();
+      this.buildCalendar();
+    }
+  }
+
   private buildCalendar(): void {
     this.calendarDays = [];
 
@@ -212,6 +296,7 @@ export class CreateAppointmentsComponent implements OnInit {
       this.calendarDays.map((day) => {
         const key = `${day.key}T${slot}`;
         const blockedId = this.blockedMap.get(key);
+        const isBooked = this.bookedSlotKeys.has(key);
         const isLunchBreak = this.isLunchBreakSlot(slot);
         const slotDateTime = new Date(`${day.key}T${slot}`);
         const isPast = slotDateTime < now;
@@ -223,6 +308,7 @@ export class CreateAppointmentsComponent implements OnInit {
           date: day.key,
           time: slot,
           blockedId: isLunchBreak ? -1 : blockedId,
+          isBooked,
           isLunchBreak,
           isPast
         };
@@ -231,8 +317,7 @@ export class CreateAppointmentsComponent implements OnInit {
   }
 
   private getWeekStart(date: Date): Date {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
+    const start = this.getStartOfDay(date);
 
     const day = start.getDay();
     const offset = day === 0 ? -6 : 1 - day;
@@ -276,11 +361,30 @@ export class CreateAppointmentsComponent implements OnInit {
     return `${dateKey}T${timeKey}`;
   }
 
+  private getSlotKeysInRange(start: Date, end: Date): string[] {
+    const keys: string[] = [];
+    const cursor = new Date(start);
+    cursor.setSeconds(0, 0);
+
+    while (cursor < end) {
+      keys.push(this.getSlotKey(cursor));
+      cursor.setMinutes(cursor.getMinutes() + 15);
+    }
+
+    return keys;
+  }
+
   private formatDateKey(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private getStartOfDay(date: Date): Date {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    return start;
   }
 
   private getRole(): 'admin' | 'user' {
@@ -307,7 +411,7 @@ export class CreateAppointmentsComponent implements OnInit {
 
     try {
       const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email || 'user@lynxhealth.local';
+      return parsed.email?.trim().toLowerCase() || 'user@lynxhealth.local';
     } catch {
       return 'user@lynxhealth.local';
     }
