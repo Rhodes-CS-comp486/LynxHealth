@@ -85,6 +85,7 @@ def ensure_appointment_schema() -> None:
         migration_steps = [
             ('student_email', 'ALTER TABLE appointments ADD COLUMN student_email VARCHAR'),
             ('appointment_type', 'ALTER TABLE appointments ADD COLUMN appointment_type VARCHAR'),
+            ('notes', 'ALTER TABLE appointments ADD COLUMN notes VARCHAR'),
         ]
 
         with engine.begin() as connection:

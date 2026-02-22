@@ -9,6 +9,7 @@ class Appointment(Base):
     student_id = Column(Integer, ForeignKey("users.id"))
     student_email = Column(String)
     appointment_type = Column(String)
+    notes = Column(String)
     start_time = Column(DateTime)
     end_time = Column(DateTime)
     status = Column(String)

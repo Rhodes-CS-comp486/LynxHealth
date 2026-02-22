@@ -16,7 +16,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
-)
+) 
 
 logger = logging.getLogger(__name__)
 

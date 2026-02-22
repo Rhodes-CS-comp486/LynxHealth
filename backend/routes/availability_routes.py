@@ -16,10 +16,12 @@ LAST_START_TIME = time(15, 45)
 DEFAULT_SLOT_DURATION_MINUTES = 15
 SLOT_INCREMENT_MINUTES = 15
 SLOT_RANGE_DAYS = 28
+BOOKING_RANGE_DAYS = 14
 BLOCKED_APPOINTMENT_TYPE = 'blocked'
 LUNCH_BREAK_START_HOUR = 12
 LUNCH_BREAK_END_HOUR = 13
 DAY_END_TIME = time(16, 0)
+MAX_APPOINTMENT_NOTES_LENGTH = 600
 APPOINTMENT_DURATIONS = {
     'immunization': 15,
     'testing': 30,
@@ -90,6 +92,7 @@ class CreateAppointmentRequest(BaseModel):
     student_email: str
     appointment_type: str
     start_time: datetime
+    notes: str | None = None
 
     @field_validator('student_email')
     @classmethod
@@ -97,6 +100,8 @@ class CreateAppointmentRequest(BaseModel):
         normalized = value.strip().lower()
         if not normalized:
             raise ValueError('Student email is required.')
+        if normalized.endswith('@admin.edu'):
+            raise ValueError('Only students can schedule appointments.')
         return normalized
 
     @field_validator('appointment_type')
@@ -105,6 +110,21 @@ class CreateAppointmentRequest(BaseModel):
         normalized = value.strip().lower()
         if normalized not in APPOINTMENT_DURATIONS:
             raise ValueError('Invalid appointment type.')
+        return normalized
+
+    @field_validator('notes')
+    @classmethod
+    def validate_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized = value.strip()
+        if not normalized:
+            return None
+
+        if len(normalized) > MAX_APPOINTMENT_NOTES_LENGTH:
+            raise ValueError(f'Notes must be {MAX_APPOINTMENT_NOTES_LENGTH} characters or fewer.')
+
         return normalized
 
 
@@ -116,6 +136,7 @@ class AppointmentResponse(BaseModel):
     start_time: datetime
     end_time: datetime
     status: str
+    notes: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -159,6 +180,18 @@ def iterate_slot_starts(start_time: datetime, end_time: datetime) -> set[datetim
 
 def is_appointment_type_supported(appointment_type: str) -> bool:
     return appointment_type in APPOINTMENT_DURATIONS
+
+
+def get_appointment_duration_minutes(appointment: Appointment) -> int:
+    appointment_type = (appointment.appointment_type or '').strip().lower()
+    if appointment_type in APPOINTMENT_DURATIONS:
+        return APPOINTMENT_DURATIONS[appointment_type]
+
+    if appointment.start_time and appointment.end_time:
+        delta = appointment.end_time - appointment.start_time
+        return max(SLOT_INCREMENT_MINUTES, int(delta.total_seconds() // 60))
+
+    return SLOT_INCREMENT_MINUTES
 
 
 def get_booked_slot_starts(now: datetime, range_end: datetime, db: Session) -> set[datetime]:
@@ -243,6 +276,16 @@ def create_blocked_time(data: CreateBlockedTimeRequest, db: Session = Depends(ge
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail='This time is already blocked.',
+            )
+
+        overlapping_appointment = db.query(Appointment).filter(
+            Appointment.start_time < end_time,
+            Appointment.end_time > start_time,
+        ).first()
+        if overlapping_appointment:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='This time is already booked by a student appointment.',
             )
 
         blocked_time = Availability(
@@ -466,17 +509,49 @@ def list_calendar_slots(
         ) from exc
 
 
-@router.post('/appointments', status_code=status.HTTP_403_FORBIDDEN)
-def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
-    del data
-    del db
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail='Appointment booking is not enabled in this release.',
-    )
+@router.get('/appointments', response_model=list[AppointmentResponse])
+def list_appointments(
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = admin_email.strip().lower()
+    if not normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only admins can view booked appointments.',
+        )
 
-    # Booking flow intentionally disabled for current visibility-only user story.
-    # Keep implementation below for future enablement.
+    ensure_database_ready()
+
+    try:
+        appointments = db.query(Appointment).filter(
+            Appointment.start_time.is_not(None),
+            Appointment.end_time.is_not(None),
+            Appointment.end_time > datetime.now(),
+        ).order_by(Appointment.start_time.asc()).all()
+
+        return [
+            AppointmentResponse(
+                id=appointment.id,
+                student_email=appointment.student_email or '',
+                appointment_type=appointment.appointment_type or 'other',
+                duration_minutes=get_appointment_duration_minutes(appointment),
+                start_time=appointment.start_time,
+                end_time=appointment.end_time,
+                status=appointment.status or 'booked',
+                notes=appointment.notes,
+            )
+            for appointment in appointments
+        ]
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
+def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
     ensure_database_ready()
 
     try:
@@ -484,12 +559,18 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
         start_time = data.start_time.replace(second=0, microsecond=0)
         end_time = start_time + timedelta(minutes=duration_minutes)
         now = datetime.now()
-        range_end = now + timedelta(days=14)
+        range_end = now + timedelta(days=BOOKING_RANGE_DAYS)
 
         if start_time <= now:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Appointments must be scheduled in the future.',
+            )
+
+        if start_time.minute % SLOT_INCREMENT_MINUTES != 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Appointments must start on 15-minute boundaries.',
             )
 
         if start_time.date().weekday() >= 5:
@@ -545,6 +626,7 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
         appointment = Appointment(
             student_email=data.student_email,
             appointment_type=data.appointment_type,
+            notes=data.notes,
             start_time=start_time,
             end_time=end_time,
             status='booked',
@@ -561,6 +643,7 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
             start_time=appointment.start_time,
             end_time=appointment.end_time,
             status=appointment.status or 'booked',
+            notes=appointment.notes,
         )
     except SQLAlchemyError as exc:
         db.rollback()
