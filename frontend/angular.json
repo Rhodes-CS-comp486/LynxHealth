@@ -91,7 +91,8 @@
               "buildTarget": "lynx-health:build:production"
             },
             "development": {
-              "buildTarget": "lynx-health:build:development"
+              "buildTarget": "lynx-health:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

@@ -1,5 +1,5 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -77,6 +77,8 @@ export class AvailabilityCalendarComponent implements OnInit {
   bookingError = '';
   confirmedBooking: AppointmentBookingResponse | null = null;
   isBooking = false;
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadAppointmentTypes();
@@ -159,7 +161,7 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.confirmedBooking = null;
 
     try {
-      const response = await fetch('http://localhost:8000/availability/appointments', {
+      const response = await fetch('/api/availability/appointments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -178,9 +180,13 @@ export class AvailabilityCalendarComponent implements OnInit {
       }
 
       const appointment = await response.json() as AppointmentBookingResponse;
+      const currentWeekIndex = this.weekIndex;
       await this.loadCalendar();
-      this.cancelBooking();
+      this.weekIndex = currentWeekIndex;
+      this.updateWeekView();
       this.confirmedBooking = appointment;
+      this.cancelBooking();
+      this.cdr.detectChanges();
     } catch (error) {
       if (error instanceof Error) {
         this.bookingError = error.message;
@@ -194,7 +200,7 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   private async loadAppointmentTypes(): Promise<void> {
     try {
-      const response = await fetch('http://localhost:8000/availability/appointment-types', {
+      const response = await fetch('/api/availability/appointment-types', {
         cache: 'no-store'
       });
 
@@ -215,8 +221,8 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.error = '';
     this.slots = [];
     this.filteredSlots = [];
-    this.visibleWeekDays = [];
-    this.visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
+    //this.visibleWeekDays = [];
+    //this.visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
 
     if (!this.selectedAppointmentType) {
       return;
@@ -224,7 +230,7 @@ export class AvailabilityCalendarComponent implements OnInit {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/availability/calendar?days=14&appointment_type=${encodeURIComponent(this.selectedAppointmentType)}`,
+        `/api/availability/calendar?days=14&appointment_type=${encodeURIComponent(this.selectedAppointmentType)}`,
         {
           cache: 'no-store'
         }
