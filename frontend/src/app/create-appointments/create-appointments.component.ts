@@ -1,5 +1,5 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 interface BlockedTime {
@@ -43,7 +43,11 @@ interface TimeCell {
   templateUrl: './create-appointments.component.html',
   styleUrl: './create-appointments.component.css'
 })
-export class CreateAppointmentsComponent implements OnInit {
+export class CreateAppointmentsComponent implements OnInit, OnDestroy {
+  private readonly autoRefreshIntervalMs = 5000;
+  private autoRefreshTimer: number | null = null;
+  private isDestroyed = false;
+
   readonly role = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
@@ -61,6 +65,8 @@ export class CreateAppointmentsComponent implements OnInit {
   adminMessage = '';
   adminError = '';
   isSaving = false;
+
+  constructor(private readonly cdr: ChangeDetectorRef) {}
 
   get bookedAppointmentsForVisibleWeek(): BookedAppointment[] {
     const weekStart = this.getStartOfDay(this.weekStart);
@@ -81,10 +87,16 @@ export class CreateAppointmentsComponent implements OnInit {
     this.buildCalendar();
     this.loadBlockedTimes();
     this.loadBookedAppointments();
+    this.startAutoRefresh();
 
     if (this.role !== 'admin') {
       this.adminError = 'Only admins can block appointment times.';
     }
+  }
+
+  ngOnDestroy(): void {
+    this.isDestroyed = true;
+    this.stopAutoRefresh();
   }
 
   previousWeek(): void {
@@ -205,6 +217,7 @@ export class CreateAppointmentsComponent implements OnInit {
         this.blockedTimes = [];
         this.blockedMap = new Map<string, number>();
         this.buildCalendar();
+        this.refreshView();
         return;
       }
 
@@ -215,10 +228,12 @@ export class CreateAppointmentsComponent implements OnInit {
       }
 
       this.buildCalendar();
+      this.refreshView();
     } catch {
       this.blockedTimes = [];
       this.blockedMap = new Map<string, number>();
       this.buildCalendar();
+      this.refreshView();
     }
   }
 
@@ -227,6 +242,7 @@ export class CreateAppointmentsComponent implements OnInit {
       this.bookedAppointments = [];
       this.bookedSlotKeys = new Set<string>();
       this.buildCalendar();
+      this.refreshView();
       return;
     }
 
@@ -242,6 +258,7 @@ export class CreateAppointmentsComponent implements OnInit {
         this.bookedAppointments = [];
         this.bookedSlotKeys = new Set<string>();
         this.buildCalendar();
+        this.refreshView();
         return;
       }
 
@@ -262,10 +279,36 @@ export class CreateAppointmentsComponent implements OnInit {
       }
 
       this.buildCalendar();
+      this.refreshView();
     } catch {
       this.bookedAppointments = [];
       this.bookedSlotKeys = new Set<string>();
       this.buildCalendar();
+      this.refreshView();
+    }
+  }
+
+  private startAutoRefresh(): void {
+    if (this.role !== 'admin' || typeof window === 'undefined') {
+      return;
+    }
+
+    this.stopAutoRefresh();
+    this.autoRefreshTimer = window.setInterval(() => {
+      void this.loadBookedAppointments();
+    }, this.autoRefreshIntervalMs);
+  }
+
+  private stopAutoRefresh(): void {
+    if (this.autoRefreshTimer !== null && typeof window !== 'undefined') {
+      window.clearInterval(this.autoRefreshTimer);
+      this.autoRefreshTimer = null;
+    }
+  }
+
+  private refreshView(): void {
+    if (!this.isDestroyed) {
+      this.cdr.detectChanges();
     }
   }
 
