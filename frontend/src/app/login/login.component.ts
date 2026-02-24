@@ -17,6 +17,10 @@ export class LoginComponent {
 
   constructor(private readonly router: Router) {}
 
+  loginWithSaml(): void {
+    window.location.href = 'http://localhost:8000/auth/saml/login';
+  }
+
   onSubmit(): void {
     const normalizedEmail = this.email.trim().toLowerCase();
 
