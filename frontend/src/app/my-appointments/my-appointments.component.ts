@@ -29,6 +29,8 @@ export class MyAppointmentsComponent implements OnInit {
 
   appointments: BookedAppointment[] = [];
   isLoading = true;
+  cancelingAppointmentId: number | null = null;
+  successMessage = '';
   error = '';
 
   ngOnInit(): void {
@@ -37,6 +39,42 @@ export class MyAppointmentsComponent implements OnInit {
 
   formatAppointmentType(value: string): string {
     return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  async cancelAppointment(appointmentId: number): Promise<void> {
+    if (this.role !== 'user') {
+      return;
+    }
+
+    this.cancelingAppointmentId = appointmentId;
+    this.error = '';
+    this.successMessage = '';
+
+    try {
+      const response = await fetch(
+        `/api/availability/appointments/${appointmentId}?student_email=${encodeURIComponent(this.sessionEmail)}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      if (!response.ok) {
+        const detail = await this.tryReadError(response);
+        throw new Error(detail || `Unable to cancel appointment (HTTP ${response.status}).`);
+      }
+
+      this.appointments = this.appointments.filter((appointment) => appointment.id !== appointmentId);
+      this.successMessage = 'Appointment canceled.';
+    } catch (error) {
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else {
+        this.error = 'Unable to cancel appointment right now.';
+      }
+    } finally {
+      this.cancelingAppointmentId = null;
+      this.cdr.detectChanges();
+    }
   }
 
   private async loadAppointments(): Promise<void> {

@@ -590,6 +590,52 @@ def list_appointments(
         ) from exc
 
 
+@router.delete('/appointments/{appointment_id}', status_code=status.HTTP_204_NO_CONTENT)
+def cancel_my_appointment(
+    appointment_id: int,
+    student_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = student_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Student email is required.',
+        )
+
+    if normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only students can cancel their own appointments.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+        if not appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment not found.',
+            )
+
+        appointment_owner_email = (appointment.student_email or '').strip().lower()
+        if appointment_owner_email != normalized_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Only the student who booked this appointment can cancel it.',
+            )
+
+        db.delete(appointment)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
 @router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
     ensure_database_ready()

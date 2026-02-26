@@ -7,6 +7,12 @@ from onelogin.saml2.auth import OneLogin_Saml2_Auth
 router = APIRouter(tags=['auth'])
 
 
+def get_user_role_from_email(email: str | None) -> str:
+    if email and email.endswith('@admin.edu'):
+        return 'admin'
+    return 'user'
+
+
 def get_saml_settings():
     settings_path = os.path.join(os.path.dirname(__file__), '..', 'saml', 'settings.json')
     with open(settings_path) as f:
@@ -50,7 +56,7 @@ async def saml_callback(request: Request):
     email = attributes.get('Email', [None])[0]
     first_name = attributes.get('FirstName', [None])[0]
     last_name = attributes.get('LastName', [None])[0]
-    role = 'admin' if email and email.endswith('@admin.edu') else 'user'
+    role = get_user_role_from_email(email)
 
     session = json.dumps({'email': email, 'role': role, 'firstName': first_name, 'lastName': last_name})
     encoded = session.replace('"', '%22').replace(' ', '%20')

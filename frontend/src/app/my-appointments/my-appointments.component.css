@@ -125,6 +125,14 @@ h1 {
   background: #fee2e2;
 }
 
+.success {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #065f46;
+  background: #d1fae5;
+}
+
 .empty-state {
   margin-top: 18px;
   border-radius: 14px;
@@ -153,4 +161,13 @@ h1 {
 
 .appointment-card p {
   margin: 6px 0;
+}
+
+.cancel-button {
+  margin-top: 10px;
+}
+
+.cancel-button[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
