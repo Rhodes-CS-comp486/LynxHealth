@@ -30,11 +30,6 @@ export class MyAppointmentsComponent implements OnInit {
   appointments: BookedAppointment[] = [];
   isLoading = true;
   error = '';
-  saveError = '';
-  saveSuccess = '';
-  editingAppointmentId: number | null = null;
-  savingAppointmentId: number | null = null;
-  draftNotesById: Record<number, string> = {};
 
   ngOnInit(): void {
     this.loadAppointments();
@@ -42,62 +37,6 @@ export class MyAppointmentsComponent implements OnInit {
 
   formatAppointmentType(value: string): string {
     return value.charAt(0).toUpperCase() + value.slice(1);
-  }
-
-  startEditing(appointment: BookedAppointment): void {
-    this.editingAppointmentId = appointment.id;
-    this.saveError = '';
-    this.saveSuccess = '';
-    this.draftNotesById[appointment.id] = appointment.notes || '';
-  }
-
-  cancelEditing(): void {
-    this.editingAppointmentId = null;
-    this.saveError = '';
-  }
-
-  updateDraftNotes(appointmentId: number, value: string): void {
-    this.draftNotesById[appointmentId] = value;
-  }
-
-  async saveNotes(appointment: BookedAppointment): Promise<void> {
-    this.savingAppointmentId = appointment.id;
-    this.saveError = '';
-    this.saveSuccess = '';
-
-    try {
-      const response = await fetch(`/api/availability/appointments/${appointment.id}/notes`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          student_email: this.sessionEmail,
-          notes: this.draftNotesById[appointment.id] ?? ''
-        })
-      });
-
-      if (!response.ok) {
-        const detail = await this.tryReadError(response);
-        throw new Error(detail || `Unable to update notes (HTTP ${response.status}).`);
-      }
-
-      const updated = await response.json() as BookedAppointment;
-      this.appointments = this.appointments.map((item) => (
-        item.id === updated.id ? updated : item
-      ));
-      this.editingAppointmentId = null;
-      this.saveSuccess = 'Appointment notes updated.';
-    } catch (error) {
-      if (error instanceof Error) {
-        this.saveError = error.message;
-      } else {
-        this.saveError = 'Unable to update notes right now.';
-      }
-    } finally {
-      this.savingAppointmentId = null;
-      this.cdr.detectChanges();
-    }
   }
 
   private async loadAppointments(): Promise<void> {

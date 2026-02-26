@@ -142,36 +142,6 @@ class AppointmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UpdateAppointmentNotesRequest(BaseModel):
-    student_email: str
-    notes: str | None = None
-
-    @field_validator('student_email')
-    @classmethod
-    def validate_student_email(cls, value: str) -> str:
-        normalized = value.strip().lower()
-        if not normalized:
-            raise ValueError('Student email is required.')
-        if normalized.endswith('@admin.edu'):
-            raise ValueError('Only students can update appointment notes.')
-        return normalized
-
-    @field_validator('notes')
-    @classmethod
-    def validate_notes(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-
-        normalized = value.strip()
-        if not normalized:
-            return None
-
-        if len(normalized) > MAX_APPOINTMENT_NOTES_LENGTH:
-            raise ValueError(f'Notes must be {MAX_APPOINTMENT_NOTES_LENGTH} characters or fewer.')
-
-        return normalized
-
-
 def to_appointment_response(appointment: Appointment) -> AppointmentResponse:
     return AppointmentResponse(
         id=appointment.id,
@@ -715,49 +685,6 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
             status=appointment.status or 'booked',
             notes=appointment.notes,
         )
-    except SQLAlchemyError as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
-        ) from exc
-
-
-@router.patch('/appointments/{appointment_id}/notes', response_model=AppointmentResponse)
-def update_appointment_notes(
-    appointment_id: int,
-    data: UpdateAppointmentNotesRequest,
-    db: Session = Depends(get_db),
-):
-    ensure_database_ready()
-
-    try:
-        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
-        if not appointment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='Appointment not found.',
-            )
-
-        student_email = (appointment.student_email or '').strip().lower()
-        if student_email != data.student_email:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='You can only update notes for your own appointments.',
-            )
-
-        if appointment.end_time and appointment.end_time <= datetime.now():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Only upcoming appointments can be updated.',
-            )
-
-        appointment.notes = data.notes
-        db.add(appointment)
-        db.commit()
-        db.refresh(appointment)
-
-        return to_appointment_response(appointment)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
