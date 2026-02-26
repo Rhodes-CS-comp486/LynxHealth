@@ -2,6 +2,8 @@ import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
+type SessionRole = 'admin' | 'user';
+
 interface BookedAppointment {
   id: number;
   student_email: string;
@@ -22,6 +24,8 @@ interface BookedAppointment {
 })
 export class MyAppointmentsComponent implements OnInit {
   readonly sessionEmail = this.getSessionEmail();
+  readonly role = this.getRole();
+
   appointments: BookedAppointment[] = [];
   isLoading = true;
   error = '';
@@ -35,8 +39,8 @@ export class MyAppointmentsComponent implements OnInit {
   }
 
   private async loadAppointments(): Promise<void> {
-    if (!this.sessionEmail) {
-      this.error = 'Please log in before viewing appointments.';
+    if (this.role !== 'user') {
+      this.error = 'My Appointments is only available for student accounts.';
       this.isLoading = false;
       return;
     }
@@ -72,21 +76,42 @@ export class MyAppointmentsComponent implements OnInit {
     }
   }
 
-  private getSessionEmail(): string {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return '';
+  private getRole(): SessionRole {
+    const data = this.getSessionStorageItem();
+
+    if (!data) {
+      return 'user';
     }
 
     try {
-      const data = localStorage.getItem('lynxSession');
-      if (!data) {
-        return '';
-      }
-
-      const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email || '';
+      const parsed = JSON.parse(data) as { role?: string };
+      return parsed.role === 'admin' ? 'admin' : 'user';
     } catch {
-      return '';
+      return 'user';
     }
+  }
+
+  private getSessionEmail(): string {
+    const data = this.getSessionStorageItem();
+
+    if (!data) {
+      return 'student@lynxhealth.local';
+    }
+
+    try {
+      const parsed = JSON.parse(data) as { email?: string };
+      const normalized = parsed.email?.trim().toLowerCase();
+      return normalized || 'student@lynxhealth.local';
+    } catch {
+      return 'student@lynxhealth.local';
+    }
+  }
+
+  private getSessionStorageItem(): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('lynxSession');
   }
 }
