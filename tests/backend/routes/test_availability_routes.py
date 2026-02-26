@@ -10,6 +10,7 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///./test.db')
 from backend.routes.availability_routes import (  # noqa: E402
     CreateAppointmentRequest,
     CreateBlockedTimeRequest,
+    UpdateAppointmentNotesRequest,
     iterate_slot_starts,
     list_my_appointments,
     validate_slot_datetime,
@@ -36,6 +37,18 @@ def test_create_appointment_request_normalizes_fields() -> None:
 
     assert request.student_email == 'student@example.edu'
     assert request.appointment_type == 'testing'
+
+
+def test_update_appointment_notes_request_normalizes_fields() -> None:
+    request = UpdateAppointmentNotesRequest(student_email=' STUDENT@EXAMPLE.EDU ', notes='  updated notes  ')
+
+    assert request.student_email == 'student@example.edu'
+    assert request.notes == 'updated notes'
+
+
+def test_update_appointment_notes_request_rejects_admin_email() -> None:
+    with pytest.raises(ValidationError):
+        UpdateAppointmentNotesRequest(student_email='admin@admin.edu', notes='a')
 
 
 def test_iterate_slot_starts_rounds_up_to_next_interval() -> None:

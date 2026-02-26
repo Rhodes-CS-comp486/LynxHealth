@@ -154,3 +154,39 @@ h1 {
 .appointment-card p {
   margin: 6px 0;
 }
+
+.success {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.notes-label {
+  display: block;
+  margin-top: 8px;
+}
+
+.notes-input {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.actions-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.button.ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
