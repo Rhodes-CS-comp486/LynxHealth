@@ -6,7 +6,8 @@
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a routerLink="/availability-calendar">Appointments</a>
+        <a routerLink="/availability-calendar">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a href="#resources">Resources</a>
         <a href="#hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>

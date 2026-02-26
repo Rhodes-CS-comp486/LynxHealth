@@ -1,6 +1,6 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 type SessionRole = 'admin' | 'user';
 
@@ -26,11 +26,17 @@ export class HomeComponent implements OnInit {
   role: SessionRole = 'user';
   slots: AvailabilitySlot[] = [];
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private readonly router: Router) {}
 
   ngOnInit(): void {
     this.handleSamlCallback();
     this.role = this.getRole();
+
+    if (this.shouldRedirectToMyAppointments()) {
+      this.router.navigate(['/my-appointments'], { replaceUrl: true });
+      return;
+    }
+
     this.loadSlots();
   }
 
@@ -90,5 +96,13 @@ export class HomeComponent implements OnInit {
     }
 
     return localStorage.getItem('lynxSession');
+  }
+
+  private shouldRedirectToMyAppointments(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.location.hash === '#my-appointments';
   }
 }
