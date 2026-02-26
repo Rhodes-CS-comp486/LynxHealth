@@ -55,4 +55,4 @@ async def saml_callback(request: Request):
     session = json.dumps({'email': email, 'role': role, 'firstName': first_name, 'lastName': last_name})
     encoded = session.replace('"', '%22').replace(' ', '%20')
 
-    return RedirectResponse(url=f'http://localhost:4200/home?session={encoded}', status_code=302)
+    return RedirectResponse(url=f'https://lynxhc.com/home?session={encoded}', status_code=302)
