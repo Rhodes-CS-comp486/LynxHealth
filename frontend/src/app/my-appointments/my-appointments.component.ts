@@ -1,5 +1,5 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 type SessionRole = 'admin' | 'user';
@@ -23,6 +23,7 @@ interface BookedAppointment {
   styleUrl: './my-appointments.component.css'
 })
 export class MyAppointmentsComponent implements OnInit {
+  constructor(private readonly cdr: ChangeDetectorRef) {}
   readonly sessionEmail = this.getSessionEmail();
   readonly role = this.getRole();
 
@@ -42,6 +43,7 @@ export class MyAppointmentsComponent implements OnInit {
     if (this.role !== 'user') {
       this.error = 'My Appointments is only available for student accounts.';
       this.isLoading = false;
+      this.cdr.detectChanges();
       return;
     }
 
@@ -64,6 +66,7 @@ export class MyAppointmentsComponent implements OnInit {
       }
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
