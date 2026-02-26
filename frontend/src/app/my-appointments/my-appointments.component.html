@@ -1,0 +1,46 @@
+<div class="page">
+  <header class="site-header">
+    <div class="container nav">
+      <div class="brand">
+        <span class="brand-mark">LH</span>
+        <span class="brand-text">Lynx Health</span>
+      </div>
+      <nav class="nav-links">
+        <a routerLink="/home">Home</a>
+        <a routerLink="/availability-calendar">Book Appointment</a>
+        <a routerLink="/home" fragment="resources">Resources</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="button small" routerLink="/login">Switch Role</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container panel">
+        <h1>My Upcoming Appointments</h1>
+        <p class="section-copy">Review upcoming bookings and notes shared with the health center.</p>
+
+        <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="section-copy" *ngIf="isLoading">Loading your appointments...</p>
+
+        <div class="empty-state" *ngIf="!isLoading && !error && appointments.length === 0">
+          You have no upcoming appointments.
+        </div>
+
+        <div class="appointments" *ngIf="!isLoading && appointments.length > 0">
+          <article class="appointment-card" *ngFor="let appointment of appointments">
+            <h3>{{ appointment.start_time | date: 'EEEE, MMM d, y' }}</h3>
+            <p>
+              {{ appointment.start_time | date: 'h:mm a' }} to {{ appointment.end_time | date: 'h:mm a' }}
+              · {{ formatAppointmentType(appointment.appointment_type) }} ({{ appointment.duration_minutes }} mins)
+            </p>
+            <p><strong>Status:</strong> {{ appointment.status }}</p>
+            <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

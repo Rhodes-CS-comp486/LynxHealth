@@ -1,0 +1,156 @@
+.page {
+  position: relative;
+  overflow: hidden;
+}
+
+.page::before,
+.page::after {
+  content: '';
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(226, 72, 59, 0.18) 0%, rgba(226, 72, 59, 0) 65%);
+  z-index: 0;
+}
+
+.page::before {
+  top: -120px;
+  left: -120px;
+}
+
+.page::after {
+  bottom: 120px;
+  right: -160px;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(251, 248, 246, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
+  font-weight: 600;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--red-500);
+  color: white;
+  letter-spacing: 0.05em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--red-500);
+  color: white;
+  font-weight: 600;
+  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
+  box-shadow: 0 16px 30px rgba(226, 72, 59, 0.3);
+}
+
+.button.small {
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
+}
+
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 2.5rem 0 4rem;
+}
+
+.panel {
+  background: var(--card);
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 1.8rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
+}
+
+.section-copy {
+  color: var(--muted);
+}
+
+.error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.empty-state {
+  margin-top: 18px;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: var(--bg-strong);
+  padding: 20px;
+  color: var(--muted);
+}
+
+.appointments {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.appointment-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-strong);
+  padding: 14px;
+}
+
+.appointment-card h3 {
+  margin: 0 0 8px;
+}
+
+.appointment-card p {
+  margin: 6px 0;
+}
