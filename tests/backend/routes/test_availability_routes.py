@@ -11,6 +11,7 @@ from backend.routes.availability_routes import (  # noqa: E402
     CreateAppointmentRequest,
     CreateBlockedTimeRequest,
     iterate_slot_starts,
+    list_my_appointments,
     validate_slot_datetime,
 )
 
@@ -68,3 +69,19 @@ def test_validate_slot_datetime_rejects_invalid_slots(slot_date: date, slot_time
         validate_slot_datetime(slot_date, slot_time)
 
     assert exception_info.value.detail == error_detail
+
+
+def test_list_my_appointments_rejects_blank_student_email() -> None:
+    with pytest.raises(HTTPException) as exception_info:
+        list_my_appointments(student_email='   ', db=None)
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Student email is required.'
+
+
+def test_list_my_appointments_rejects_admin_email() -> None:
+    with pytest.raises(HTTPException) as exception_info:
+        list_my_appointments(student_email='admin@admin.edu', db=None)
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'Only students can view their own appointments.'

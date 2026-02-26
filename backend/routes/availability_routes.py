@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import SessionLocal, ensure_availability_schema, ensure_appointment_schema
@@ -139,6 +140,19 @@ class AppointmentResponse(BaseModel):
     notes: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+def to_appointment_response(appointment: Appointment) -> AppointmentResponse:
+    return AppointmentResponse(
+        id=appointment.id,
+        student_email=appointment.student_email or '',
+        appointment_type=appointment.appointment_type or 'other',
+        duration_minutes=get_appointment_duration_minutes(appointment),
+        start_time=appointment.start_time,
+        end_time=appointment.end_time,
+        status=appointment.status or 'booked',
+        notes=appointment.notes,
+    )
 
 
 def ensure_database_ready() -> None:
@@ -509,6 +523,43 @@ def list_calendar_slots(
         ) from exc
 
 
+@router.get('/appointments/mine', response_model=list[AppointmentResponse])
+def list_my_appointments(
+    student_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = student_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Student email is required.',
+        )
+
+    if normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only students can view their own appointments.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        now = datetime.now()
+        appointments = db.query(Appointment).filter(
+            func.lower(func.trim(Appointment.student_email)) == normalized_email,
+            Appointment.start_time.is_not(None),
+            Appointment.end_time.is_not(None),
+            Appointment.end_time > now,
+        ).order_by(Appointment.start_time.asc()).all()
+
+        return [to_appointment_response(appointment) for appointment in appointments]
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
 @router.get('/appointments', response_model=list[AppointmentResponse])
 def list_appointments(
     admin_email: str = Query(...),
@@ -524,25 +575,14 @@ def list_appointments(
     ensure_database_ready()
 
     try:
+        now = datetime.now()
         appointments = db.query(Appointment).filter(
             Appointment.start_time.is_not(None),
             Appointment.end_time.is_not(None),
-            Appointment.end_time > datetime.now(),
+            Appointment.end_time > now,
         ).order_by(Appointment.start_time.asc()).all()
 
-        return [
-            AppointmentResponse(
-                id=appointment.id,
-                student_email=appointment.student_email or '',
-                appointment_type=appointment.appointment_type or 'other',
-                duration_minutes=get_appointment_duration_minutes(appointment),
-                start_time=appointment.start_time,
-                end_time=appointment.end_time,
-                status=appointment.status or 'booked',
-                notes=appointment.notes,
-            )
-            for appointment in appointments
-        ]
+        return [to_appointment_response(appointment) for appointment in appointments]
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
