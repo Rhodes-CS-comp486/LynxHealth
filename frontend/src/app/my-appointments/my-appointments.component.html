@@ -23,6 +23,7 @@
         <p class="section-copy">Review upcoming bookings and update notes shared with the health center.</p>
 
         <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
         <p class="success" *ngIf="saveSuccess">{{ saveSuccess }}</p>
         <p class="error" *ngIf="saveError">{{ saveError }}</p>
         <p class="section-copy" *ngIf="isLoading">Loading your appointments...</p>
@@ -63,6 +64,14 @@
                 </button>
               </div>
             </ng-template>
+
+            <button
+              class="button small cancel-button"
+              type="button"
+              [disabled]="cancelingAppointmentId === appointment.id"
+              (click)="cancelAppointment(appointment.id)">
+              {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
+            </button>
           </article>
         </div>
       </div>
