@@ -15,6 +15,24 @@ interface BookedAppointment {
   notes: string | null;
 }
 
+interface CalendarSlot {
+  date: string;
+  time: string;
+  duration_minutes: number;
+  appointment_type: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  is_available: boolean;
+  is_blocked: boolean;
+  is_booked: boolean;
+}
+
+interface RescheduleDayGroup {
+  dateKey: string;
+  slots: CalendarSlot[];
+}
+
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
@@ -31,6 +49,10 @@ export class MyAppointmentsComponent implements OnInit {
   isLoading = true;
   cancelingAppointmentId: number | null = null;
   reschedulingAppointmentId: number | null = null;
+  reschedulePanelAppointmentId: number | null = null;
+  isLoadingRescheduleOptions = false;
+  rescheduleOptions: RescheduleDayGroup[] = [];
+  selectedRescheduleStartTime: string | null = null;
   successMessage = '';
   error = '';
   saveError = '';
@@ -48,8 +70,87 @@ export class MyAppointmentsComponent implements OnInit {
   }
 
 
-  async rescheduleAppointment(appointment: BookedAppointment): Promise<void> {
+  async openReschedulePanel(appointment: BookedAppointment): Promise<void> {
     if (this.role !== 'user') {
+      return;
+    }
+
+    if (this.reschedulePanelAppointmentId === appointment.id) {
+      this.closeReschedulePanel();
+      return;
+    }
+
+    this.reschedulePanelAppointmentId = appointment.id;
+    this.isLoadingRescheduleOptions = true;
+    this.rescheduleOptions = [];
+    this.selectedRescheduleStartTime = null;
+    this.error = '';
+    this.successMessage = '';
+
+    try {
+      const response = await fetch(
+        `/api/availability/calendar?days=14&appointment_type=${encodeURIComponent(appointment.appointment_type)}`,
+        { cache: 'no-store' }
+      );
+      if (!response.ok) {
+        const detail = await this.tryReadError(response);
+        throw new Error(detail || `Unable to load available times (HTTP ${response.status}).`);
+      }
+
+      const allSlots = await response.json() as CalendarSlot[];
+      const currentAppointmentStart = new Date(appointment.start_time).toISOString();
+      const availableSlots = allSlots.filter((slot) => (
+        slot.is_available && new Date(slot.start_time).toISOString() !== currentAppointmentStart
+      ));
+
+      const groupedSlots = new Map<string, CalendarSlot[]>();
+      for (const slot of availableSlots) {
+        const dateKey = this.toLocalDateKey(new Date(slot.start_time));
+        const existing = groupedSlots.get(dateKey);
+        if (existing) {
+          existing.push(slot);
+        } else {
+          groupedSlots.set(dateKey, [slot]);
+        }
+      }
+
+      this.rescheduleOptions = Array.from(groupedSlots.entries())
+        .map(([dateKey, slots]) => ({
+          dateKey,
+          slots: slots.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+        }))
+        .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+
+      if (availableSlots.length > 0) {
+        this.selectedRescheduleStartTime = availableSlots
+          .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0]
+          ?.start_time || null;
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else {
+        this.error = 'Unable to reschedule appointment right now.';
+      }
+    } finally {
+      this.isLoadingRescheduleOptions = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  closeReschedulePanel(): void {
+    this.reschedulePanelAppointmentId = null;
+    this.isLoadingRescheduleOptions = false;
+    this.rescheduleOptions = [];
+    this.selectedRescheduleStartTime = null;
+  }
+
+  selectRescheduleTime(startTime: string): void {
+    this.selectedRescheduleStartTime = startTime;
+  }
+
+  async confirmReschedule(appointment: BookedAppointment): Promise<void> {
+    if (this.role !== 'user' || !this.selectedRescheduleStartTime) {
       return;
     }
 
@@ -58,29 +159,6 @@ export class MyAppointmentsComponent implements OnInit {
     this.successMessage = '';
 
     try {
-      const currentStart = new Date(appointment.start_time);
-      const suggestedTime = new Date(currentStart.getTime() + (30 * 60 * 1000));
-      const promptDefault = this.toDatetimeLocalValue(suggestedTime);
-      const rawInput = typeof window === 'undefined'
-        ? promptDefault
-        : window.prompt('Choose a new appointment date and time (YYYY-MM-DDTHH:mm):', promptDefault);
-
-      if (rawInput === null) {
-        return;
-      }
-
-      const trimmedInput = rawInput.trim();
-      if (!trimmedInput) {
-        this.error = 'Reschedule canceled: no new date/time provided.';
-        return;
-      }
-
-      const newStartDate = new Date(trimmedInput);
-      if (Number.isNaN(newStartDate.getTime())) {
-        this.error = 'Invalid date/time format. Please use YYYY-MM-DDTHH:mm.';
-        return;
-      }
-
       const response = await fetch(`/api/availability/appointments/${appointment.id}/reschedule`, {
         method: 'PATCH',
         headers: {
@@ -88,7 +166,7 @@ export class MyAppointmentsComponent implements OnInit {
         },
         body: JSON.stringify({
           student_email: this.sessionEmail,
-          start_time: newStartDate.toISOString()
+          start_time: this.selectedRescheduleStartTime
         })
       });
 
@@ -101,6 +179,7 @@ export class MyAppointmentsComponent implements OnInit {
       this.appointments = this.appointments
         .map((item) => (item.id === updated.id ? updated : item))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+      this.closeReschedulePanel();
       this.successMessage = 'Appointment rescheduled.';
     } catch (error) {
       if (error instanceof Error) {
@@ -237,12 +316,6 @@ export class MyAppointmentsComponent implements OnInit {
     }
   }
 
-
-  private toDatetimeLocalValue(value: Date): string {
-    const local = new Date(value.getTime() - (value.getTimezoneOffset() * 60000));
-    return local.toISOString().slice(0, 16);
-  }
-
   private async tryReadError(response: Response): Promise<string | null> {
     try {
       const payload = await response.json() as { detail?: string };
@@ -250,6 +323,13 @@ export class MyAppointmentsComponent implements OnInit {
     } catch {
       return null;
     }
+  }
+
+  private toLocalDateKey(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private getRole(): SessionRole {

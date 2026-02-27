@@ -69,9 +69,9 @@
               <button
                 class="button small"
                 type="button"
-                [disabled]="reschedulingAppointmentId === appointment.id"
-                (click)="rescheduleAppointment(appointment)">
-                {{ reschedulingAppointmentId === appointment.id ? 'Rescheduling...' : 'Reschedule appointment' }}
+                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions"
+                (click)="openReschedulePanel(appointment)">
+                {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
               </button>
               <button
                 class="button small cancel-button"
@@ -81,6 +81,49 @@
                 {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
               </button>
             </div>
+
+            <section class="reschedule-panel" *ngIf="reschedulePanelAppointmentId === appointment.id">
+              <h4>Pick a new time</h4>
+              <p class="section-copy">
+                Current time: {{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}
+              </p>
+
+              <p class="section-copy" *ngIf="isLoadingRescheduleOptions">Loading available times...</p>
+              <p class="section-copy" *ngIf="!isLoadingRescheduleOptions && rescheduleOptions.length === 0">
+                No available times were found in the next 14 days.
+              </p>
+
+              <div class="reschedule-day-group" *ngFor="let group of rescheduleOptions">
+                <h5>{{ group.slots[0].start_time | date: 'EEEE, MMM d' }}</h5>
+                <div class="slot-grid">
+                  <button
+                    class="button small ghost time-slot"
+                    type="button"
+                    *ngFor="let slot of group.slots"
+                    [class.selected]="selectedRescheduleStartTime === slot.start_time"
+                    (click)="selectRescheduleTime(slot.start_time)">
+                    {{ slot.start_time | date: 'h:mm a' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="actions-row">
+                <button
+                  class="button small"
+                  type="button"
+                  [disabled]="!selectedRescheduleStartTime || reschedulingAppointmentId === appointment.id"
+                  (click)="confirmReschedule(appointment)">
+                  {{ reschedulingAppointmentId === appointment.id ? 'Rescheduling...' : 'Confirm new time' }}
+                </button>
+                <button
+                  class="button small ghost"
+                  type="button"
+                  [disabled]="reschedulingAppointmentId === appointment.id"
+                  (click)="closeReschedulePanel()">
+                  Keep current time
+                </button>
+              </div>
+            </section>
           </article>
         </div>
       </div>
