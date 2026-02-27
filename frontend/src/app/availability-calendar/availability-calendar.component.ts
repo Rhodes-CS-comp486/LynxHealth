@@ -304,6 +304,11 @@ export class AvailabilityCalendarComponent implements OnInit {
     for (let offset = 0; offset < 7; offset += 1) {
       const dayDate = new Date(start);
       dayDate.setDate(start.getDate() + offset);
+      const dayOfWeek = dayDate.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        continue;
+      }
+
       const dayKey = this.formatDateKey(dayDate);
 
       const daySlots = this.filteredSlots.filter((slot) => slot.date === dayKey);

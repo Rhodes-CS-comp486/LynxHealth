@@ -166,6 +166,21 @@ class UpdateAppointmentNotesRequest(BaseModel):
         return normalize_appointment_notes(value)
 
 
+class RescheduleAppointmentRequest(BaseModel):
+    student_email: str
+    start_time: datetime
+
+    @field_validator('student_email')
+    @classmethod
+    def validate_student_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not normalized:
+            raise ValueError('Student email is required.')
+        if normalized.endswith('@admin.edu'):
+            raise ValueError('Only students can reschedule appointments.')
+        return normalized
+
+
 def to_appointment_response(appointment: Appointment) -> AppointmentResponse:
     return AppointmentResponse(
         id=appointment.id,
@@ -230,6 +245,55 @@ def get_appointment_duration_minutes(appointment: Appointment) -> int:
         return max(SLOT_INCREMENT_MINUTES, int(delta.total_seconds() // 60))
 
     return SLOT_INCREMENT_MINUTES
+
+
+def validate_appointment_window(start_time: datetime, duration_minutes: int, now: datetime) -> datetime:
+    normalized_start = start_time.replace(second=0, microsecond=0)
+    end_time = normalized_start + timedelta(minutes=duration_minutes)
+    range_end = now + timedelta(days=BOOKING_RANGE_DAYS)
+
+    if normalized_start <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointments must be scheduled in the future.',
+        )
+
+    if normalized_start.minute % SLOT_INCREMENT_MINUTES != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointments must start on 15-minute boundaries.',
+        )
+
+    if normalized_start.date().weekday() >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointments can only be scheduled on weekdays.',
+        )
+
+    day_open = datetime.combine(normalized_start.date(), OPEN_TIME)
+    day_close = datetime.combine(normalized_start.date(), DAY_END_TIME)
+    if normalized_start < day_open or end_time > day_close:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointment is outside scheduling hours.',
+        )
+
+    probe = normalized_start
+    while probe < end_time:
+        if is_lunch_break_slot(probe.time()):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Appointments cannot overlap the lunch closure (12:00 PM to 1:00 PM).',
+            )
+        probe += timedelta(minutes=SLOT_INCREMENT_MINUTES)
+
+    if normalized_start >= range_end:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointments can only be booked within the next 2 weeks.',
+        )
+
+    return end_time
 
 
 def get_booked_slot_starts(now: datetime, range_end: datetime, db: Session) -> set[datetime]:
@@ -614,6 +678,52 @@ def list_appointments(
         ) from exc
 
 
+@router.delete('/appointments/{appointment_id}', status_code=status.HTTP_204_NO_CONTENT)
+def cancel_my_appointment(
+    appointment_id: int,
+    student_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = student_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Student email is required.',
+        )
+
+    if normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only students can cancel their own appointments.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+        if not appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment not found.',
+            )
+
+        appointment_owner_email = (appointment.student_email or '').strip().lower()
+        if appointment_owner_email != normalized_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Only the student who booked this appointment can cancel it.',
+            )
+
+        db.delete(appointment)
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
 @router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
     ensure_database_ready()
@@ -621,50 +731,8 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
     try:
         duration_minutes = APPOINTMENT_DURATIONS[data.appointment_type]
         start_time = data.start_time.replace(second=0, microsecond=0)
-        end_time = start_time + timedelta(minutes=duration_minutes)
         now = datetime.now()
-        range_end = now + timedelta(days=BOOKING_RANGE_DAYS)
-
-        if start_time <= now:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Appointments must be scheduled in the future.',
-            )
-
-        if start_time.minute % SLOT_INCREMENT_MINUTES != 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Appointments must start on 15-minute boundaries.',
-            )
-
-        if start_time.date().weekday() >= 5:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Appointments can only be scheduled on weekdays.',
-            )
-
-        day_open = datetime.combine(start_time.date(), OPEN_TIME)
-        day_close = datetime.combine(start_time.date(), DAY_END_TIME)
-        if start_time < day_open or end_time > day_close:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Appointment is outside scheduling hours.',
-            )
-
-        probe = start_time
-        while probe < end_time:
-            if is_lunch_break_slot(probe.time()):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail='Appointments cannot overlap the lunch closure (12:00 PM to 1:00 PM).',
-                )
-            probe += timedelta(minutes=SLOT_INCREMENT_MINUTES)
-
-        if start_time >= range_end:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Appointments can only be booked within the next 2 weeks.',
-            )
+        end_time = validate_appointment_window(start_time, duration_minutes, now)
 
         blocked_overlap = db.query(Availability).filter(
             Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,
@@ -709,6 +777,77 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
             status=appointment.status or 'booked',
             notes=appointment.notes,
         )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.patch('/appointments/{appointment_id}/reschedule', response_model=AppointmentResponse)
+def reschedule_appointment(
+    appointment_id: int,
+    data: RescheduleAppointmentRequest,
+    db: Session = Depends(get_db),
+):
+    ensure_database_ready()
+
+    try:
+        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+        if not appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment not found.',
+            )
+
+        appointment_owner_email = (appointment.student_email or '').strip().lower()
+        if appointment_owner_email != data.student_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='You can only reschedule your own appointments.',
+            )
+
+        now = datetime.now()
+        if appointment.end_time and appointment.end_time <= now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Only upcoming appointments can be rescheduled.',
+            )
+
+        duration_minutes = get_appointment_duration_minutes(appointment)
+        start_time = data.start_time.replace(second=0, microsecond=0)
+        end_time = validate_appointment_window(start_time, duration_minutes, now)
+
+        blocked_overlap = db.query(Availability).filter(
+            Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,
+            Availability.start_time < end_time,
+            Availability.end_time > start_time,
+        ).first()
+        if blocked_overlap:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='This time is blocked.',
+            )
+
+        overlapping_appointment = db.query(Appointment).filter(
+            Appointment.id != appointment_id,
+            Appointment.start_time < end_time,
+            Appointment.end_time > start_time,
+        ).first()
+        if overlapping_appointment:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='This time is already booked.',
+            )
+
+        appointment.start_time = start_time
+        appointment.end_time = end_time
+        db.add(appointment)
+        db.commit()
+        db.refresh(appointment)
+
+        return to_appointment_response(appointment)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
