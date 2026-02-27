@@ -4,7 +4,7 @@
   "sp": {
     "entityId": "https://lynxhc.com",
     "assertionConsumerService": {
-      "url": "http://localhost:8000/auth/saml/callback",
+      "url": "https://lynxhc.com/auth/saml/callback",
       "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
     },
     "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
