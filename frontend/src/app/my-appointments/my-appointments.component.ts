@@ -30,6 +30,7 @@ export class MyAppointmentsComponent implements OnInit {
   appointments: BookedAppointment[] = [];
   isLoading = true;
   cancelingAppointmentId: number | null = null;
+  reschedulingAppointmentId: number | null = null;
   successMessage = '';
   error = '';
   saveError = '';
@@ -44,6 +45,73 @@ export class MyAppointmentsComponent implements OnInit {
 
   formatAppointmentType(value: string): string {
     return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+
+  async rescheduleAppointment(appointment: BookedAppointment): Promise<void> {
+    if (this.role !== 'user') {
+      return;
+    }
+
+    this.reschedulingAppointmentId = appointment.id;
+    this.error = '';
+    this.successMessage = '';
+
+    try {
+      const currentStart = new Date(appointment.start_time);
+      const suggestedTime = new Date(currentStart.getTime() + (30 * 60 * 1000));
+      const promptDefault = this.toDatetimeLocalValue(suggestedTime);
+      const rawInput = typeof window === 'undefined'
+        ? promptDefault
+        : window.prompt('Choose a new appointment date and time (YYYY-MM-DDTHH:mm):', promptDefault);
+
+      if (rawInput === null) {
+        return;
+      }
+
+      const trimmedInput = rawInput.trim();
+      if (!trimmedInput) {
+        this.error = 'Reschedule canceled: no new date/time provided.';
+        return;
+      }
+
+      const newStartDate = new Date(trimmedInput);
+      if (Number.isNaN(newStartDate.getTime())) {
+        this.error = 'Invalid date/time format. Please use YYYY-MM-DDTHH:mm.';
+        return;
+      }
+
+      const response = await fetch(`/api/availability/appointments/${appointment.id}/reschedule`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          student_email: this.sessionEmail,
+          start_time: newStartDate.toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        const detail = await this.tryReadError(response);
+        throw new Error(detail || `Unable to reschedule appointment (HTTP ${response.status}).`);
+      }
+
+      const updated = await response.json() as BookedAppointment;
+      this.appointments = this.appointments
+        .map((item) => (item.id === updated.id ? updated : item))
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+      this.successMessage = 'Appointment rescheduled.';
+    } catch (error) {
+      if (error instanceof Error) {
+        this.error = error.message;
+      } else {
+        this.error = 'Unable to reschedule appointment right now.';
+      }
+    } finally {
+      this.reschedulingAppointmentId = null;
+      this.cdr.detectChanges();
+    }
   }
 
   async cancelAppointment(appointmentId: number): Promise<void> {
@@ -167,6 +235,12 @@ export class MyAppointmentsComponent implements OnInit {
       this.isLoading = false;
       this.cdr.detectChanges();
     }
+  }
+
+
+  private toDatetimeLocalValue(value: Date): string {
+    const local = new Date(value.getTime() - (value.getTimezoneOffset() * 60000));
+    return local.toISOString().slice(0, 16);
   }
 
   private async tryReadError(response: Response): Promise<string | null> {

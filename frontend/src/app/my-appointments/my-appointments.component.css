@@ -191,8 +191,15 @@ h1 {
   box-shadow: none;
 }
 
-.cancel-button {
+.appointment-actions-row {
   margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cancel-button {
+  background: #b91c1c;
 }
 
 .cancel-button[disabled] {

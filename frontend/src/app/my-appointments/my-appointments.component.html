@@ -65,13 +65,22 @@
               </div>
             </ng-template>
 
-            <button
-              class="button small cancel-button"
-              type="button"
-              [disabled]="cancelingAppointmentId === appointment.id"
-              (click)="cancelAppointment(appointment.id)">
-              {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
-            </button>
+            <div class="appointment-actions-row">
+              <button
+                class="button small"
+                type="button"
+                [disabled]="reschedulingAppointmentId === appointment.id"
+                (click)="rescheduleAppointment(appointment)">
+                {{ reschedulingAppointmentId === appointment.id ? 'Rescheduling...' : 'Reschedule appointment' }}
+              </button>
+              <button
+                class="button small cancel-button"
+                type="button"
+                [disabled]="cancelingAppointmentId === appointment.id"
+                (click)="cancelAppointment(appointment.id)">
+                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
+              </button>
+            </div>
           </article>
         </div>
       </div>
