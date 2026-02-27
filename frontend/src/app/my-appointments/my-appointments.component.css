@@ -163,6 +163,34 @@ h1 {
   margin: 6px 0;
 }
 
+.notes-label {
+  display: block;
+  margin-top: 8px;
+}
+
+.notes-input {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.actions-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.button.ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
 .cancel-button {
   margin-top: 10px;
 }

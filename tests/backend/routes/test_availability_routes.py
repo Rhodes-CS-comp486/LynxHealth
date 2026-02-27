@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -9,19 +9,23 @@ from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault('DATABASE_URL', 'sqlite:///./test.db')
 
+from backend.routes import availability_routes  # noqa: E402
+from backend.database import Base  # noqa: E402
+from backend.models.appointment import Appointment  # noqa: E402
+from backend.models.availability import Availability  # noqa: E402
+from backend.models.user import User  # noqa: E402
 from backend.routes.availability_routes import (  # noqa: E402
     CreateAppointmentRequest,
     CreateBlockedTimeRequest,
+    UpdateAppointmentNotesRequest,
     cancel_my_appointment,
     get_booked_slot_starts,
     iterate_slot_starts,
+    list_appointments,
     list_my_appointments,
+    update_appointment_notes,
     validate_slot_datetime,
 )
-from backend.database import Base  # noqa: E402
-from backend.models.availability import Availability  # noqa: E402
-from backend.models.appointment import Appointment  # noqa: E402
-from backend.models.user import User  # noqa: E402
 
 
 def test_create_blocked_time_request_normalizes_admin_email() -> None:
@@ -44,6 +48,18 @@ def test_create_appointment_request_normalizes_fields() -> None:
 
     assert request.student_email == 'student@example.edu'
     assert request.appointment_type == 'testing'
+
+
+def test_update_appointment_notes_request_normalizes_fields() -> None:
+    request = UpdateAppointmentNotesRequest(student_email=' STUDENT@EXAMPLE.EDU ', notes='  updated notes  ')
+
+    assert request.student_email == 'student@example.edu'
+    assert request.notes == 'updated notes'
+
+
+def test_update_appointment_notes_request_rejects_admin_email() -> None:
+    with pytest.raises(ValidationError):
+        UpdateAppointmentNotesRequest(student_email='admin@admin.edu', notes='a')
 
 
 def test_iterate_slot_starts_rounds_up_to_next_interval() -> None:
@@ -228,3 +244,122 @@ def test_cancel_my_appointment_reopens_slot_in_booked_slot_lookup(
     )
     assert datetime(2026, 1, 5, 9, 0) not in booked_after_cancel
     assert datetime(2026, 1, 5, 9, 15) not in booked_after_cancel
+
+
+class _FakeQuery:
+    def __init__(self, appointments: list[Appointment]):
+        self._appointments = appointments
+
+    def filter(self, *_args, **_kwargs):
+        return self
+
+    def order_by(self, *_args, **_kwargs):
+        return self
+
+    def first(self):
+        return self._appointments[0] if self._appointments else None
+
+    def all(self):
+        return list(self._appointments)
+
+
+class _FakeDb:
+    def __init__(self, appointments: list[Appointment] | Appointment | None):
+        if isinstance(appointments, list):
+            self.appointments = appointments
+        elif appointments is None:
+            self.appointments = []
+        else:
+            self.appointments = [appointments]
+        self.committed = False
+
+    def query(self, _model):
+        return _FakeQuery(self.appointments)
+
+    def add(self, _obj):
+        return None
+
+    def commit(self):
+        self.committed = True
+
+    def refresh(self, _obj):
+        return None
+
+    def rollback(self):
+        return None
+
+
+def _build_appointment(student_email: str, *, is_upcoming: bool = True) -> Appointment:
+    now = datetime.now()
+    start_time = now + timedelta(hours=1)
+    end_time = now + timedelta(hours=2)
+    if not is_upcoming:
+        start_time = now - timedelta(hours=2)
+        end_time = now - timedelta(hours=1)
+
+    appointment = Appointment(
+        id=100,
+        student_email=student_email,
+        appointment_type='testing',
+        start_time=start_time,
+        end_time=end_time,
+        status='booked',
+        notes='Initial',
+    )
+    return appointment
+
+
+def test_update_appointment_notes_updates_matching_upcoming_appointment(monkeypatch) -> None:
+    monkeypatch.setattr(availability_routes, 'ensure_database_ready', lambda: None)
+    appointment = _build_appointment('student@example.edu', is_upcoming=True)
+    db = _FakeDb(appointment)
+
+    payload = UpdateAppointmentNotesRequest(student_email='student@example.edu', notes='Updated note')
+    response = update_appointment_notes(appointment_id=100, data=payload, db=db)
+
+    assert db.committed is True
+    assert appointment.notes == 'Updated note'
+    assert response.notes == 'Updated note'
+
+
+def test_update_appointment_notes_rejects_non_owner(monkeypatch) -> None:
+    monkeypatch.setattr(availability_routes, 'ensure_database_ready', lambda: None)
+    appointment = _build_appointment('other@example.edu', is_upcoming=True)
+    db = _FakeDb(appointment)
+
+    payload = UpdateAppointmentNotesRequest(student_email='student@example.edu', notes='Updated note')
+
+    with pytest.raises(HTTPException) as exception_info:
+        update_appointment_notes(appointment_id=100, data=payload, db=db)
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'You can only update notes for your own appointments.'
+
+
+def test_update_appointment_notes_rejects_past_appointment(monkeypatch) -> None:
+    monkeypatch.setattr(availability_routes, 'ensure_database_ready', lambda: None)
+    appointment = _build_appointment('student@example.edu', is_upcoming=False)
+    db = _FakeDb(appointment)
+
+    payload = UpdateAppointmentNotesRequest(student_email='student@example.edu', notes='Updated note')
+
+    with pytest.raises(HTTPException) as exception_info:
+        update_appointment_notes(appointment_id=100, data=payload, db=db)
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Only upcoming appointments can be updated.'
+
+
+def test_updated_notes_are_visible_to_user_and_admin_views(monkeypatch) -> None:
+    monkeypatch.setattr(availability_routes, 'ensure_database_ready', lambda: None)
+    appointment = _build_appointment('student@example.edu', is_upcoming=True)
+    db = _FakeDb(appointment)
+
+    payload = UpdateAppointmentNotesRequest(student_email='student@example.edu', notes='Shared update')
+    update_appointment_notes(appointment_id=100, data=payload, db=db)
+
+    student_appointments = list_my_appointments(student_email='student@example.edu', db=db)
+    admin_appointments = list_appointments(admin_email='admin@admin.edu', db=db)
+
+    assert student_appointments[0].notes == 'Shared update'
+    assert admin_appointments[0].notes == 'Shared update'

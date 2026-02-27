@@ -20,10 +20,12 @@
     <section class="section">
       <div class="container panel">
         <h1>My Upcoming Appointments</h1>
-        <p class="section-copy">Review upcoming bookings and notes shared with the health center.</p>
+        <p class="section-copy">Review upcoming bookings and update notes shared with the health center.</p>
 
         <p class="error" *ngIf="error">{{ error }}</p>
         <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
+        <p class="success" *ngIf="saveSuccess">{{ saveSuccess }}</p>
+        <p class="error" *ngIf="saveError">{{ saveError }}</p>
         <p class="section-copy" *ngIf="isLoading">Loading your appointments...</p>
 
         <div class="empty-state" *ngIf="!isLoading && !error && appointments.length === 0">
@@ -38,13 +40,36 @@
               · {{ formatAppointmentType(appointment.appointment_type) }} ({{ appointment.duration_minutes }} mins)
             </p>
             <p><strong>Status:</strong> {{ appointment.status }}</p>
-            <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+
+            <ng-container *ngIf="editingAppointmentId !== appointment.id; else editNotesTemplate">
+              <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+              <button class="button small" type="button" (click)="startEditing(appointment)">Edit notes</button>
+            </ng-container>
+
+            <ng-template #editNotesTemplate>
+              <label class="notes-label" [for]="'notes-' + appointment.id"><strong>Notes:</strong></label>
+              <textarea
+                class="notes-input"
+                [id]="'notes-' + appointment.id"
+                rows="4"
+                maxlength="600"
+                [value]="draftNotesById[appointment.id] || ''"
+                (input)="updateDraftNotes(appointment.id, $any($event.target).value)"></textarea>
+              <div class="actions-row">
+                <button class="button small" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="saveNotes(appointment)">
+                  {{ savingAppointmentId === appointment.id ? 'Saving...' : 'Save notes' }}
+                </button>
+                <button class="button small ghost" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="cancelEditing()">
+                  Cancel
+                </button>
+              </div>
+            </ng-template>
+
             <button
               class="button small cancel-button"
               type="button"
               [disabled]="cancelingAppointmentId === appointment.id"
-              (click)="cancelAppointment(appointment.id)"
-            >
+              (click)="cancelAppointment(appointment.id)">
               {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
             </button>
           </article>
