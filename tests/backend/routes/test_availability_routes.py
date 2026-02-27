@@ -23,7 +23,9 @@ from backend.routes.availability_routes import (  # noqa: E402
     iterate_slot_starts,
     list_appointments,
     list_my_appointments,
+    reschedule_appointment,
     update_appointment_notes,
+    validate_appointment_window,
     validate_slot_datetime,
 )
 
@@ -289,6 +291,14 @@ class _FakeDb:
         return None
 
 
+
+
+def _next_weekday_from_now(hour: int, minute: int) -> datetime:
+    candidate = datetime.now().replace(second=0, microsecond=0) + timedelta(days=1)
+    while candidate.weekday() >= 5:
+        candidate += timedelta(days=1)
+    return candidate.replace(hour=hour, minute=minute)
+
 def _build_appointment(student_email: str, *, is_upcoming: bool = True) -> Appointment:
     now = datetime.now()
     start_time = now + timedelta(hours=1)
@@ -363,3 +373,113 @@ def test_updated_notes_are_visible_to_user_and_admin_views(monkeypatch) -> None:
 
     assert student_appointments[0].notes == 'Shared update'
     assert admin_appointments[0].notes == 'Shared update'
+
+
+def test_validate_appointment_window_rejects_past_time() -> None:
+    with pytest.raises(HTTPException) as exception_info:
+        validate_appointment_window(
+            datetime(2026, 1, 5, 9, 0),
+            duration_minutes=30,
+            now=datetime(2026, 1, 5, 9, 0),
+        )
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Appointments must be scheduled in the future.'
+
+
+def test_reschedule_appointment_updates_time_and_preserves_details(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    base_start = _next_weekday_from_now(hour=10, minute=0)
+    original = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        notes='Bring prior results',
+        start_time=base_start,
+        end_time=base_start + timedelta(minutes=30),
+        status='booked',
+    )
+    appointment_db.add(original)
+    appointment_db.commit()
+    appointment_db.refresh(original)
+
+    new_start = base_start + timedelta(hours=1)
+    payload = availability_routes.RescheduleAppointmentRequest(
+        student_email='student@example.edu',
+        start_time=new_start,
+    )
+
+    response = reschedule_appointment(appointment_id=original.id, data=payload, db=appointment_db)
+
+    assert response.id == original.id
+    assert response.start_time == new_start
+    assert response.end_time == new_start + timedelta(minutes=30)
+    assert response.appointment_type == 'testing'
+    assert response.notes == 'Bring prior results'
+
+
+def test_reschedule_appointment_reopens_old_slot_and_blocks_new_slot(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    base_start = _next_weekday_from_now(hour=9, minute=0)
+    original = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        start_time=base_start,
+        end_time=base_start + timedelta(minutes=30),
+        status='booked',
+    )
+    appointment_db.add(original)
+    appointment_db.commit()
+    appointment_db.refresh(original)
+
+    before = get_booked_slot_starts(
+        now=base_start - timedelta(hours=1),
+        range_end=base_start + timedelta(days=1),
+        db=appointment_db,
+    )
+    assert base_start in before
+
+    new_start = base_start + timedelta(hours=1)
+    payload = availability_routes.RescheduleAppointmentRequest(
+        student_email='student@example.edu',
+        start_time=new_start,
+    )
+    reschedule_appointment(appointment_id=original.id, data=payload, db=appointment_db)
+
+    after = get_booked_slot_starts(
+        now=base_start - timedelta(hours=1),
+        range_end=base_start + timedelta(days=1),
+        db=appointment_db,
+    )
+
+    assert base_start not in after
+    assert base_start + timedelta(minutes=15) not in after
+    assert new_start in after
+    assert new_start + timedelta(minutes=15) in after
+
+
+def test_reschedule_appointment_rejects_past_appointment(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    original = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        start_time=datetime.now() - timedelta(hours=2),
+        end_time=datetime.now() - timedelta(hours=1, minutes=30),
+        status='booked',
+    )
+    appointment_db.add(original)
+    appointment_db.commit()
+    appointment_db.refresh(original)
+
+    payload = availability_routes.RescheduleAppointmentRequest(
+        student_email='student@example.edu',
+        start_time=datetime.now() + timedelta(hours=2),
+    )
+
+    with pytest.raises(HTTPException) as exception_info:
+        reschedule_appointment(appointment_id=original.id, data=payload, db=appointment_db)
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Only upcoming appointments can be rescheduled.'
