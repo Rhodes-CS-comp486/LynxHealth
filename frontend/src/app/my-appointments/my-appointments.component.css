@@ -125,6 +125,14 @@ h1 {
   background: #fee2e2;
 }
 
+.success {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #065f46;
+  background: #d1fae5;
+}
+
 .empty-state {
   margin-top: 18px;
   border-radius: 14px;
@@ -155,14 +163,6 @@ h1 {
   margin: 6px 0;
 }
 
-.success {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: #065f46;
-  background: #d1fae5;
-}
-
 .notes-label {
   display: block;
   margin-top: 8px;
@@ -189,4 +189,66 @@ h1 {
   background: transparent;
   color: var(--ink);
   box-shadow: none;
+}
+
+.appointment-actions-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reschedule-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.reschedule-panel h4,
+.reschedule-panel h5 {
+  margin: 0 0 8px;
+}
+
+.reschedule-day-group + .reschedule-day-group {
+  margin-top: 10px;
+}
+
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button.time-slot {
+  min-width: 88px;
+}
+
+.button.time-slot.selected {
+  background: var(--red-500);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(226, 72, 59, 0.25);
+}
+
+.cancel-button {
+  background: #b91c1c;
+}
+
+.cancel-button[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .button.time-slot {
+    width: 100%;
+    min-width: 0;
+  }
 }

@@ -23,6 +23,7 @@
         <p class="section-copy">Review upcoming bookings and update notes shared with the health center.</p>
 
         <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
         <p class="success" *ngIf="saveSuccess">{{ saveSuccess }}</p>
         <p class="error" *ngIf="saveError">{{ saveError }}</p>
         <p class="section-copy" *ngIf="isLoading">Loading your appointments...</p>
@@ -63,6 +64,66 @@
                 </button>
               </div>
             </ng-template>
+
+            <div class="appointment-actions-row">
+              <button
+                class="button small"
+                type="button"
+                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions"
+                (click)="openReschedulePanel(appointment)">
+                {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
+              </button>
+              <button
+                class="button small cancel-button"
+                type="button"
+                [disabled]="cancelingAppointmentId === appointment.id"
+                (click)="cancelAppointment(appointment.id)">
+                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
+              </button>
+            </div>
+
+            <section class="reschedule-panel" *ngIf="reschedulePanelAppointmentId === appointment.id">
+              <h4>Pick a new time</h4>
+              <p class="section-copy">
+                Current time: {{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}
+              </p>
+
+              <p class="section-copy" *ngIf="isLoadingRescheduleOptions">Loading available times...</p>
+              <p class="section-copy" *ngIf="!isLoadingRescheduleOptions && rescheduleOptions.length === 0">
+                No available times were found in the next 14 days.
+              </p>
+
+              <div class="reschedule-day-group" *ngFor="let group of rescheduleOptions">
+                <h5>{{ group.slots[0].start_time | date: 'EEEE, MMM d' }}</h5>
+                <div class="slot-grid">
+                  <button
+                    class="button small ghost time-slot"
+                    type="button"
+                    *ngFor="let slot of group.slots"
+                    [class.selected]="selectedRescheduleStartTime === slot.start_time"
+                    (click)="selectRescheduleTime(slot.start_time)">
+                    {{ slot.start_time | date: 'h:mm a' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="actions-row">
+                <button
+                  class="button small"
+                  type="button"
+                  [disabled]="!selectedRescheduleStartTime || reschedulingAppointmentId === appointment.id"
+                  (click)="confirmReschedule(appointment)">
+                  {{ reschedulingAppointmentId === appointment.id ? 'Rescheduling...' : 'Confirm new time' }}
+                </button>
+                <button
+                  class="button small ghost"
+                  type="button"
+                  [disabled]="reschedulingAppointmentId === appointment.id"
+                  (click)="closeReschedulePanel()">
+                  Keep current time
+                </button>
+              </div>
+            </section>
           </article>
         </div>
       </div>
