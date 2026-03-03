@@ -18,7 +18,7 @@ export class LoginComponent {
   constructor(private readonly router: Router) {}
 
   loginWithSaml(): void {
-    window.location.href = 'http://localhost:8000/auth/saml/login';
+    window.location.href = 'https://www.lynxhc.com/auth/saml/login';
   }
 
   onSubmit(): void {
