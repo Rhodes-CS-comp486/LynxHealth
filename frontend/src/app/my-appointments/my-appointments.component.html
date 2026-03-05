@@ -7,10 +7,14 @@
       </div>
       <nav class="nav-links">
         <a routerLink="/home">Home</a>
-        <a routerLink="/availability-calendar">Book Appointment</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/home" fragment="hours">Hours</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
+        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
         <a class="button small" routerLink="/login">Switch Role</a>
       </div>
     </div>
@@ -43,7 +47,6 @@
 
             <ng-container *ngIf="editingAppointmentId !== appointment.id; else editNotesTemplate">
               <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
-              <button class="button small" type="button" (click)="startEditing(appointment)">Edit notes</button>
             </ng-container>
 
             <ng-template #editNotesTemplate>
@@ -66,6 +69,11 @@
             </ng-template>
 
             <div class="appointment-actions-row">
+               <button
+                *ngIf="editingAppointmentId !== appointment.id"
+                class="button small"
+                type="button"
+                (click)="startEditing(appointment)">Edit notes</button>
               <button
                 class="button small"
                 type="button"
