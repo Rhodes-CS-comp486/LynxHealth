@@ -29,21 +29,34 @@
           Use the actions below to quickly schedule a new visit or view your current appointments.
         </p>
         <div class="hero-actions" *ngIf="role === 'user'">
-          <a class="button button-primary schedule-button" routerLink="/availability-calendar">
+          <a class="button button-primary action-button" routerLink="/availability-calendar">
             Schedule an Appointment
           </a>
-          <a class="button button-secondary" routerLink="/my-appointments">View My Appointments</a>
-          <button class="button button-secondary" type="button">View Health Center Information</button>
+          <a class="button button-primary action-button" routerLink="/my-appointments">View My Appointments</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
         <div class="hero-actions" *ngIf="role === 'admin'">
-          <a class="button button-primary" routerLink="/create-appointments">Manage Appointment Slots</a>
-          <button class="button button-secondary" type="button">View Health Center Information</button>
+          <a class="button button-primary action-button" routerLink="/create-appointments">Manage Appointment Slots</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
       </div>
 
       <div class="hero-image-wrap">
         <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
       </div>
+    </section>
+
+    <section class="contact-card container" aria-label="Health Center Contact Information">
+      <h2>Health Center Contact Information</h2>
+      <p>
+        Email us at <a href="mailto:health@rhodes.edu">health@rhodes.edu</a> or call us at
+        <a href="tel:+19018433895">(901) 843-3895</a>.
+      </p>
+      <p>
+        For after-hours emergencies, contact Campus Safety at
+        <a href="tel:+19018433880">(901) 843-3880</a> for assistance.
+      </p>
+      <p class="emergency">If this is a medical emergency, please call 911 immediately.</p>
     </section>
   </main>
 </div>
