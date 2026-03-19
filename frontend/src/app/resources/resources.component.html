@@ -1,0 +1,86 @@
+<div class="page">
+  <header class="site-header">
+    <div class="container nav">
+      <div class="brand">
+        <span class="brand-mark">LH</span>
+        <span class="brand-text">Lynx Health</span>
+      </div>
+      <nav class="nav-links">
+        <a routerLink="/home">Home</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
+        <a routerLink="/resources">Resources</a>
+        <a routerLink="/home" fragment="hours">Hours</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
+      </nav>
+      <div class="nav-actions">
+        <span class="role-pill">{{ role === 'admin' ? 'Admin' : 'User' }}</span>
+        <a class="button small" routerLink="/login">Switch Role</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero section">
+      <div class="container hero-grid">
+        <div>
+          <p class="eyebrow">Resources</p>
+          <h1>Health center information from the official Rhodes Health website.</h1>
+          <p class="section-copy intro-copy">
+            Use these guided pages to quickly find health center details, policy updates, emergency care information,
+            and off-campus support. Each section links back to the official Rhodes source so you can verify the latest details.
+          </p>
+          <div class="hero-actions">
+            <a class="button" [href]="selectedSection.sourceUrl" target="_blank" rel="noreferrer">Open official page</a>
+            <a class="button ghost" href="https://sites.rhodes.edu/health" target="_blank" rel="noreferrer">Visit health center site</a>
+          </div>
+        </div>
+
+        <aside class="summary-card">
+          <p class="summary-label">Now viewing</p>
+          <h2>{{ selectedSection.label }}</h2>
+          <p>{{ selectedSection.description }}</p>
+          <ul>
+            <li *ngFor="let highlight of selectedSection.highlights">{{ highlight }}</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container resource-layout">
+        <nav class="resource-nav" aria-label="Health center resource pages">
+          <button
+            *ngFor="let section of sections"
+            type="button"
+            class="resource-tab"
+            [class.active]="section.id === selectedSectionId"
+            (click)="selectSection(section.id)">
+            <span class="tab-label">{{ section.label }}</span>
+            <span class="tab-description">{{ section.title }}</span>
+          </button>
+        </nav>
+
+        <article class="resource-panel">
+          <p class="panel-kicker">{{ selectedSection.label }}</p>
+          <h2>{{ selectedSection.title }}</h2>
+          <p class="section-copy">{{ selectedSection.description }}</p>
+
+          <div class="highlight-list">
+            <article class="highlight-card" *ngFor="let highlight of selectedSection.highlights; let index = index">
+              <span class="highlight-index">0{{ index + 1 }}</span>
+              <p>{{ highlight }}</p>
+            </article>
+          </div>
+
+          <div class="link-group">
+            <a *ngFor="let link of selectedSection.quickLinks" class="link-card" [href]="link.url" target="_blank" rel="noreferrer">
+              <strong>{{ link.label }}</strong>
+              <span>{{ link.url }}</span>
+            </a>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+</div>

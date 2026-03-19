@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { CreateAppointmentsComponent } from './create-appointments/create-appointments.component';
 import { AvailabilityCalendarComponent } from './availability-calendar/availability-calendar.component';
 import { MyAppointmentsComponent } from './my-appointments/my-appointments.component';
+import { ResourcesComponent } from './resources/resources.component';
 
 export const routes: Routes = [
   {
@@ -30,6 +31,10 @@ export const routes: Routes = [
   {
     path: 'my-appointments',
     component: MyAppointmentsComponent
+  },
+  {
+    path: 'resources',
+    component: ResourcesComponent
   },
   {
     path: 'creatappointments',
