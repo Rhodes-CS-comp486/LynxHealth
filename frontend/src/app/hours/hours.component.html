@@ -1,0 +1,71 @@
+<div class="page">
+  <header class="site-header">
+    <div class="container nav">
+      <div class="brand">
+        <span class="brand-mark">LH</span>
+        <span class="brand-text">Lynx Health</span>
+      </div>
+      <nav class="nav-links">
+        <a routerLink="/home">Home</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
+        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/hours">Hours</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
+      </nav>
+      <div class="nav-actions">
+        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
+        <a class="button small" routerLink="/login">Log Out</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container panel">
+        <div class="hours-grid">
+          <div>
+            <h1>Rhodes Health Center Hours</h1>
+            <p class="section-copy">Plan your visit using the weekly schedule below.</p>
+            <div class="notice">
+              <span>Notice</span>
+              <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
+              <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
+            </div>
+          </div>
+          <div class="hours-card">
+            <div class="hours-row">
+              <span>Monday</span>
+              <strong>9:00 AM - 4:00 PM</strong>
+            </div>
+            <div class="hours-row">
+              <span>Tuesday</span>
+              <strong>9:00 AM - 4:00 PM</strong>
+            </div>
+            <div class="hours-row">
+              <span>Wednesday</span>
+              <strong>9:00 AM - 4:00 PM</strong>
+            </div>
+            <div class="hours-row">
+              <span>Thursday</span>
+              <strong>9:00 AM - 4:00 PM</strong>
+            </div>
+            <div class="hours-row">
+              <span>Friday</span>
+              <strong>9:00 AM - 4:00 PM</strong>
+            </div>
+            <div class="hours-row muted">
+              <span>Saturday</span>
+              <strong>Closed</strong>
+            </div>
+            <div class="hours-row muted">
+              <span>Sunday</span>
+              <strong>Closed</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+</div>

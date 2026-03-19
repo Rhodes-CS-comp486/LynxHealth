@@ -10,12 +10,12 @@
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/home" fragment="resources">Resources</a>
-        <a routerLink="/home" fragment="hours">Hours</a>
+        <a routerLink="/hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <a class="button small" routerLink="/login">Log Out</a>
       </div>
     </div>
   </header>

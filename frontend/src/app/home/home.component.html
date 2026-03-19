@@ -10,12 +10,12 @@
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/home" fragment="resources">Resources</a>
-        <a routerLink="/home" fragment="hours">Hours</a>
+        <a routerLink="/hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role == "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <a class="button small" routerLink="/login">Log Out</a>
       </div>
     </div>
   </header>
@@ -62,48 +62,6 @@
     </section>
 
 
-    <section id="hours" class="section">
-      <div class="container hours-grid">
-        <div>
-          <h2>Rhodes Health Center Hours</h2>
-          <div class="notice">
-            <span>Notice</span>
-            <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
-            <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
-          </div>
-        </div>
-        <div class="hours-card">
-          <div class="hours-row">
-            <span>Monday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Tuesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Wednesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Thursday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Friday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Saturday</span>
-            <strong>Closed</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Sunday</span>
-            <strong>Closed</strong>
-          </div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer class="site-footer">

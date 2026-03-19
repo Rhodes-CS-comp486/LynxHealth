@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
+import { HoursComponent } from './hours/hours.component';
 import { LoginComponent } from './login/login.component';
 import { CreateAppointmentsComponent } from './create-appointments/create-appointments.component';
 import { AvailabilityCalendarComponent } from './availability-calendar/availability-calendar.component';
@@ -18,6 +19,10 @@ export const routes: Routes = [
   {
     path: 'home',
     component: HomeComponent
+  },
+  {
+    path: 'hours',
+    component: HoursComponent
   },
   {
     path: 'create-appointments',
