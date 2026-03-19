@@ -8,7 +8,7 @@
       <nav class="nav-links">
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/resources">Resources</a>
         <a routerLink="/home" fragment="hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
@@ -31,7 +31,7 @@
           </p>
           <div class="hero-actions">
             <a class="button" routerLink="/availability-calendar">Check availability</a>
-            <a class="button ghost" href="#resources">Explore resources</a>
+            <a class="button ghost" routerLink="/resources">Explore resources</a>
           </div>
         </div>
         <div class="hero-image">
@@ -116,7 +116,7 @@
       </div>
       <div class="footer-links">
         <a routerLink="/availability-calendar">Appointments</a>
-        <a href="#resources">Resources</a>
+        <a routerLink="/resources">Resources</a>
         <a href="#">Contact</a>
       </div>
     </div>

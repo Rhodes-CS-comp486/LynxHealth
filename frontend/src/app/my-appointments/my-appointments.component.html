@@ -8,7 +8,7 @@
       <nav class="nav-links">
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/resources">Resources</a>
         <a routerLink="/home" fragment="hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
