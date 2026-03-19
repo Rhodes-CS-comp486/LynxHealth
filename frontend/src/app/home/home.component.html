@@ -1,12 +1,11 @@
 <div class="page">
   <header class="site-header">
     <div class="container nav">
-      <div class="brand">
+      <div class="brand" routerLink="/home">
         <span class="brand-mark">LH</span>
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a routerLink="/home">Home</a>
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/resources">Resources</a>
