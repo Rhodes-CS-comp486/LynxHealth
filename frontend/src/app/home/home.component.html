@@ -9,117 +9,48 @@
         <a routerLink="/home">Home</a>
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/home" fragment="resources">Resources</a>
-        <a routerLink="/home" fragment="hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role == "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <a class="button button-secondary" routerLink="/login">Switch Role</a>
       </div>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <div class="eyebrow">Welcome to Lynx Health</div>
-          <h1>Book health center appointments and view wellness resources today!</h1>
-          <p>
-            Lynx Health Center keeps scheduling simple. View real-time
-            availability, manage upcoming visits, and discover wellness resources in one place.
-          </p>
-          <div class="hero-actions">
-            <a class="button" routerLink="/availability-calendar">Check availability</a>
-            <a class="button ghost" href="#resources">Explore resources</a>
-          </div>
+  <main class="home-main">
+    <section class="hero container">
+      <div class="hero-copy">
+        <p class="eyebrow">Welcome to Lynx Health</p>
+        <h1>Schedule and manage appointments in one place.</h1>
+        <p class="hero-text">
+          Use the actions below to quickly schedule a new visit or view your current appointments.
+        </p>
+        <div class="hero-actions" *ngIf="role === 'user'">
+          <a class="button button-primary schedule-button" routerLink="/availability-calendar">
+            Schedule an Appointment
+          </a>
+          <a class="button button-secondary" routerLink="/my-appointments">View My Appointments</a>
         </div>
-        <div class="hero-image">
-          <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
+        <div class="hero-actions" *ngIf="role === 'admin'">
+          <a class="button button-primary" routerLink="/create-appointments">Manage Appointment Slots</a>
         </div>
+      </div>
+
+      <div class="hero-image-wrap">
+        <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
       </div>
     </section>
 
-    <section id="availability" class="section">
-      <div class="container">
-        <h2>Available Appointment Slots</h2>
-        <p class="section-copy">Students can schedule into any unbooked slot listed below.</p>
-
-        <div *ngIf="slots.length === 0" class="notice-card">
-          No slots are currently available.
-        </div>
-
-        <div *ngIf="slots.length > 0" class="slot-list">
-          <article class="slot-card" *ngFor="let slot of slots">
-            <p>{{ slot.start_time | date: 'EEE, MMM d, y, h:mm a' }}</p>
-            <p>to {{ slot.end_time | date: 'h:mm a' }}</p>
-            <p>{{ slot.duration_minutes }} mins · {{ slot.appointment_type }}</p>
-            <span class="slot-state">{{ slot.is_booked ? 'Booked' : 'Available' }}</span>
-          </article>
-        </div>
-      </div>
-    </section>
-
-
-    <section id="hours" class="section">
-      <div class="container hours-grid">
-        <div>
-          <h2>Rhodes Health Center Hours</h2>
-          <div class="notice">
-            <span>Notice</span>
-            <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
-            <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
-          </div>
-        </div>
-        <div class="hours-card">
-          <div class="hours-row">
-            <span>Monday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Tuesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Wednesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Thursday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Friday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Saturday</span>
-            <strong>Closed</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Sunday</span>
-            <strong>Closed</strong>
-          </div>
-        </div>
-      </div>
+    <section class="quick-links container" *ngIf="role === 'user'">
+      <a class="quick-card" routerLink="/availability-calendar">
+        <h2>New Appointment</h2>
+        <p>Find open times and reserve a slot.</p>
+      </a>
+      <a class="quick-card" routerLink="/my-appointments">
+        <h2>My Appointments</h2>
+        <p>Review upcoming appointments and details.</p>
+      </a>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="container footer-grid">
-      <div>
-        <div class="brand">
-          <span class="brand-mark">LH</span>
-          <span class="brand-text">Lynx Health</span>
-        </div>
-        <p>Supporting student health with modern scheduling.</p>
-      </div>
-      <div class="footer-links">
-        <a routerLink="/availability-calendar">Appointments</a>
-        <a href="#resources">Resources</a>
-        <a href="#">Contact</a>
-      </div>
-    </div>
-  </footer>
 </div>
