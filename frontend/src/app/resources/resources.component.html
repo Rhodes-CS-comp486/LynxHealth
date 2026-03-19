@@ -21,65 +21,69 @@
   </header>
 
   <main>
-    <section class="hero section">
-      <div class="container hero-grid">
-        <div>
-          <p class="eyebrow">Resources</p>
-          <h1>Health center information from the official Rhodes Health website.</h1>
-          <p class="section-copy intro-copy">
-            Use these guided pages to quickly find health center details, policy updates, emergency care information,
-            and off-campus support. Each section links back to the official Rhodes source so you can verify the latest details.
-          </p>
-          <div class="hero-actions">
-            <a class="button" [href]="selectedSection.sourceUrl" target="_blank" rel="noreferrer">Open official page</a>
-            <a class="button ghost" href="https://sites.rhodes.edu/health" target="_blank" rel="noreferrer">Visit health center site</a>
-          </div>
-        </div>
-
-        <aside class="summary-card">
-          <p class="summary-label">Now viewing</p>
-          <h2>{{ selectedSection.label }}</h2>
-          <p>{{ selectedSection.description }}</p>
-          <ul>
-            <li *ngFor="let highlight of selectedSection.highlights">{{ highlight }}</li>
-          </ul>
-        </aside>
-      </div>
-    </section>
-
     <section class="section">
-      <div class="container resource-layout">
-        <nav class="resource-nav" aria-label="Health center resource pages">
-          <button
-            *ngFor="let section of sections"
-            type="button"
-            class="resource-tab"
-            [class.active]="section.id === selectedSectionId"
-            (click)="selectSection(section.id)">
-            <span class="tab-label">{{ section.label }}</span>
-            <span class="tab-description">{{ section.title }}</span>
-          </button>
-        </nav>
+      <div class="container content-card">
+        <p class="eyebrow">Rhodes Health Center</p>
+        <h1>Welcome to the Student Health Center!</h1>
+        <p class="lead">
+          The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
+          resource for our diverse student body. We offer personalized medical services, preventive care, and health
+          education that support academic success and personal growth.
+        </p>
 
-        <article class="resource-panel">
-          <p class="panel-kicker">{{ selectedSection.label }}</p>
-          <h2>{{ selectedSection.title }}</h2>
-          <p class="section-copy">{{ selectedSection.description }}</p>
+        <section class="info-section">
+          <h2>Mission</h2>
+          <p>
+            Our mission is to empower students to make informed health decisions, take responsibility for their
+            well-being, and build habits that promote lifelong wellness. In every interaction, we foster an environment
+            of kindness, respect, and cultural humility—reflecting Rhodes College's values of integrity, compassion,
+            and community engagement.
+          </p>
+        </section>
 
-          <div class="highlight-list">
-            <article class="highlight-card" *ngFor="let highlight of selectedSection.highlights; let index = index">
-              <span class="highlight-index">0{{ index + 1 }}</span>
-              <p>{{ highlight }}</p>
-            </article>
-          </div>
+        <section class="info-section">
+          <h2>Visiting the Student Health Center</h2>
+          <p>
+            The Rhodes College Student Health Center is located in the <strong>Moore Moore Building</strong>, with the
+            <strong>main entrance on the east side of the building</strong>, along Thomas Lane.
+          </p>
+          <p>
+            Handicap access is available on the south side of the Student Health Center, closest to the Refectory. For
+            students requiring assistance at the handicap entrance to the Moore Moore Building, please call
+            <strong>(901) 843-3895 for the Student Health Center</strong> or
+            <strong>(901) 843-3128 for the Student Counseling Center</strong>.
+          </p>
+        </section>
 
-          <div class="link-group">
-            <a *ngFor="let link of selectedSection.quickLinks" class="link-card" [href]="link.url" target="_blank" rel="noreferrer">
-              <strong>{{ link.label }}</strong>
-              <span>{{ link.url }}</span>
+        <section class="info-section">
+          <h2>Student Health Center Hours</h2>
+          <p><strong>Monday – Friday</strong> &nbsp;&nbsp; <strong>8:30 AM – 5:00 PM</strong></p>
+          <p><strong>Appointments may be scheduled from 9:00 AM to 3:45 PM.</strong></p>
+          <p><strong>The clinic is closed from 12:00 PM to 1:00 PM.</strong></p>
+          <p>
+            For after-hours emergencies, contact <strong>Campus Safety (901-843-3880)</strong> for assistance. Acute
+            illnesses and emergency accidents can be treated at off-campus facilities outside of regular business
+            hours.
+          </p>
+        </section>
+
+        <section class="info-section links-section">
+          <h2>Official Rhodes Health Links</h2>
+          <div class="link-list">
+            <a class="resource-link" href="https://sites.rhodes.edu/health" target="_blank" rel="noreferrer">
+              Rhodes Health Center Home
+            </a>
+            <a class="resource-link" href="https://sites.rhodes.edu/health/rhodes-policies" target="_blank" rel="noreferrer">
+              Rhodes Policies
+            </a>
+            <a class="resource-link" href="https://sites.rhodes.edu/health/emergency-care" target="_blank" rel="noreferrer">
+              Emergency Care
+            </a>
+            <a class="resource-link" href="https://sites.rhodes.edu/health/health-awareness-resources" target="_blank" rel="noreferrer">
+              Health Awareness Resources
             </a>
           </div>
-        </article>
+        </section>
       </div>
     </section>
   </main>
