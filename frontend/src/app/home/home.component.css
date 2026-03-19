@@ -54,7 +54,12 @@
 }
 
 .home-main {
-  padding: 1rem 0 1.25rem;
+  min-height: calc(100vh - 70px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.85rem 0 1rem;
 }
 
 .hero,
@@ -70,30 +75,29 @@
   grid-template-columns: 1.1fr 0.9fr;
   gap: 1.25rem;
   align-items: center;
-  padding: 1.2rem 1.35rem;
+  padding: 1.35rem 1.45rem;
+  min-height: 370px;
 }
 
-.eyebrow {
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--red-600);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.hero-copy h1 {
-  margin: 0.35rem 0 0.55rem;
+.welcome-title {
+  margin: 0 0 0.35rem;
   font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
-  font-size: clamp(1.55rem, 1.2rem + 1vw, 2.1rem);
-  line-height: 1.2;
+  font-size: clamp(2.2rem, 1.8rem + 1.8vw, 3.1rem);
+  line-height: 1.1;
+}
+
+.schedule-subtitle {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .hero-text {
   margin: 0;
   color: var(--muted);
   max-width: 50ch;
-  font-size: 0.98rem;
+  font-size: 0.96rem;
 }
 
 .hero-actions {
@@ -113,6 +117,9 @@
   font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
   cursor: pointer;
   text-align: center;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  min-height: 44px;
 }
 
 .button-primary {
@@ -129,7 +136,7 @@
 
 .action-button {
   flex: 1;
-  min-width: 190px;
+  min-width: 0;
 }
 
 .hero-image-wrap {
@@ -143,8 +150,9 @@
 }
 
 .contact-card {
-  margin-top: 0.75rem;
-  padding: 1rem 1.35rem;
+  margin-top: 0.1rem;
+  padding: 1.05rem 1.35rem;
+  min-height: 190px;
 }
 
 .contact-card h2 {
@@ -186,6 +194,7 @@
   .hero {
     grid-template-columns: 1fr;
     padding: 1.05rem 1.1rem;
+    min-height: auto;
   }
 
   .hero-image-wrap {
@@ -204,6 +213,10 @@
 
   .nav {
     flex-wrap: wrap;
+  }
+
+  .home-main {
+    min-height: auto;
   }
 
   .hero-actions {
