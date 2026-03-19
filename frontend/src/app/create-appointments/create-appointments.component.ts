@@ -1,6 +1,8 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 interface BlockedTime {
   id: number;
@@ -16,6 +18,11 @@ interface BookedAppointment {
   end_time: string;
   status: string;
   notes: string | null;
+}
+
+interface AppointmentTypeOption {
+  appointment_type: string;
+  duration_minutes: number;
 }
 
 interface CalendarDay {
@@ -39,7 +46,7 @@ interface TimeCell {
 @Component({
   selector: 'app-create-appointments',
   standalone: true,
-  imports: [RouterLink, NgIf, NgFor, DatePipe, NgClass],
+  imports: [RouterLink, NgIf, NgFor, DatePipe, NgClass, FormsModule],
   templateUrl: './create-appointments.component.html',
   styleUrl: './create-appointments.component.css'
 })
@@ -61,12 +68,18 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   blockedMap = new Map<string, number>();
   bookedAppointments: BookedAppointment[] = [];
   bookedSlotKeys = new Set<string>();
+  appointmentTypeOptions: AppointmentTypeOption[] = [];
 
   adminMessage = '';
   adminError = '';
   isSaving = false;
+  newAppointmentType = '';
+  newAppointmentDurationMinutes = 15;
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+  ) {}
 
   get bookedAppointmentsForVisibleWeek(): BookedAppointment[] {
     const weekStart = this.getStartOfDay(this.weekStart);
@@ -85,6 +98,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.buildCalendar();
+    this.loadAppointmentTypes();
     this.loadBlockedTimes();
     this.loadBookedAppointments();
     this.startAutoRefresh();
@@ -166,6 +180,51 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  async createAppointmentType(): Promise<void> {
+    if (this.role !== 'admin') {
+      this.adminError = 'Only admins can create appointment types.';
+      return;
+    }
+
+    this.isSaving = true;
+    this.adminError = '';
+    this.adminMessage = '';
+
+    try {
+      const response = await fetch('/api/availability/appointment-types', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          admin_email: this.sessionEmail,
+          appointment_type: this.newAppointmentType,
+          duration_minutes: this.newAppointmentDurationMinutes
+        })
+      });
+
+      if (!response.ok) {
+        const payload = await this.tryReadError(response);
+        throw new Error(payload || `Unable to create appointment type (HTTP ${response.status}).`);
+      }
+
+      const created = await response.json() as AppointmentTypeOption;
+      this.newAppointmentType = '';
+      this.newAppointmentDurationMinutes = 15;
+      this.appointmentTypeOptionsService.clearCache();
+      this.adminMessage = `${this.formatAppointmentType(created.appointment_type)} (${created.duration_minutes} mins) is now available for booking.`;
+      await this.loadAppointmentTypes();
+    } catch (error) {
+      if (error instanceof Error) {
+        this.adminError = error.message;
+      } else {
+        this.adminError = 'Unable to create appointment type.';
+      }
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
   private async blockTime(date: string, time: string): Promise<number> {
     const response = await fetch('/api/availability/slots', {
       method: 'POST',
@@ -233,6 +292,26 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.blockedTimes = [];
       this.blockedMap = new Map<string, number>();
       this.buildCalendar();
+      this.refreshView();
+    }
+  }
+
+  private async loadAppointmentTypes(): Promise<void> {
+    try {
+      const response = await fetch('/api/availability/appointment-types', {
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        this.appointmentTypeOptions = [];
+        this.refreshView();
+        return;
+      }
+
+      this.appointmentTypeOptions = await response.json() as AppointmentTypeOption[];
+      this.refreshView();
+    } catch {
+      this.appointmentTypeOptions = [];
       this.refreshView();
     }
   }
@@ -396,6 +475,13 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const suffix = hour >= 12 ? 'PM' : 'AM';
     const normalizedHour = hour % 12 || 12;
     return `${normalizedHour}:${String(minute).padStart(2, '0')} ${suffix}`;
+  }
+
+  formatAppointmentType(value: string): string {
+    return value
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
   private getSlotKey(date: Date): string {

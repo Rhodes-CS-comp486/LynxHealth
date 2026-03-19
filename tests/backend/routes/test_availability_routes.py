@@ -12,16 +12,20 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///./test.db')
 from backend.routes import availability_routes  # noqa: E402
 from backend.database import Base  # noqa: E402
 from backend.models.appointment import Appointment  # noqa: E402
+from backend.models.appointment_type_option import AppointmentTypeOption  # noqa: E402
 from backend.models.availability import Availability  # noqa: E402
 from backend.models.user import User  # noqa: E402
 from backend.routes.availability_routes import (  # noqa: E402
     CreateAppointmentRequest,
+    CreateAppointmentTypeRequest,
     CreateBlockedTimeRequest,
     UpdateAppointmentNotesRequest,
     cancel_my_appointment,
+    create_appointment_type,
     get_booked_slot_starts,
     iterate_slot_starts,
     list_appointments,
+    list_appointment_types,
     list_availability_slots,
     list_calendar_slots,
     list_my_appointments,
@@ -52,6 +56,27 @@ def test_create_appointment_request_normalizes_fields() -> None:
 
     assert request.student_email == 'student@example.edu'
     assert request.appointment_type == 'testing'
+
+
+def test_create_appointment_type_request_normalizes_fields() -> None:
+    request = CreateAppointmentTypeRequest(
+        admin_email=' ADMIN@ADMIN.EDU ',
+        appointment_type=' Physical Exam ',
+        duration_minutes=45,
+    )
+
+    assert request.admin_email == 'admin@admin.edu'
+    assert request.appointment_type == 'physical_exam'
+    assert request.duration_minutes == 45
+
+
+def test_create_appointment_type_request_rejects_non_admin() -> None:
+    with pytest.raises(ValidationError):
+        CreateAppointmentTypeRequest(
+            admin_email='student@example.edu',
+            appointment_type='physical exam',
+            duration_minutes=45,
+        )
 
 
 def test_update_appointment_notes_request_normalizes_fields() -> None:
@@ -119,14 +144,63 @@ def test_list_my_appointments_rejects_admin_email() -> None:
 def appointment_db():
     engine = create_engine('sqlite:///:memory:')
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine, tables=[User.__table__, Availability.__table__, Appointment.__table__])
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[User.__table__, Availability.__table__, Appointment.__table__, AppointmentTypeOption.__table__],
+    )
 
     db = testing_session_local()
     try:
+        _seed_appointment_types(db)
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine, tables=[Appointment.__table__, Availability.__table__, User.__table__])
+        Base.metadata.drop_all(
+            bind=engine,
+            tables=[AppointmentTypeOption.__table__, Appointment.__table__, Availability.__table__, User.__table__],
+        )
+
+
+def _seed_appointment_types(db) -> None:
+    db.add_all([
+        AppointmentTypeOption(appointment_type='immunization', duration_minutes=15),
+        AppointmentTypeOption(appointment_type='testing', duration_minutes=30),
+        AppointmentTypeOption(appointment_type='counseling', duration_minutes=60),
+        AppointmentTypeOption(appointment_type='other', duration_minutes=60),
+        AppointmentTypeOption(appointment_type='prescription', duration_minutes=15),
+    ])
+    db.commit()
+
+
+def test_list_appointment_types_returns_database_values(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    response = list_appointment_types(db=appointment_db)
+
+    assert {option.appointment_type for option in response} >= {
+        'immunization',
+        'testing',
+        'counseling',
+        'other',
+        'prescription',
+    }
+
+
+def test_create_appointment_type_persists_new_option_for_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    payload = CreateAppointmentTypeRequest(
+        admin_email='admin@admin.edu',
+        appointment_type='physical exam',
+        duration_minutes=45,
+    )
+    response = create_appointment_type(data=payload, db=appointment_db)
+
+    assert response.appointment_type == 'physical_exam'
+    assert response.duration_minutes == 45
+
+    options = list_appointment_types(db=appointment_db)
+    assert any(option.appointment_type == 'physical_exam' and option.duration_minutes == 45 for option in options)
 
 
 def test_cancel_my_appointment_rejects_blank_student_email(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -360,13 +434,19 @@ class _FakeDb:
             self.appointments = []
         else:
             self.appointments = [appointments]
+        self.appointment_type_options: list[AppointmentTypeOption] = []
         self.committed = False
 
-    def query(self, _model):
+    def query(self, model):
+        if model is AppointmentTypeOption:
+            return _FakeQuery(self.appointment_type_options)
         return _FakeQuery(self.appointments)
 
     def add(self, _obj):
         return None
+
+    def add_all(self, objects):
+        self.appointment_type_options.extend(objects)
 
     def commit(self):
         self.committed = True
