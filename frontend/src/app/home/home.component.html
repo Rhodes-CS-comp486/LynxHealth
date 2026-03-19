@@ -9,6 +9,8 @@
         <a routerLink="/home">Home</a>
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
+        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/home" fragment="hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
@@ -31,26 +33,17 @@
             Schedule an Appointment
           </a>
           <a class="button button-secondary" routerLink="/my-appointments">View My Appointments</a>
+          <button class="button button-secondary" type="button">View Health Center Information</button>
         </div>
         <div class="hero-actions" *ngIf="role === 'admin'">
           <a class="button button-primary" routerLink="/create-appointments">Manage Appointment Slots</a>
+          <button class="button button-secondary" type="button">View Health Center Information</button>
         </div>
       </div>
 
       <div class="hero-image-wrap">
         <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
       </div>
-    </section>
-
-    <section class="quick-links container" *ngIf="role === 'user'">
-      <a class="quick-card" routerLink="/availability-calendar">
-        <h2>New Appointment</h2>
-        <p>Find open times and reserve a slot.</p>
-      </a>
-      <a class="quick-card" routerLink="/my-appointments">
-        <h2>My Appointments</h2>
-        <p>Review upcoming appointments and details.</p>
-      </a>
     </section>
   </main>
 </div>

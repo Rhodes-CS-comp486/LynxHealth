@@ -59,7 +59,7 @@
 
 .hero {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1.05fr 0.95fr;
   gap: 1.5rem;
   align-items: center;
   background: var(--card);
@@ -132,36 +132,10 @@
 }
 
 .hero-image-wrap img {
-  width: min(100%, 280px);
+  width: min(100%, 390px);
   height: auto;
 }
 
-.quick-links {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.quick-card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 1rem 1.1rem;
-  box-shadow: 0 8px 20px rgba(27, 17, 12, 0.05);
-}
-
-.quick-card h2 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-family: "Space Grotesk", "Source Sans 3", sans-serif;
-}
-
-.quick-card p {
-  margin: 0.45rem 0 0;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
 
 .role-pill {
   display: inline-flex;
@@ -185,9 +159,6 @@
     order: -1;
   }
 
-  .quick-links {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 720px) {
