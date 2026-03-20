@@ -23,11 +23,9 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-family: "Space Grotesk", "Source Sans 3", sans-serif;
-  font-weight: 600;
-  text-decoration: none;
-  color: inherit;
+  gap: 0.85rem;
+  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
+  font-weight: 700;
 }
 
 .brand-mark {
