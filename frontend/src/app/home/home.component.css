@@ -58,7 +58,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 0.35rem;
+  gap: 1.5rem;
   padding: 0.8rem 0 0.9rem;
 }
 
@@ -75,14 +75,14 @@
   grid-template-columns: 1.1fr 0.9fr;
   gap: 1.25rem;
   align-items: center;
-  padding: 1.2rem 1.35rem;
+  padding: 1.25rem 1.35rem;
   min-height: 338px;
 }
 
 .welcome-title {
-  margin: 0 0 0.45rem;
+  margin: 0 0 1rem;
   font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
-  font-size: clamp(1.6rem, 1.35rem + 1vw, 2.1rem);
+  font-size: clamp(2rem, 1.35rem + 1vw, 3rem);
   line-height: 1.1;
   color: var(--red-500);
   white-space: nowrap;
@@ -91,7 +91,7 @@
 .schedule-subtitle {
   margin: 0 0 0.25rem;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 1.2rem;
   font-weight: 600;
 }
 
@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 0.62rem 1rem;
+  padding: 1rem 1rem;
   border: 1px solid transparent;
   font-weight: 700;
   font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
