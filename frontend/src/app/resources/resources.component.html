@@ -1,7 +1,7 @@
 <div class="page">
   <header class="site-header">
     <div class="container nav">
-      <div class="brand">
+      <div class="brand" routerLink="/home">
         <span class="brand-mark">LH</span>
         <span class="brand-text">Lynx Health</span>
       </div>
@@ -9,7 +9,7 @@
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/resources">Resources</a>
-        <a routerLink="/home" fragment="hours">Hours</a>
+        <a routerLink="/hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
