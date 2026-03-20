@@ -1,31 +1,19 @@
-import { DatePipe, NgFor, NgIf } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 type SessionRole = 'admin' | 'user';
 
-interface AvailabilitySlot {
-  id: number;
-  date: string;
-  time: string;
-  duration_minutes: number;
-  appointment_type: string;
-  start_time: string;
-  end_time: string;
-  is_booked: boolean;
-}
-
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NgIf, NgFor, DatePipe],
+  imports: [RouterLink, NgIf],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
 export class HomeComponent implements OnInit {
   role: SessionRole = 'user';
-  slots: AvailabilitySlot[] = [];
 
   constructor(
     private readonly router: Router,
@@ -38,7 +26,6 @@ export class HomeComponent implements OnInit {
 
     if (this.shouldRedirectToMyAppointments()) {
       this.router.navigate(['/my-appointments'], { replaceUrl: true });
-      return;
     }
 
     if (this.role === 'user') {
@@ -66,28 +53,10 @@ export class HomeComponent implements OnInit {
       try {
         const decoded = decodeURIComponent(session);
         localStorage.setItem('lynxSession', decoded);
-        // Clean the URL so session param doesn't stay in the address bar
         window.history.replaceState({}, '', '/home');
       } catch {
         // ignore
       }
-    }
-  }
-
-  private async loadSlots(): Promise<void> {
-    try {
-      const endpoint = this.role === 'user'
-        ? '/api/availability/slots?students_only=true'
-        : '/api/availability/slots';
-
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        return;
-      }
-
-      this.slots = await response.json() as AvailabilitySlot[];
-    } catch {
-      this.slots = [];
     }
   }
 

@@ -15,7 +15,7 @@
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role == "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <a class="button button-secondary small" routerLink="/login">Switch Role</a>
       </div>
     </div>
   </header>
@@ -35,74 +35,28 @@
             <a class="button ghost" href="#resources">Explore resources</a>
           </div>
         </div>
-        <div class="hero-image">
-          <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
+        <div class="hero-actions" *ngIf="role === 'admin'">
+          <a class="button button-primary action-button" routerLink="/create-appointments">Manage Appointment Slots</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
+      </div>
+
+      <div class="hero-image-wrap">
+        <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
       </div>
     </section>
 
-    <section id="availability" class="section">
-      <div class="container">
-        <h2>Available Appointment Slots</h2>
-        <p class="section-copy">Students can schedule into any unbooked slot listed below.</p>
-
-        <div *ngIf="slots.length === 0" class="notice-card">
-          No slots are currently available.
-        </div>
-
-        <div *ngIf="slots.length > 0" class="slot-list">
-          <article class="slot-card" *ngFor="let slot of slots">
-            <p>{{ slot.start_time | date: 'EEE, MMM d, y, h:mm a' }}</p>
-            <p>to {{ slot.end_time | date: 'h:mm a' }}</p>
-            <p>{{ slot.duration_minutes }} mins · {{ slot.appointment_type }}</p>
-            <span class="slot-state">{{ slot.is_booked ? 'Booked' : 'Available' }}</span>
-          </article>
-        </div>
-      </div>
-    </section>
-
-
-    <section id="hours" class="section">
-      <div class="container hours-grid">
-        <div>
-          <h2>Rhodes Health Center Hours</h2>
-          <div class="notice">
-            <span>Notice</span>
-            <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
-            <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
-          </div>
-        </div>
-        <div class="hours-card">
-          <div class="hours-row">
-            <span>Monday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Tuesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Wednesday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Thursday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row">
-            <span>Friday</span>
-            <strong>8:30 AM - 5:00 PM</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Saturday</span>
-            <strong>Closed</strong>
-          </div>
-          <div class="hours-row muted">
-            <span>Sunday</span>
-            <strong>Closed</strong>
-          </div>
-        </div>
-      </div>
+    <section class="contact-card container" aria-label="Health Center Contact Information">
+      <h2>Health Center Contact Information</h2>
+      <p>
+        Email us at <a href="mailto:health@rhodes.edu">health@rhodes.edu</a> or call us at
+        <a href="tel:+19018433895">(901) 843-3895</a>.
+      </p>
+      <p>
+        For after-hours emergencies, contact Campus Safety at
+        <a href="tel:+19018433880">(901) 843-3880</a> for assistance.
+      </p>
+      <p class="emergency">If this is a medical emergency, please call 911 immediately.</p>
     </section>
   </main>
 
