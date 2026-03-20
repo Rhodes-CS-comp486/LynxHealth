@@ -47,6 +47,8 @@
   gap: 0.75rem;
   font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
   font-weight: 600;
+  text-decoration: none;
+  color: inherit;
 }
 
 .brand-mark {

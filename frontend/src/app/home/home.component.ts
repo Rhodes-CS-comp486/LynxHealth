@@ -1,6 +1,7 @@
 import { NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 type SessionRole = 'admin' | 'user';
 
@@ -14,7 +15,10 @@ type SessionRole = 'admin' | 'user';
 export class HomeComponent implements OnInit {
   role: SessionRole = 'user';
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+  ) {}
 
   ngOnInit(): void {
     this.handleSamlCallback();
@@ -23,6 +27,20 @@ export class HomeComponent implements OnInit {
     if (this.shouldRedirectToMyAppointments()) {
       this.router.navigate(['/my-appointments'], { replaceUrl: true });
     }
+
+    if (this.role === 'user') {
+      this.appointmentTypeOptionsService.prefetchAppointmentTypes();
+    }
+
+    this.loadSlots();
+  }
+
+  prefetchAppointmentTypes(): void {
+    if (this.role !== 'user') {
+      return;
+    }
+
+    this.appointmentTypeOptionsService.prefetchAppointmentTypes();
   }
 
   private handleSamlCallback(): void {

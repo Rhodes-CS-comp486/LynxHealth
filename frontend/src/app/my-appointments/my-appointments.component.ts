@@ -1,6 +1,7 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 type SessionRole = 'admin' | 'user';
 
@@ -41,7 +42,10 @@ interface RescheduleDayGroup {
   styleUrl: './my-appointments.component.css'
 })
 export class MyAppointmentsComponent implements OnInit {
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+  ) {}
   readonly sessionEmail = this.getSessionEmail();
   readonly role = this.getRole();
 
@@ -62,11 +66,26 @@ export class MyAppointmentsComponent implements OnInit {
   draftNotesById: Record<number, string> = {};
 
   ngOnInit(): void {
+    if (this.role === 'user') {
+      this.appointmentTypeOptionsService.prefetchAppointmentTypes();
+    }
+
     this.loadAppointments();
   }
 
+  prefetchAppointmentTypes(): void {
+    if (this.role !== 'user') {
+      return;
+    }
+
+    this.appointmentTypeOptionsService.prefetchAppointmentTypes();
+  }
+
   formatAppointmentType(value: string): string {
-    return value.charAt(0).toUpperCase() + value.slice(1);
+    return value
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
 
