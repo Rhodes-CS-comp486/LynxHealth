@@ -1,15 +1,14 @@
 <div class="page">
   <header class="site-header">
     <div class="container nav">
-      <div class="brand" routerLink="/home">
+      <div class="brand">
         <span class="brand-mark">LH</span>
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a routerLink="/home">Home</a>
-        <a *ngIf="role === 'user'" routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/resources">Resources</a>
+        <a routerLink="/home" fragment="resources">Resources</a>
         <a routerLink="/home" fragment="hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
@@ -20,20 +19,18 @@
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <div class="eyebrow">Welcome to Lynx Health</div>
-          <h1>Book health center appointments and view wellness resources today!</h1>
-          <p>
-            Lynx Health Center keeps scheduling simple. View real-time
-            availability, manage upcoming visits, and discover wellness resources in one place.
-          </p>
-          <div class="hero-actions">
-            <a class="button" routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">Check availability</a>
-            <a class="button ghost" href="#resources">Explore resources</a>
-          </div>
+  <main class="home-main">
+    <section class="hero container">
+      <div class="hero-copy">
+
+        <h1 class="welcome-title">Welcome to Lynx Health</h1>
+         <p class="schedule-subtitle">Schedule and manage appointments in one place.</p>
+        <div class="hero-actions" *ngIf="role === 'user'">
+          <a class="button button-primary action-button" routerLink="/availability-calendar">
+            Schedule an Appointment
+          </a>
+          <a class="button button-primary action-button" routerLink="/my-appointments">View My Appointments</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
         <div class="hero-actions" *ngIf="role === 'admin'">
           <a class="button button-primary action-button" routerLink="/create-appointments">Manage Appointment Slots</a>
@@ -59,21 +56,4 @@
       <p class="emergency">If this is a medical emergency, please call 911 immediately.</p>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="container footer-grid">
-      <div>
-        <div class="brand">
-          <span class="brand-mark">LH</span>
-          <span class="brand-text">Lynx Health</span>
-        </div>
-        <p>Supporting student health with modern scheduling.</p>
-      </div>
-      <div class="footer-links">
-        <a routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">Appointments</a>
-        <a href="#resources">Resources</a>
-        <a href="#">Contact</a>
-      </div>
-    </div>
-  </footer>
 </div>
