@@ -1,6 +1,7 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 type SessionRole = 'admin' | 'user';
 
@@ -26,7 +27,10 @@ export class HomeComponent implements OnInit {
   role: SessionRole = 'user';
   slots: AvailabilitySlot[] = [];
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+  ) {}
 
   ngOnInit(): void {
     this.handleSamlCallback();
@@ -37,7 +41,19 @@ export class HomeComponent implements OnInit {
       return;
     }
 
+    if (this.role === 'user') {
+      this.appointmentTypeOptionsService.prefetchAppointmentTypes();
+    }
+
     this.loadSlots();
+  }
+
+  prefetchAppointmentTypes(): void {
+    if (this.role !== 'user') {
+      return;
+    }
+
+    this.appointmentTypeOptionsService.prefetchAppointmentTypes();
   }
 
   private handleSamlCallback(): void {

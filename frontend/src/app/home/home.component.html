@@ -6,7 +6,8 @@
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
+        <a routerLink="/home">Home</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/resources">Resources</a>
         <a routerLink="/home" fragment="hours">Hours</a>
@@ -30,8 +31,8 @@
             availability, manage upcoming visits, and discover wellness resources in one place.
           </p>
           <div class="hero-actions">
-            <a class="button" routerLink="/availability-calendar">Check availability</a>
-            <a class="button ghost" routerLink="/resources">Explore resources</a>
+            <a class="button" routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">Check availability</a>
+            <a class="button ghost" href="#resources">Explore resources</a>
           </div>
         </div>
         <div class="hero-image">
@@ -115,8 +116,8 @@
         <p>Supporting student health with modern scheduling.</p>
       </div>
       <div class="footer-links">
-        <a routerLink="/availability-calendar">Appointments</a>
-        <a routerLink="/resources">Resources</a>
+        <a routerLink="/availability-calendar" (mouseenter)="prefetchAppointmentTypes()" (focus)="prefetchAppointmentTypes()" (click)="prefetchAppointmentTypes()">Appointments</a>
+        <a href="#resources">Resources</a>
         <a href="#">Contact</a>
       </div>
     </div>

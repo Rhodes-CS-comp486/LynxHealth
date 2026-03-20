@@ -6,9 +6,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.database import SessionLocal, ensure_availability_schema, ensure_appointment_schema
+from backend.database import (
+    SessionLocal,
+    ensure_availability_schema,
+    ensure_appointment_schema,
+    ensure_appointment_type_option_schema,
+)
 from backend.models.availability import Availability
 from backend.models.appointment import Appointment
+from backend.models.appointment_type_option import AppointmentTypeOption
 
 router = APIRouter(tags=['availability'])
 
@@ -23,13 +29,8 @@ LUNCH_BREAK_START_HOUR = 12
 LUNCH_BREAK_END_HOUR = 13
 DAY_END_TIME = time(16, 0)
 MAX_APPOINTMENT_NOTES_LENGTH = 600
-APPOINTMENT_DURATIONS = {
-    'immunization': 15,
-    'testing': 30,
-    'counseling': 60,
-    'other': 60,
-    'prescription': 15,
-}
+MIN_APPOINTMENT_DURATION_MINUTES = 15
+MAX_APPOINTMENT_DURATION_MINUTES = 240
 
 
 def normalize_appointment_notes(value: str | None) -> str | None:
@@ -103,6 +104,48 @@ class AppointmentTypeOptionResponse(BaseModel):
     duration_minutes: int
 
 
+class CreateAppointmentTypeRequest(BaseModel):
+    admin_email: str
+    appointment_type: str
+    duration_minutes: int
+
+    @field_validator('admin_email')
+    @classmethod
+    def validate_admin_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+
+        if not normalized.endswith('@admin.edu'):
+            raise ValueError('Only admins can create appointment types.')
+
+        return normalized
+
+    @field_validator('appointment_type')
+    @classmethod
+    def validate_appointment_type(cls, value: str) -> str:
+        normalized = ' '.join(value.strip().lower().split())
+        slug = normalized.replace(' ', '_')
+
+        if not slug:
+            raise ValueError('Appointment type is required.')
+        if len(slug) > 50:
+            raise ValueError('Appointment type must be 50 characters or fewer.')
+        if not slug.replace('_', '').isalnum():
+            raise ValueError('Appointment type can only contain letters, numbers, and spaces.')
+        if slug == BLOCKED_APPOINTMENT_TYPE:
+            raise ValueError('Appointment type name is reserved.')
+
+        return slug
+
+    @field_validator('duration_minutes')
+    @classmethod
+    def validate_duration_minutes(cls, value: int) -> int:
+        if value < MIN_APPOINTMENT_DURATION_MINUTES or value > MAX_APPOINTMENT_DURATION_MINUTES:
+            raise ValueError('Duration must be between 15 and 240 minutes.')
+        if value % SLOT_INCREMENT_MINUTES != 0:
+            raise ValueError('Duration must be in 15-minute increments.')
+        return value
+
+
 class CreateAppointmentRequest(BaseModel):
     student_email: str
     appointment_type: str
@@ -123,8 +166,8 @@ class CreateAppointmentRequest(BaseModel):
     @classmethod
     def validate_appointment_type(cls, value: str) -> str:
         normalized = value.strip().lower()
-        if normalized not in APPOINTMENT_DURATIONS:
-            raise ValueError('Invalid appointment type.')
+        if not normalized:
+            raise ValueError('Appointment type is required.')
         return normalized
 
     @field_validator('notes')
@@ -181,12 +224,12 @@ class RescheduleAppointmentRequest(BaseModel):
         return normalized
 
 
-def to_appointment_response(appointment: Appointment) -> AppointmentResponse:
+def to_appointment_response(appointment: Appointment, duration_map: dict[str, int] | None = None) -> AppointmentResponse:
     return AppointmentResponse(
         id=appointment.id,
         student_email=appointment.student_email or '',
         appointment_type=appointment.appointment_type or 'other',
-        duration_minutes=get_appointment_duration_minutes(appointment),
+        duration_minutes=get_appointment_duration_minutes(appointment, duration_map),
         start_time=appointment.start_time,
         end_time=appointment.end_time,
         status=appointment.status or 'booked',
@@ -198,11 +241,24 @@ def ensure_database_ready() -> None:
     try:
         ensure_availability_schema()
         ensure_appointment_schema()
+        ensure_appointment_type_option_schema()
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
         ) from exc
+
+
+def get_appointment_duration_map(db: Session) -> dict[str, int]:
+    options = db.query(AppointmentTypeOption).order_by(
+        AppointmentTypeOption.appointment_type.asc()
+    ).all()
+
+    return {
+        (option.appointment_type or '').strip().lower(): option.duration_minutes
+        for option in options
+        if option.appointment_type and option.duration_minutes
+    }
 
 
 def get_db():
@@ -231,14 +287,14 @@ def iterate_slot_starts(start_time: datetime, end_time: datetime) -> set[datetim
     return slots
 
 
-def is_appointment_type_supported(appointment_type: str) -> bool:
-    return appointment_type in APPOINTMENT_DURATIONS
+def is_appointment_type_supported(appointment_type: str, duration_map: dict[str, int]) -> bool:
+    return appointment_type in duration_map
 
 
-def get_appointment_duration_minutes(appointment: Appointment) -> int:
+def get_appointment_duration_minutes(appointment: Appointment, duration_map: dict[str, int] | None = None) -> int:
     appointment_type = (appointment.appointment_type or '').strip().lower()
-    if appointment_type in APPOINTMENT_DURATIONS:
-        return APPOINTMENT_DURATIONS[appointment_type]
+    if duration_map and appointment_type in duration_map:
+        return duration_map[appointment_type]
 
     if appointment.start_time and appointment.end_time:
         delta = appointment.end_time - appointment.start_time
@@ -527,11 +583,55 @@ def list_availability_slots(
 
 
 @router.get('/appointment-types', response_model=list[AppointmentTypeOptionResponse])
-def list_appointment_types():
-    return [
-        AppointmentTypeOptionResponse(appointment_type=appointment_type, duration_minutes=duration_minutes)
-        for appointment_type, duration_minutes in APPOINTMENT_DURATIONS.items()
-    ]
+def list_appointment_types(db: Session = Depends(get_db)):
+    ensure_database_ready()
+
+    try:
+        duration_map = get_appointment_duration_map(db)
+        return [
+            AppointmentTypeOptionResponse(appointment_type=appointment_type, duration_minutes=duration_minutes)
+            for appointment_type, duration_minutes in duration_map.items()
+        ]
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.post('/appointment-types', response_model=AppointmentTypeOptionResponse, status_code=status.HTTP_201_CREATED)
+def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = Depends(get_db)):
+    ensure_database_ready()
+
+    try:
+        existing = db.query(AppointmentTypeOption).filter(
+            func.lower(func.trim(AppointmentTypeOption.appointment_type)) == data.appointment_type,
+        ).first()
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail='Appointment type already exists.',
+            )
+
+        option = AppointmentTypeOption(
+            appointment_type=data.appointment_type,
+            duration_minutes=data.duration_minutes,
+        )
+        db.add(option)
+        db.commit()
+        db.refresh(option)
+
+        return AppointmentTypeOptionResponse(
+            appointment_type=option.appointment_type,
+            duration_minutes=option.duration_minutes,
+        )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
 
 
 @router.get('/calendar', response_model=list[CalendarSlotResponse])
@@ -543,14 +643,15 @@ def list_calendar_slots(
     ensure_database_ready()
 
     try:
+        duration_map = get_appointment_duration_map(db)
         normalized_appointment_type = appointment_type.strip().lower()
-        if not is_appointment_type_supported(normalized_appointment_type):
+        if not is_appointment_type_supported(normalized_appointment_type, duration_map):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='Invalid appointment type.',
             )
 
-        duration_minutes = APPOINTMENT_DURATIONS[normalized_appointment_type]
+        duration_minutes = duration_map[normalized_appointment_type]
         now = datetime.now()
         range_end = now + timedelta(days=days)
         blocked_start_times = get_blocked_slot_starts(now, range_end, db)
@@ -632,6 +733,7 @@ def list_my_appointments(
     ensure_database_ready()
 
     try:
+        duration_map = get_appointment_duration_map(db)
         now = datetime.now()
         appointments = db.query(Appointment).filter(
             func.lower(func.trim(Appointment.student_email)) == normalized_email,
@@ -640,7 +742,7 @@ def list_my_appointments(
             Appointment.end_time > now,
         ).order_by(Appointment.start_time.asc()).all()
 
-        return [to_appointment_response(appointment) for appointment in appointments]
+        return [to_appointment_response(appointment, duration_map) for appointment in appointments]
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -663,6 +765,7 @@ def list_appointments(
     ensure_database_ready()
 
     try:
+        duration_map = get_appointment_duration_map(db)
         now = datetime.now()
         appointments = db.query(Appointment).filter(
             Appointment.start_time.is_not(None),
@@ -670,7 +773,7 @@ def list_appointments(
             Appointment.end_time > now,
         ).order_by(Appointment.start_time.asc()).all()
 
-        return [to_appointment_response(appointment) for appointment in appointments]
+        return [to_appointment_response(appointment, duration_map) for appointment in appointments]
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -729,7 +832,14 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
     ensure_database_ready()
 
     try:
-        duration_minutes = APPOINTMENT_DURATIONS[data.appointment_type]
+        duration_map = get_appointment_duration_map(db)
+        if data.appointment_type not in duration_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid appointment type.',
+            )
+
+        duration_minutes = duration_map[data.appointment_type]
         start_time = data.start_time.replace(second=0, microsecond=0)
         now = datetime.now()
         end_time = validate_appointment_window(start_time, duration_minutes, now)
@@ -794,6 +904,7 @@ def reschedule_appointment(
     ensure_database_ready()
 
     try:
+        duration_map = get_appointment_duration_map(db)
         appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
         if not appointment:
             raise HTTPException(
@@ -815,7 +926,7 @@ def reschedule_appointment(
                 detail='Only upcoming appointments can be rescheduled.',
             )
 
-        duration_minutes = get_appointment_duration_minutes(appointment)
+        duration_minutes = get_appointment_duration_minutes(appointment, duration_map)
         start_time = data.start_time.replace(second=0, microsecond=0)
         end_time = validate_appointment_window(start_time, duration_minutes, now)
 
@@ -847,7 +958,7 @@ def reschedule_appointment(
         db.commit()
         db.refresh(appointment)
 
-        return to_appointment_response(appointment)
+        return to_appointment_response(appointment, duration_map)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
@@ -865,6 +976,7 @@ def update_appointment_notes(
     ensure_database_ready()
 
     try:
+        duration_map = get_appointment_duration_map(db)
         appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
         if not appointment:
             raise HTTPException(
@@ -890,7 +1002,7 @@ def update_appointment_notes(
         db.commit()
         db.refresh(appointment)
 
-        return to_appointment_response(appointment)
+        return to_appointment_response(appointment, duration_map)
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(

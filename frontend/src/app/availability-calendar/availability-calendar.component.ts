@@ -2,15 +2,11 @@ import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AppointmentTypeOption, AppointmentTypeOptionsService } from '../appointment-type-options.service';
 
 type SlotStatus = 'available' | 'blocked' | 'booked';
 type SessionRole = 'admin' | 'user';
 type TimeOfDayFilter = 'all' | 'morning' | 'afternoon';
-
-interface AppointmentTypeOption {
-  appointment_type: string;
-  duration_minutes: number;
-}
 
 interface CalendarSlot {
   date: string;
@@ -42,14 +38,6 @@ interface AppointmentBookingResponse {
   notes: string | null;
 }
 
-const DEFAULT_APPOINTMENT_TYPE_OPTIONS: AppointmentTypeOption[] = [
-  { appointment_type: 'immunization', duration_minutes: 15 },
-  { appointment_type: 'testing', duration_minutes: 30 },
-  { appointment_type: 'counseling', duration_minutes: 60 },
-  { appointment_type: 'other', duration_minutes: 60 },
-  { appointment_type: 'prescription', duration_minutes: 15 }
-];
-
 @Component({
   selector: 'app-availability-calendar',
   standalone: true,
@@ -66,7 +54,7 @@ export class AvailabilityCalendarComponent implements OnInit {
   filteredSlots: CalendarSlot[] = [];
   visibleWeekDays: CalendarDay[] = [];
   visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
-  appointmentTypeOptions: AppointmentTypeOption[] = [...DEFAULT_APPOINTMENT_TYPE_OPTIONS];
+  appointmentTypeOptions: AppointmentTypeOption[] = [];
   error = '';
   weekIndex = 0;
 
@@ -78,7 +66,10 @@ export class AvailabilityCalendarComponent implements OnInit {
   confirmedBooking: AppointmentBookingResponse | null = null;
   isBooking = false;
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+  ) {}
 
   ngOnInit(): void {
     this.loadAppointmentTypes();
@@ -131,7 +122,10 @@ export class AvailabilityCalendarComponent implements OnInit {
   }
 
   formatAppointmentType(value: string): string {
-    return value.charAt(0).toUpperCase() + value.slice(1);
+    return value
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
   }
 
   beginBooking(slot: CalendarSlot): void {
@@ -199,22 +193,7 @@ export class AvailabilityCalendarComponent implements OnInit {
   }
 
   private async loadAppointmentTypes(): Promise<void> {
-    try {
-      const response = await fetch('/api/availability/appointment-types', {
-        cache: 'no-store'
-      });
-
-      if (!response.ok) {
-        return;
-      }
-
-      const payload = await response.json() as AppointmentTypeOption[];
-      if (payload.length > 0) {
-        this.appointmentTypeOptions = payload;
-      }
-    } catch {
-      // Keep default appointment types so students can always choose a type.
-    }
+    this.appointmentTypeOptions = await this.appointmentTypeOptionsService.getAppointmentTypes();
   }
 
   private async loadCalendar(): Promise<void> {
