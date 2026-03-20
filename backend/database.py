@@ -22,6 +22,7 @@ Base = declarative_base()
 _schema_lock = Lock()
 _availability_schema_checked = False
 _appointment_schema_checked = False
+_appointment_type_option_schema_checked = False
 
 
 def ensure_availability_schema() -> None:
@@ -100,3 +101,36 @@ def ensure_appointment_schema() -> None:
             )
 
         _appointment_schema_checked = True
+
+
+def ensure_appointment_type_option_schema() -> None:
+    global _appointment_type_option_schema_checked
+
+    if _appointment_type_option_schema_checked:
+        return
+
+    with _schema_lock:
+        if _appointment_type_option_schema_checked:
+            return
+
+        inspector = inspect(engine)
+
+        if 'appointment_type_options' not in inspector.get_table_names():
+            _appointment_type_option_schema_checked = True
+            return
+
+        existing_columns = {column['name'] for column in inspector.get_columns('appointment_type_options')}
+        migration_steps = [
+            ('appointment_type', 'ALTER TABLE appointment_type_options ADD COLUMN appointment_type VARCHAR'),
+            ('duration_minutes', 'ALTER TABLE appointment_type_options ADD COLUMN duration_minutes INTEGER'),
+        ]
+
+        with engine.begin() as connection:
+            for column_name, statement in migration_steps:
+                if column_name not in existing_columns:
+                    connection.execute(text(statement))
+            connection.execute(
+                text('CREATE UNIQUE INDEX IF NOT EXISTS idx_appointment_type_options_name ON appointment_type_options(appointment_type)')
+            )
+
+        _appointment_type_option_schema_checked = True

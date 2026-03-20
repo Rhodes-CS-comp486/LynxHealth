@@ -6,78 +6,55 @@
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a routerLink="/home">Home</a>
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/home" fragment="resources">Resources</a>
+        <a routerLink="/resources">Resources</a>
         <a routerLink="/hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role == "admin" ? "Admin" : "User" }}</span>
-        <a class="button small" routerLink="/login">Log Out</a>
+        <a class="button button-secondary small" routerLink="/login">Switch Role</a>
       </div>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-copy">
-          <div class="eyebrow">Welcome to Lynx Health</div>
-          <h1>Book health center appointments and view wellness resources today!</h1>
-          <p>
-            Lynx Health Center keeps scheduling simple. View real-time
-            availability, manage upcoming visits, and discover wellness resources in one place.
-          </p>
-          <div class="hero-actions">
-            <a class="button" routerLink="/availability-calendar">Check availability</a>
-            <a class="button ghost" href="#resources">Explore resources</a>
-          </div>
+  <main class="home-main">
+    <section class="hero container">
+      <div class="hero-copy">
+
+        <h1 class="welcome-title">Welcome to Lynx Health</h1>
+         <p class="schedule-subtitle">Schedule and manage appointments in one place.</p>
+        <div class="hero-actions" *ngIf="role === 'user'">
+          <a class="button button-primary action-button" routerLink="/availability-calendar">
+            Schedule an Appointment
+          </a>
+          <a class="button button-primary action-button" routerLink="/my-appointments">View My Appointments</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
-        <div class="hero-image">
-          <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
+        <div class="hero-actions" *ngIf="role === 'admin'">
+          <a class="button button-primary action-button" routerLink="/create-appointments">Manage Appointment Slots</a>
+          <button class="button button-primary action-button" type="button">View Health Center Information</button>
         </div>
+      </div>
+
+      <div class="hero-image-wrap">
+        <img src="assets/health-center-illustration.png" alt="Illustration of a health center" />
       </div>
     </section>
 
-    <section id="availability" class="section">
-      <div class="container">
-        <h2>Available Appointment Slots</h2>
-        <p class="section-copy">Students can schedule into any unbooked slot listed below.</p>
-
-        <div *ngIf="slots.length === 0" class="notice-card">
-          No slots are currently available.
-        </div>
-
-        <div *ngIf="slots.length > 0" class="slot-list">
-          <article class="slot-card" *ngFor="let slot of slots">
-            <p>{{ slot.start_time | date: 'EEE, MMM d, y, h:mm a' }}</p>
-            <p>to {{ slot.end_time | date: 'h:mm a' }}</p>
-            <p>{{ slot.duration_minutes }} mins · {{ slot.appointment_type }}</p>
-            <span class="slot-state">{{ slot.is_booked ? 'Booked' : 'Available' }}</span>
-          </article>
-        </div>
-      </div>
+    <section class="contact-card container" aria-label="Health Center Contact Information">
+      <h2>Health Center Contact Information</h2>
+      <p>
+        Email us at <a href="mailto:health@rhodes.edu">health@rhodes.edu</a> or call us at
+        <a href="tel:+19018433895">(901) 843-3895</a>.
+      </p>
+      <p>
+        For after-hours emergencies, contact Campus Safety at
+        <a href="tel:+19018433880">(901) 843-3880</a> for assistance.
+      </p>
+      <p class="emergency">If this is a medical emergency, please call 911 immediately.</p>
     </section>
-
 
   </main>
-
-  <footer class="site-footer">
-    <div class="container footer-grid">
-      <div>
-        <div class="brand">
-          <span class="brand-mark">LH</span>
-          <span class="brand-text">Lynx Health</span>
-        </div>
-        <p>Supporting student health with modern scheduling.</p>
-      </div>
-      <div class="footer-links">
-        <a routerLink="/availability-calendar">Appointments</a>
-        <a href="#resources">Resources</a>
-        <a href="#">Contact</a>
-      </div>
-    </div>
-  </footer>
 </div>
