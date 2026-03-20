@@ -124,6 +124,12 @@
   min-height: 44px;
 }
 
+.button.small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  min-height: 0;
+}
+
 .button-primary {
   background: var(--red-500);
   color: #fff;
