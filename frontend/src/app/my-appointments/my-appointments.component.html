@@ -67,9 +67,8 @@
               </div>
             </ng-template>
 
-            <div class="appointment-actions-row">
-               <button
-                *ngIf="editingAppointmentId !== appointment.id"
+            <div class="appointment-actions-row" *ngIf="editingAppointmentId !== appointment.id">
+              <button
                 class="button small"
                 type="button"
                 (click)="startEditing(appointment)">Edit notes</button>

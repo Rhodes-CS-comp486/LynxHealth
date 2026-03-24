@@ -250,6 +250,7 @@ export class MyAppointmentsComponent implements OnInit {
 
   startEditing(appointment: BookedAppointment): void {
     this.editingAppointmentId = appointment.id;
+    this.closeReschedulePanel();
     this.saveError = '';
     this.saveSuccess = '';
     this.draftNotesById[appointment.id] = appointment.notes || '';
