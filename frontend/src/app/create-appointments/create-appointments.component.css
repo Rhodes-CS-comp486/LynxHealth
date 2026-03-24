@@ -58,6 +58,7 @@
 .cell.blocked { border-color: var(--red-200); background: var(--red-100); color: var(--red-700); }
 .cell.booked { border-color: #c9d8f4; background: #eff4ff; color: #24427f; }
 .cell:disabled { opacity: 0.65; cursor: not-allowed; }
+.out-of-hours { display: inline-block; font-size: 0.72rem; color: var(--muted); padding: 0.4rem 0; }
 
 .success { margin-top: 1rem; color: #2f7d41; font-weight: 600; }
 .error { margin-top: 1rem; color: #b4332b; font-weight: 600; }

@@ -27,17 +27,12 @@
             <h1>{{ role === 'admin' ? 'Manage Clinic Hours' : 'Rhodes Health Center Hours' }}</h1>
             <p class="section-copy" *ngIf="role === 'admin'">Update open days, daily operating hours, and holiday closures.</p>
             <p class="section-copy" *ngIf="role === 'user'">Plan your visit using current clinic operating hours and closures.</p>
-            <div class="notice">
-              <span>Notice</span>
-              <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
-              <p>Students can only schedule during available operating hours and non-holiday days.</p>
-            </div>
 
             <p *ngIf="error" class="error">{{ error }}</p>
             <p *ngIf="message" class="success">{{ message }}</p>
           </div>
 
-          <div class="hours-card" *ngIf="!isLoading">
+          <div class="hours-card">
             <div *ngFor="let day of dailyHours" class="hours-row" [class.muted]="!day.is_open">
               <div>
                 <strong>{{ day.day_name }}</strong>
@@ -61,7 +56,7 @@
           </div>
         </div>
 
-        <section class="holiday-panel" *ngIf="!isLoading">
+        <section class="holiday-panel">
           <h2>Holiday Closures</h2>
 
           <div class="holiday-form" *ngIf="role === 'admin'">

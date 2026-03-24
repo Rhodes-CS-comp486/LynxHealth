@@ -35,7 +35,7 @@ export class HoursComponent implements OnInit {
   readonly role: SessionRole = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
-  dailyHours: DailyHours[] = [];
+  dailyHours: DailyHours[] = this.getDefaultDailyHours();
   holidays: Holiday[] = [];
 
   isLoading = false;
@@ -69,6 +69,7 @@ export class HoursComponent implements OnInit {
       } else {
         this.error = 'Unable to load clinic hours right now.';
       }
+      this.dailyHours = this.getDefaultDailyHours();
     } finally {
       this.isLoading = false;
     }
@@ -178,6 +179,17 @@ export class HoursComponent implements OnInit {
     } catch {
       return null;
     }
+  }
+
+  private getDefaultDailyHours(): DailyHours[] {
+    const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return names.map((day_name, day_of_week) => ({
+      day_of_week,
+      day_name,
+      is_open: day_of_week < 5,
+      open_time: day_of_week < 5 ? '09:00' : null,
+      close_time: day_of_week < 5 ? '16:00' : null
+    }));
   }
 
   private getRole(): SessionRole {
