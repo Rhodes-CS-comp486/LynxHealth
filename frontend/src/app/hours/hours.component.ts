@@ -1,5 +1,5 @@
 import { NgFor, NgIf } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -31,7 +31,9 @@ interface ClinicHoursResponse {
   templateUrl: './hours.component.html',
   styleUrl: './hours.component.css'
 })
-export class HoursComponent implements OnInit {
+export class HoursComponent implements OnInit, OnDestroy {
+  private refreshTimer: number | null = null;
+
   readonly role: SessionRole = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
@@ -51,7 +53,16 @@ export class HoursComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadCachedClinicHours();
     this.loadClinicHours();
+    this.startAutoRefresh();
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshTimer !== null && typeof window !== 'undefined') {
+      window.clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
   }
 
   async loadClinicHours(): Promise<void> {
@@ -67,13 +78,13 @@ export class HoursComponent implements OnInit {
       const payload = await response.json() as ClinicHoursResponse;
       this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
       this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+      this.saveCachedClinicHours(payload);
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
       } else {
         this.error = 'Unable to load clinic hours right now.';
       }
-      this.dailyHours = this.getDefaultDailyHours();
     } finally {
       this.isLoading = false;
     }
@@ -156,6 +167,7 @@ export class HoursComponent implements OnInit {
       const payload = await response.json() as ClinicHoursResponse;
       this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
       this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+      this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
     } catch (error) {
       if (error instanceof Error) {
@@ -183,6 +195,45 @@ export class HoursComponent implements OnInit {
     } catch {
       return null;
     }
+  }
+
+  private startAutoRefresh(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.refreshTimer = window.setInterval(() => {
+      void this.loadClinicHours();
+    }, 15000);
+  }
+
+  private loadCachedClinicHours(): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
+
+    const cached = localStorage.getItem('lynxClinicHours');
+    if (!cached) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(cached) as ClinicHoursResponse;
+      if (Array.isArray(payload.daily_hours) && Array.isArray(payload.holidays)) {
+        this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
+        this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+      }
+    } catch {
+      // ignore invalid cache
+    }
+  }
+
+  private saveCachedClinicHours(payload: ClinicHoursResponse): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem('lynxClinicHours', JSON.stringify(payload));
   }
 
   private getDefaultDailyHours(): DailyHours[] {
