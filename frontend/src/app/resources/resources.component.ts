@@ -11,6 +11,12 @@ import { RouterLink } from '@angular/router';
 })
 export class ResourcesComponent {
   readonly role = this.getRole();
+  readonly isAdmin = this.role === 'admin';
+  isEditing = false;
+
+  toggleEditMode(): void {
+    this.isEditing = !this.isEditing;
+  }
 
   private getRole(): 'admin' | 'user' {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {

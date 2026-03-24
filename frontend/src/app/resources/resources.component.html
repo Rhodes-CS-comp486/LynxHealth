@@ -23,6 +23,14 @@
     <section class="section">
       <div class="container panel">
         <h1>Welcome to the Student Health Center!</h1>
+        <div class="admin-toolbar" *ngIf="isAdmin">
+          <button class="button small" type="button" (click)="toggleEditMode()">
+            {{ isEditing ? 'Exit Edit Mode' : 'Edit Page Content' }}
+          </button>
+          <div class="edit-controls" *ngIf="isEditing">
+            <p>Editing mode is enabled. Admin edit controls would appear here.</p>
+          </div>
+        </div>
         <p class="section-copy">
           The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
           resource for our diverse student body. We offer personalized medical services, preventive care, and health
