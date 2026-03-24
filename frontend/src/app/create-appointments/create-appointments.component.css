@@ -59,8 +59,21 @@
 .cell.booked { border-color: #c9d8f4; background: #eff4ff; color: #24427f; }
 .cell:disabled { opacity: 0.65; cursor: not-allowed; }
 
-.success { margin-top: 1rem; color: #2f7d41; font-weight: 600; }
-.error { margin-top: 1rem; color: #b4332b; font-weight: 600; }
+.success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #991b1b;
+  background: #fee2e2;
+}
 
 .booked-panel { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
 .booked-panel h2 { margin: 0 0 0.35rem; font-size: 1.2rem; }
