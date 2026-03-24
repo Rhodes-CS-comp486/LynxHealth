@@ -14,6 +14,7 @@ from backend.routes.availability_routes import (  # noqa: E402
     CreateBlockedTimeRequest,
     UpdateAppointmentNotesRequest,
     iterate_slot_starts,
+    list_appointments,
     list_my_appointments,
     update_appointment_notes,
     validate_slot_datetime,
@@ -104,23 +105,34 @@ def test_list_my_appointments_rejects_admin_email() -> None:
 
 
 class _FakeQuery:
-    def __init__(self, appointment: Appointment | None):
-        self._appointment = appointment
+    def __init__(self, appointments: list[Appointment]):
+        self._appointments = appointments
 
     def filter(self, *_args, **_kwargs):
         return self
 
+    def order_by(self, *_args, **_kwargs):
+        return self
+
     def first(self):
-        return self._appointment
+        return self._appointments[0] if self._appointments else None
+
+    def all(self):
+        return list(self._appointments)
 
 
 class _FakeDb:
-    def __init__(self, appointment: Appointment | None):
-        self.appointment = appointment
+    def __init__(self, appointments: list[Appointment] | Appointment | None):
+        if isinstance(appointments, list):
+            self.appointments = appointments
+        elif appointments is None:
+            self.appointments = []
+        else:
+            self.appointments = [appointments]
         self.committed = False
 
     def query(self, _model):
-        return _FakeQuery(self.appointment)
+        return _FakeQuery(self.appointments)
 
     def add(self, _obj):
         return None
@@ -194,3 +206,18 @@ def test_update_appointment_notes_rejects_past_appointment(monkeypatch) -> None:
 
     assert exception_info.value.status_code == 400
     assert exception_info.value.detail == 'Only upcoming appointments can be updated.'
+
+
+def test_updated_notes_are_visible_to_user_and_admin_views(monkeypatch) -> None:
+    monkeypatch.setattr(availability_routes, 'ensure_database_ready', lambda: None)
+    appointment = _build_appointment('student@example.edu', is_upcoming=True)
+    db = _FakeDb(appointment)
+
+    payload = UpdateAppointmentNotesRequest(student_email='student@example.edu', notes='Shared update')
+    update_appointment_notes(appointment_id=100, data=payload, db=db)
+
+    student_appointments = list_my_appointments(student_email='student@example.edu', db=db)
+    admin_appointments = list_appointments(admin_email='admin@admin.edu', db=db)
+
+    assert student_appointments[0].notes == 'Shared update'
+    assert admin_appointments[0].notes == 'Shared update'

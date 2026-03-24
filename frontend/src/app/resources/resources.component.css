@@ -1,0 +1,67 @@
+.section-header {
+  margin-bottom: 1rem;
+}
+
+.resource-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.resource-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-strong);
+  padding: 1rem;
+}
+
+.resource-card h3 {
+  margin: 0 0 0.5rem;
+}
+
+.resource-card p {
+  margin: 0 0 0.75rem;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  margin: 0.25rem 0;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions-row {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--red-500);
+  color: #fff;
+  font-weight: 600;
+}
+
+.button.ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}

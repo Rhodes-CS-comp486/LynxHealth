@@ -1,6 +1,7 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ResourcesComponent } from '../resources/resources.component';
 
 type SessionRole = 'admin' | 'user';
 
@@ -18,7 +19,7 @@ interface AvailabilitySlot {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NgIf, NgFor, DatePipe],
+  imports: [RouterLink, NgIf, NgFor, DatePipe, ResourcesComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })

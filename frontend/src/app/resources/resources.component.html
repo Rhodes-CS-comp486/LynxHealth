@@ -1,0 +1,35 @@
+<section id="resources" class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Wellness Resources</h2>
+      <p class="section-copy">Browse trusted health resources. Admins can edit section details inline.</p>
+    </div>
+
+    <div class="resource-list">
+      <article class="resource-card" *ngFor="let section of sections; let index = index">
+        <!-- View mode -->
+        <div *ngIf="!section.isEditing">
+          <h3>{{ section.header }}</h3>
+          <p>{{ section.content }}</p>
+          <button *ngIf="role === 'admin'" class="button small ghost" type="button" (click)="startEditing(index)">
+            Edit
+          </button>
+        </div>
+
+        <!-- Edit mode -->
+        <div *ngIf="section.isEditing">
+          <label class="field-label" [for]="'resource-header-' + index">Header</label>
+          <input [id]="'resource-header-' + index" [(ngModel)]="section.header" />
+
+          <label class="field-label" [for]="'resource-content-' + index">Content</label>
+          <textarea [id]="'resource-content-' + index" rows="4" [(ngModel)]="section.content"></textarea>
+
+          <div class="actions-row">
+            <button class="button small" type="button" (click)="saveSection(index)">Save</button>
+            <button class="button small ghost" type="button" (click)="cancelEditing(index)">Cancel</button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>

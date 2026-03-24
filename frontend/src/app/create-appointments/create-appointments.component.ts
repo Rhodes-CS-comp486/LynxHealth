@@ -167,7 +167,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   private async blockTime(date: string, time: string): Promise<number> {
-    const response = await fetch('http://localhost:8000/availability/slots', {
+    const response = await fetch('/api/availability/slots', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -189,7 +189,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   private async unblockTime(id: number): Promise<void> {
-    const response = await fetch(`http://localhost:8000/availability/slots/${id}?admin_email=${encodeURIComponent(this.sessionEmail)}`, {
+    const response = await fetch(`/api/availability/slots/${id}?admin_email=${encodeURIComponent(this.sessionEmail)}`, {
       method: 'DELETE'
     });
 
@@ -210,7 +210,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   private async loadBlockedTimes(): Promise<void> {
     try {
-      const response = await fetch(`http://localhost:8000/availability/blocked-times?ts=${Date.now()}`, {
+      const response = await fetch(`/api/availability/blocked-times?ts=${Date.now()}`, {
         cache: 'no-store'
       });
       if (!response.ok) {
@@ -248,7 +248,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/availability/appointments?admin_email=${encodeURIComponent(this.sessionEmail)}&ts=${Date.now()}`,
+        `/api/availability/appointments?admin_email=${encodeURIComponent(this.sessionEmail)}&ts=${Date.now()}`,
         {
           cache: 'no-store'
         }
