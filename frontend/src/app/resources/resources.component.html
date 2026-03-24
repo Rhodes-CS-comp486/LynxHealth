@@ -27,55 +27,60 @@
             <h1>Welcome to the Student Health Center!</h1>
             <p class="section-copy">
               The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
-              resource for our diverse student body.
+              resource for our diverse student body. We offer personalized medical services, preventive care, and health
+              education that support academic success and personal growth.
             </p>
           </div>
 
-          <button *ngIf="isAdmin" type="button" class="button" (click)="addSection()">
-            Add Section
+          <button *ngIf="isAdmin" type="button" class="button" (click)="addBlock()">
+            Add Content Block
           </button>
         </div>
 
-        <section class="info-section" *ngFor="let section of sections; trackBy: trackBySectionId">
+        <p *ngIf="isAdmin" class="admin-banner">
+          Admin editing tools are enabled. Use Edit/Delete on each content block below.
+        </p>
+
+        <section class="info-section" *ngFor="let block of blocks; trackBy: trackByBlockId">
           <div class="section-header-row">
-            <h2>{{ section.title }}</h2>
+            <h2>{{ block.title }}</h2>
 
             <div class="admin-controls" *ngIf="isAdmin">
               <button
                 type="button"
                 class="button small secondary"
-                *ngIf="editingSectionId !== section.id"
-                (click)="startEditing(section)"
+                *ngIf="editingBlockId !== block.id"
+                (click)="startEditing(block)"
               >
                 Edit
               </button>
               <button
                 type="button"
                 class="button small danger"
-                *ngIf="editingSectionId !== section.id"
-                (click)="deleteSection(section.id)"
+                *ngIf="editingBlockId !== block.id"
+                (click)="deleteBlock(block.id)"
               >
                 Delete
               </button>
             </div>
           </div>
 
-          <div class="section-content" [innerHTML]="section.contentHtml"></div>
+          <div class="section-content" [innerHTML]="block.contentHtml"></div>
 
-          <div class="editor" *ngIf="isAdmin && editingSectionId === section.id">
-            <label class="editor-label" for="section-title">Section Header</label>
-            <input id="section-title" [(ngModel)]="draftTitle" class="editor-input" />
+          <div class="editor" *ngIf="isAdmin && editingBlockId === block.id">
+            <label class="editor-label" for="block-title">Content Block Header</label>
+            <input id="block-title" [(ngModel)]="draftTitle" class="editor-input" />
 
             <div class="editor-actions">
               <button type="button" class="button small secondary" (click)="insertSubheader()">Insert Subheader</button>
               <button type="button" class="button small secondary" (click)="insertBulletList()">Insert Bullet List</button>
             </div>
 
-            <label class="editor-label" for="section-content">Section Content (HTML supported)</label>
-            <textarea id="section-content" [(ngModel)]="draftContentHtml" class="editor-textarea"></textarea>
+            <label class="editor-label" for="block-content">Content Block Body (HTML supported)</label>
+            <textarea id="block-content" [(ngModel)]="draftContentHtml" class="editor-textarea"></textarea>
 
             <div class="editor-actions">
-              <button type="button" class="button small" (click)="saveSection(section.id)">Save</button>
+              <button type="button" class="button small" (click)="saveBlock(block.id)">Save</button>
               <button type="button" class="button small secondary" (click)="cancelEditing()">Cancel</button>
             </div>
           </div>
