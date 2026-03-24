@@ -40,6 +40,9 @@
             <p class="section-copy">Only admins can create new appointment types. Students will see these options when booking.</p>
           </div>
 
+          <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
+          <p class="error" *ngIf="adminError">{{ adminError }}</p>
+
           <form class="type-form" (ngSubmit)="createAppointmentType()">
             <label>
               <span>Type name</span>
@@ -111,9 +114,6 @@
           <p class="error" *ngIf="role !== 'admin'">Only admins can manage blocked times.</p>
           <p class="error" *ngIf="role === 'admin'">No future slots are available in this week.</p>
         </ng-template>
-
-        <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
-        <p class="error" *ngIf="adminError">{{ adminError }}</p>
 
         <div class="booked-panel" *ngIf="role === 'admin'">
           <h2>Upcoming Student Appointments</h2>

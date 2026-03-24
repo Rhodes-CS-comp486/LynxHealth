@@ -33,6 +33,41 @@ MIN_APPOINTMENT_DURATION_MINUTES = 15
 MAX_APPOINTMENT_DURATION_MINUTES = 240
 
 
+def format_invalid_appointment_type_characters(invalid_characters: list[str]) -> str:
+    if len(invalid_characters) == 1:
+        return f"Appointment types cannot include '{invalid_characters[0]}'."
+
+    formatted = ', '.join(f"'{character}'" for character in invalid_characters[:-1])
+    formatted += f" or '{invalid_characters[-1]}'"
+    return f'Appointment types cannot include {formatted}.'
+
+
+def normalize_appointment_type_name(value: str) -> str:
+    normalized = ' '.join(value.strip().lower().split())
+
+    if not normalized:
+        raise ValueError('Appointment type is required.')
+
+    invalid_characters: list[str] = []
+    for character in normalized:
+        if character.isalnum() or character in {' ', '-'}:
+            continue
+        if character not in invalid_characters:
+            invalid_characters.append(character)
+
+    if invalid_characters:
+        raise ValueError(format_invalid_appointment_type_characters(invalid_characters))
+
+    slug = normalized.replace(' ', '_')
+
+    if len(slug) > 50:
+        raise ValueError('Appointment type must be 50 characters or fewer.')
+    if slug == BLOCKED_APPOINTMENT_TYPE:
+        raise ValueError('Appointment type name is reserved.')
+
+    return slug
+
+
 def normalize_appointment_notes(value: str | None) -> str | None:
     if value is None:
         return None
@@ -122,19 +157,7 @@ class CreateAppointmentTypeRequest(BaseModel):
     @field_validator('appointment_type')
     @classmethod
     def validate_appointment_type(cls, value: str) -> str:
-        normalized = ' '.join(value.strip().lower().split())
-        slug = normalized.replace(' ', '_')
-
-        if not slug:
-            raise ValueError('Appointment type is required.')
-        if len(slug) > 50:
-            raise ValueError('Appointment type must be 50 characters or fewer.')
-        if not slug.replace('_', '').isalnum():
-            raise ValueError('Appointment type can only contain letters, numbers, and spaces.')
-        if slug == BLOCKED_APPOINTMENT_TYPE:
-            raise ValueError('Appointment type name is reserved.')
-
-        return slug
+        return normalize_appointment_type_name(value)
 
     @field_validator('duration_minutes')
     @classmethod
