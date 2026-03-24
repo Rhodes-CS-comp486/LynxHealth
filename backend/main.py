@@ -4,8 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
-from backend.database import engine, ensure_availability_schema, ensure_appointment_schema, ensure_appointment_type_option_schema
-from backend.models import user, appointment, availability, appointment_type_option
+from backend.database import (
+    engine,
+    ensure_availability_schema,
+    ensure_appointment_schema,
+    ensure_appointment_type_option_schema,
+    ensure_clinic_hours_schema,
+    ensure_clinic_holidays_schema,
+)
+from backend.models import user, appointment, availability, appointment_type_option, clinic_hours, clinic_holiday
 from backend.routes import auth_routes, availability_routes
 
 app = FastAPI()
@@ -28,9 +35,13 @@ def initialize_database() -> None:
         appointment.Base.metadata.create_all(bind=engine)
         availability.Base.metadata.create_all(bind=engine)
         appointment_type_option.Base.metadata.create_all(bind=engine)
+        clinic_hours.Base.metadata.create_all(bind=engine)
+        clinic_holiday.Base.metadata.create_all(bind=engine)
         ensure_availability_schema()
         ensure_appointment_schema()
         ensure_appointment_type_option_schema()
+        ensure_clinic_hours_schema()
+        ensure_clinic_holidays_schema()
     except SQLAlchemyError:
         logger.exception('Database initialization failed. Check DATABASE_URL and Postgres credentials.')
 

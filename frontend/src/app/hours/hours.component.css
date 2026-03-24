@@ -4,27 +4,6 @@
   overflow: hidden;
 }
 
-.page::before,
-.page::after {
-  content: '';
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(226, 72, 59, 0.18) 0%, rgba(226, 72, 59, 0) 65%);
-  z-index: 0;
-}
-
-.page::before {
-  top: -120px;
-  left: -120px;
-}
-
-.page::after {
-  bottom: 120px;
-  right: -160px;
-}
-
 .section {
   position: relative;
   z-index: 1;
@@ -41,8 +20,10 @@
 
 h1 {
   margin: 0 0 0.75rem;
-  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
-  font-size: clamp(2rem, 2vw + 1rem, 2.6rem);
+}
+
+h2 {
+  margin: 0 0 1rem;
 }
 
 .section-copy {
@@ -53,12 +34,12 @@ h1 {
 .hours-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2.5rem;
-  align-items: center;
+  gap: 2rem;
+  align-items: start;
 }
 
 .notice {
-  margin-top: 1.5rem;
+  margin-top: 1.2rem;
   padding: 1rem;
   border-radius: 16px;
   background: rgba(226, 72, 59, 0.12);
@@ -77,43 +58,84 @@ h1 {
   margin: 0.5rem 0 0;
 }
 
-.hours-card {
+.hours-card,
+.holiday-panel {
   background: var(--card);
   border-radius: 20px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  display: grid;
-  gap: 0.8rem;
 }
 
 .hours-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding-bottom: 0.6rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--line);
 }
 
 .hours-row:last-child {
   border-bottom: none;
-  padding-bottom: 0;
 }
 
 .hours-row.muted {
   color: var(--muted);
 }
 
+.admin-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-row-controls input[type='time'] {
+  min-width: 120px;
+}
+
+.holiday-panel {
+  margin-top: 1.2rem;
+}
+
+.holiday-form,
+.holiday-row,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.holiday-form {
+  margin-bottom: 0.8rem;
+}
+
+.holiday-row {
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  padding: 0.65rem 0;
+}
+
+.error {
+  color: #c53030;
+  margin-top: 1rem;
+}
+
+.success {
+  color: #2f855a;
+  margin-top: 1rem;
+}
+
+.muted-text {
+  color: var(--muted);
+}
+
+.actions {
+  margin-top: 1rem;
+  justify-content: flex-end;
+}
+
 @media (max-width: 1024px) {
   .hours-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .hours-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.4rem;
   }
 }
