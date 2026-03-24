@@ -22,20 +22,26 @@
   <main>
     <section class="section">
       <div class="container panel">
-        <h1>Welcome to the Student Health Center!</h1>
         <div class="admin-toolbar" *ngIf="isAdmin">
           <button class="button small" type="button" (click)="toggleEditMode()">
             {{ isEditing ? 'Exit Edit Mode' : 'Edit Page Content' }}
           </button>
-          <div class="edit-controls" *ngIf="isEditing">
-            <p>Editing mode is enabled. Admin edit controls would appear here.</p>
-          </div>
         </div>
-        <p class="section-copy">
-          The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
-          resource for our diverse student body. We offer personalized medical services, preventive care, and health
-          education that support academic success and personal growth.
-        </p>
+        <div *ngIf="!isEditing">
+          <h1>{{ section.header }}</h1>
+          <p class="section-copy">{{ section.content }}</p>
+        </div>
+
+        <div class="edit-controls" *ngIf="isEditing">
+          <label>
+            Section header
+            <input [(ngModel)]="section.header" />
+          </label>
+          <label>
+            Section content
+            <textarea rows="5" [(ngModel)]="section.content"></textarea>
+          </label>
+        </div>
 
         <section class="info-section">
           <h2>Mission</h2>

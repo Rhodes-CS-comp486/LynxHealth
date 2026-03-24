@@ -63,6 +63,23 @@ h1 {
   border-radius: 12px;
   padding: 0.75rem 1rem;
   background: rgba(226, 72, 59, 0.07);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.edit-controls label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.edit-controls input,
+.edit-controls textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
 }
 
 h2 {
