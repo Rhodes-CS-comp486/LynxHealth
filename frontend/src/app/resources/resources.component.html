@@ -6,25 +6,24 @@
         <span class="brand-text">Lynx Health</span>
       </div>
       <nav class="nav-links">
-        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointments</a>
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
         <a routerLink="/resources">Resources</a>
         <a routerLink="/hours">Hours</a>
-        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Appointments</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
       </nav>
       <div class="nav-actions">
-        <span class="role-pill">{{ role === 'admin' ? 'Admin' : 'User' }}</span>
-        <a class="button small" routerLink="/login">Switch Role</a>
+        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
+        <a class="button small" routerLink="/login">Log Out</a>
       </div>
     </div>
   </header>
 
   <main>
     <section class="section">
-      <div class="container content-card">
-        <p class="eyebrow">Rhodes Health Center</p>
+      <div class="container panel">
         <h1>Welcome to the Student Health Center!</h1>
-        <p class="lead">
+        <p class="section-copy">
           The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
           resource for our diverse student body. We offer personalized medical services, preventive care, and health
           education that support academic success and personal growth.
