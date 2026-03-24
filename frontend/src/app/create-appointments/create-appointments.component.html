@@ -29,7 +29,7 @@
           </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>
-            <strong>{{ calendarDays[0]?.date | date: 'MMM d' }} - {{ calendarDays[calendarDays.length - 1]?.date | date: 'MMM d, y' }}</strong>
+            <strong>{{ calendarDays[0]?.date | date: 'MMM d' }} - {{ calendarDays[4]?.date | date: 'MMM d, y' }}</strong>
             <button class="button ghost" type="button" (click)="nextWeek()">Next week</button>
           </div>
         </div>

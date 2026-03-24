@@ -31,11 +31,12 @@ h2 {
   margin: 0;
 }
 
-.hours-grid {
+.cards-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2rem;
-  align-items: start;
+  align-items: stretch;
+  margin-top: 1rem;
 }
 
 .hours-card,
@@ -74,7 +75,7 @@ h2 {
 }
 
 .holiday-panel {
-  margin-top: 1.2rem;
+  margin-top: 0;
 }
 
 .holiday-form,
@@ -115,7 +116,7 @@ h2 {
 }
 
 @media (max-width: 1024px) {
-  .hours-grid {
+  .cards-grid {
     grid-template-columns: 1fr;
   }
 }

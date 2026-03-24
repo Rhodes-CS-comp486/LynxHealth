@@ -458,7 +458,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < 7; i += 1) {
+    for (let i = 0; i < 5; i += 1) {
       const dayDate = new Date(this.weekStart);
       dayDate.setDate(this.weekStart.getDate() + i);
       dayDate.setHours(0, 0, 0, 0);

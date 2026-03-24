@@ -46,6 +46,10 @@ export class HoursComponent implements OnInit {
   newHolidayDate = '';
   newHolidayName = '';
 
+  get weekdayHours(): DailyHours[] {
+    return this.dailyHours.filter((day) => day.day_of_week < 5);
+  }
+
   ngOnInit(): void {
     this.loadClinicHours();
   }
