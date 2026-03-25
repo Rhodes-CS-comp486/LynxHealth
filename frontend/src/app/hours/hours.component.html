@@ -23,8 +23,8 @@
     <section class="section">
       <div class="container panel">
         <div>
-          <h1>{{ role === 'admin' ? 'Manage Clinic Hours' : 'Rhodes Health Center Hours' }}</h1>
-          <p class="section-copy" *ngIf="role === 'admin'">Update open days, daily operating hours, and holiday closures.</p>
+          <h1>{{ role === 'admin' ? 'Operating Hours & Closures' : 'Rhodes Health Center Hours' }}</h1>
+          <p class="section-copy" *ngIf="role === 'admin'">Use this page to update overall clinic hours, open days, and holiday closures. To block specific time slots or make daily availability changes, visit the Manage Availability page.</p>
           <p class="section-copy" *ngIf="role === 'user'">Plan your visit using current clinic operating hours and closures.</p>
 
           <p *ngIf="error" class="error">{{ error }}</p>
@@ -33,7 +33,7 @@
 
         <div class="cards-grid">
           <section class="hours-card">
-            <h2>Manage Clinic Hours</h2>
+            <h2>Operating Hours & Closures</h2>
             <div *ngFor="let day of weekdayHours" class="hours-row" [class.muted]="!day.is_open">
               <div>
                 <strong>{{ day.day_name }}</strong>
@@ -75,7 +75,7 @@
         </div>
 
         <div *ngIf="role === 'admin'" class="actions">
-          <button class="button" type="button" (click)="saveHours()" [disabled]="isSaving">
+          <button class="button save-button" type="button" (click)="saveHours()" [disabled]="isSaving">
             {{ isSaving ? 'Saving...' : 'Save Hours & Closures' }}
           </button>
         </div>

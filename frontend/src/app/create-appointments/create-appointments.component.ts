@@ -140,14 +140,14 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const next = new Date(this.weekStart);
     next.setDate(next.getDate() - 7);
     this.weekStart = this.getWeekStart(next);
-    this.buildCalendar();
+    this.loadClinicHours();
   }
 
   nextWeek(): void {
     const next = new Date(this.weekStart);
     next.setDate(next.getDate() + 7);
     this.weekStart = this.getWeekStart(next);
-    this.buildCalendar();
+    this.loadClinicHours();
   }
 
   async toggleBlocked(cell: TimeCell): Promise<void> {
@@ -435,6 +435,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.stopAutoRefresh();
     this.autoRefreshTimer = window.setInterval(() => {
       void this.loadBookedAppointments();
+      void this.loadClinicHours();
+      void this.loadBlockedTimes();
     }, this.autoRefreshIntervalMs);
   }
 
