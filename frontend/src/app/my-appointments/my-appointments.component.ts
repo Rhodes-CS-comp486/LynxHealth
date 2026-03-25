@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 type SessionRole = 'admin' | 'user';
+type RescheduleViewMode = 'quick' | 'card';
 
 interface BookedAppointment {
   id: number;
@@ -53,7 +54,10 @@ export class MyAppointmentsComponent implements OnInit {
   reschedulePanelAppointmentId: number | null = null;
   isLoadingRescheduleOptions = false;
   rescheduleOptions: RescheduleDayGroup[] = [];
+  rescheduleWeekKeys: string[] = [];
+  rescheduleWeekIndex = 0;
   selectedRescheduleStartTime: string | null = null;
+  rescheduleViewMode: RescheduleViewMode = 'quick';
   successMessage = '';
   error = '';
   saveError = '';
@@ -70,6 +74,34 @@ export class MyAppointmentsComponent implements OnInit {
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
+  get visibleRescheduleOptions(): RescheduleDayGroup[] {
+    const activeWeekKey = this.rescheduleWeekKeys[this.rescheduleWeekIndex];
+    if (!activeWeekKey) {
+      return [];
+    }
+
+    return this.rescheduleOptions.filter((group) => this.getWeekStartKey(new Date(group.slots[0].start_time)) === activeWeekKey);
+  }
+
+  get canShowPreviousRescheduleWeek(): boolean {
+    return this.rescheduleWeekIndex > 0;
+  }
+
+  get canShowNextRescheduleWeek(): boolean {
+    return this.rescheduleWeekIndex < this.rescheduleWeekKeys.length - 1;
+  }
+
+  get rescheduleWeekRangeLabel(): string {
+    const visibleOptions = this.visibleRescheduleOptions;
+    if (visibleOptions.length === 0) {
+      return '';
+    }
+
+    const first = new Date(visibleOptions[0].slots[0].start_time);
+    const last = new Date(visibleOptions[visibleOptions.length - 1].slots[0].start_time);
+    return `${first.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${last.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+  }
+
 
   async openReschedulePanel(appointment: BookedAppointment): Promise<void> {
     if (this.role !== 'user') {
@@ -84,7 +116,10 @@ export class MyAppointmentsComponent implements OnInit {
     this.reschedulePanelAppointmentId = appointment.id;
     this.isLoadingRescheduleOptions = true;
     this.rescheduleOptions = [];
+    this.rescheduleWeekKeys = [];
+    this.rescheduleWeekIndex = 0;
     this.selectedRescheduleStartTime = null;
+    this.rescheduleViewMode = 'quick';
     this.error = '';
     this.successMessage = '';
 
@@ -122,6 +157,11 @@ export class MyAppointmentsComponent implements OnInit {
         }))
         .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
+      this.rescheduleWeekKeys = Array.from(new Set(
+        this.rescheduleOptions.map((group) => this.getWeekStartKey(new Date(group.slots[0].start_time)))
+      ));
+      this.rescheduleWeekIndex = 0;
+
       if (availableSlots.length > 0) {
         this.selectedRescheduleStartTime = availableSlots
           .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0]
@@ -143,11 +183,34 @@ export class MyAppointmentsComponent implements OnInit {
     this.reschedulePanelAppointmentId = null;
     this.isLoadingRescheduleOptions = false;
     this.rescheduleOptions = [];
+    this.rescheduleWeekKeys = [];
+    this.rescheduleWeekIndex = 0;
     this.selectedRescheduleStartTime = null;
+    this.rescheduleViewMode = 'quick';
   }
 
   selectRescheduleTime(startTime: string): void {
     this.selectedRescheduleStartTime = startTime;
+  }
+
+  setRescheduleViewMode(mode: RescheduleViewMode): void {
+    this.rescheduleViewMode = mode;
+  }
+
+  showPreviousRescheduleWeek(): void {
+    if (!this.canShowPreviousRescheduleWeek) {
+      return;
+    }
+
+    this.rescheduleWeekIndex -= 1;
+  }
+
+  showNextRescheduleWeek(): void {
+    if (!this.canShowNextRescheduleWeek) {
+      return;
+    }
+
+    this.rescheduleWeekIndex += 1;
   }
 
   async confirmReschedule(appointment: BookedAppointment): Promise<void> {
@@ -350,6 +413,14 @@ export class MyAppointmentsComponent implements OnInit {
     const month = String(value.getMonth() + 1).padStart(2, '0');
     const day = String(value.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private getWeekStartKey(value: Date): string {
+    const start = new Date(value);
+    const day = start.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + diff);
+    return this.toLocalDateKey(start);
   }
 
   private getRole(): SessionRole {
