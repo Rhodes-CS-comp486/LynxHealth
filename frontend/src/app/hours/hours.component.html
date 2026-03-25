@@ -26,6 +26,11 @@
           <h1>{{ role === 'admin' ? 'Operating Hours & Closures' : 'Rhodes Health Center Hours' }}</h1>
           <p class="section-copy" *ngIf="role === 'admin'">Use this page to update overall clinic hours, open days, and holiday closures. To block specific time slots or make daily availability changes, visit the Manage Availability page.</p>
           <p class="section-copy" *ngIf="role === 'user'">Plan your visit using current clinic operating hours and closures.</p>
+          <div class="notice" *ngIf="role === 'user'">
+            <span>Notice</span>
+            <p>The health center is closed every day from 12:00 PM - 1:00 PM for lunch.</p>
+            <p>Appointments may be scheduled from 9:00 AM to 3:45 PM.</p>
+          </div>
 
           <p *ngIf="error" class="error">{{ error }}</p>
           <p *ngIf="message" class="success">{{ message }}</p>

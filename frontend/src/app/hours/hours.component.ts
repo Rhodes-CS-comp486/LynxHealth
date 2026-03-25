@@ -44,7 +44,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   isSaving = false;
-  saveState: 'idle' | 'saving' | 'saved' = 'idle';
+  saveState: 'idle' | 'saving' = 'idle';
   hasUnsavedChanges = false;
   error = '';
   message = '';
@@ -59,10 +59,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   get saveButtonLabel(): string {
     if (this.saveState === 'saving') {
-      return 'Saving...';
-    }
-    if (this.saveState === 'saved') {
-      return 'Saved!';
+      return 'Saving!';
     }
     return 'Save Hours & Closures';
   }
@@ -165,6 +162,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     this.saveState = 'saving';
+    this.queueSaveStateReset();
     this.message = '';
     this.error = '';
 
@@ -203,8 +201,7 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
       this.hasUnsavedChanges = false;
-      this.saveState = 'saved';
-      this.queueSaveStateReset();
+      this.saveState = 'idle';
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
@@ -284,6 +281,7 @@ export class HoursComponent implements OnInit, OnDestroy {
   private queueSaveStateReset(): void {
     if (typeof window === 'undefined') {
       this.saveState = 'idle';
+      this.isSaving = false;
       return;
     }
     if (this.saveStateTimer !== null) {
@@ -291,8 +289,9 @@ export class HoursComponent implements OnInit, OnDestroy {
     }
     this.saveStateTimer = window.setTimeout(() => {
       this.saveState = 'idle';
+      this.isSaving = false;
       this.saveStateTimer = null;
-    }, 1400);
+    }, 3000);
   }
 
   private compareHolidays(left: Holiday, right: Holiday): number {
