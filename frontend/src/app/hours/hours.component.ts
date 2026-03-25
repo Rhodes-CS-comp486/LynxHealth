@@ -1,5 +1,5 @@
 import { NgFor, NgIf } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -69,6 +69,8 @@ export class HoursComponent implements OnInit, OnDestroy {
     this.loadClinicHours();
     this.startAutoRefresh();
   }
+
+  constructor(private readonly cdr: ChangeDetectorRef) {}
 
   ngOnDestroy(): void {
     if (this.refreshTimer !== null && typeof window !== 'undefined') {
@@ -175,6 +177,7 @@ export class HoursComponent implements OnInit, OnDestroy {
     this.isSaving = true;
     this.saveState = 'saving';
     this.queueSaveStateReset();
+    this.cdr.detectChanges();
 
     try {
       const response = await fetch('/api/availability/clinic-hours', {
@@ -202,12 +205,14 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
       this.hasUnsavedChanges = false;
+      this.cdr.detectChanges();
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
       } else {
         this.error = 'Unable to save clinic hours.';
       }
+      this.cdr.detectChanges();
     }
   }
 
@@ -279,6 +284,7 @@ export class HoursComponent implements OnInit, OnDestroy {
     if (typeof window === 'undefined') {
       this.saveState = 'idle';
       this.isSaving = false;
+      this.cdr.detectChanges();
       return;
     }
     if (this.saveStateTimer !== null) {
@@ -288,6 +294,7 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveState = 'idle';
       this.isSaving = false;
       this.saveStateTimer = null;
+      this.cdr.detectChanges();
     }, 1000);
   }
 
