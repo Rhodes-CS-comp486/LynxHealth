@@ -80,7 +80,7 @@
 
         <div *ngIf="role === 'admin'" class="actions">
           <button class="button save-button" type="button" (click)="saveHours()" [disabled]="isSaving">
-            Save Hours & Closures
+            {{ saveButtonLabel }}
           </button>
         </div>
       </div>

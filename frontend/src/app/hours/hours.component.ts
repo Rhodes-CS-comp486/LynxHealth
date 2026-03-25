@@ -34,6 +34,7 @@ interface ClinicHoursResponse {
 })
 export class HoursComponent implements OnInit, OnDestroy {
   private refreshTimer: number | null = null;
+  private saveStateTimer: number | null = null;
 
   readonly role: SessionRole = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
@@ -43,6 +44,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   isSaving = false;
+  saveState: 'idle' | 'saving' | 'saved' = 'idle';
   hasUnsavedChanges = false;
   error = '';
   message = '';
@@ -55,6 +57,16 @@ export class HoursComponent implements OnInit, OnDestroy {
     return this.dailyHours.filter((day) => day.day_of_week < 5);
   }
 
+  get saveButtonLabel(): string {
+    if (this.saveState === 'saving') {
+      return 'Saving...';
+    }
+    if (this.saveState === 'saved') {
+      return 'Saved!';
+    }
+    return 'Save Hours & Closures';
+  }
+
   ngOnInit(): void {
     this.loadCachedClinicHours();
     this.loadClinicHours();
@@ -65,6 +77,10 @@ export class HoursComponent implements OnInit, OnDestroy {
     if (this.refreshTimer !== null && typeof window !== 'undefined') {
       window.clearInterval(this.refreshTimer);
       this.refreshTimer = null;
+    }
+    if (this.saveStateTimer !== null && typeof window !== 'undefined') {
+      window.clearTimeout(this.saveStateTimer);
+      this.saveStateTimer = null;
     }
   }
 
@@ -148,6 +164,7 @@ export class HoursComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
+    this.saveState = 'saving';
     this.message = '';
     this.error = '';
 
@@ -155,6 +172,7 @@ export class HoursComponent implements OnInit, OnDestroy {
       if (day.is_open && (!day.open_time || !day.close_time || day.close_time <= day.open_time)) {
         this.error = `Please provide valid opening and closing times for ${day.day_name}.`;
         this.isSaving = false;
+        this.saveState = 'idle';
         return;
       }
     }
@@ -185,12 +203,15 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
       this.hasUnsavedChanges = false;
+      this.saveState = 'saved';
+      this.queueSaveStateReset();
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
       } else {
         this.error = 'Unable to save clinic hours.';
       }
+      this.saveState = 'idle';
     } finally {
       this.isSaving = false;
     }
@@ -258,6 +279,20 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   markDirty(): void {
     this.hasUnsavedChanges = true;
+  }
+
+  private queueSaveStateReset(): void {
+    if (typeof window === 'undefined') {
+      this.saveState = 'idle';
+      return;
+    }
+    if (this.saveStateTimer !== null) {
+      window.clearTimeout(this.saveStateTimer);
+    }
+    this.saveStateTimer = window.setTimeout(() => {
+      this.saveState = 'idle';
+      this.saveStateTimer = null;
+    }, 1400);
   }
 
   private compareHolidays(left: Holiday, right: Holiday): number {

@@ -117,6 +117,10 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     });
   }
 
+  get conflictingAppointmentsCount(): number {
+    return this.bookedAppointmentsForVisibleWeek.filter((appointment) => this.isAppointmentOutsideCurrentRules(appointment)).length;
+  }
+
   ngOnInit(): void {
     this.setDefaultClinicHours();
     this.loadClinicHours();
@@ -679,5 +683,40 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     return localStorage.getItem('lynxSession');
+  }
+
+  isAppointmentOutsideCurrentRules(appointment: BookedAppointment): boolean {
+    const start = new Date(appointment.start_time);
+    const end = new Date(appointment.end_time);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return false;
+    }
+
+    const dayKey = this.formatDateKey(start);
+    if (this.holidayDates.has(dayKey)) {
+      return true;
+    }
+
+    const dayHours = this.clinicDailyHours.get(start.getDay() === 0 ? 6 : start.getDay() - 1);
+    if (!dayHours?.is_open || !dayHours.open_time || !dayHours.close_time) {
+      return true;
+    }
+
+    const dayOpen = this.toMinutes(dayHours.open_time);
+    const dayClose = this.toMinutes(dayHours.close_time);
+    const startMinutes = (start.getHours() * 60) + start.getMinutes();
+    const endMinutes = (end.getHours() * 60) + end.getMinutes();
+
+    if (dayOpen === null || dayClose === null) {
+      return true;
+    }
+
+    if (startMinutes < dayOpen || endMinutes > dayClose) {
+      return true;
+    }
+
+    const lunchStart = 12 * 60;
+    const lunchEnd = 13 * 60;
+    return startMinutes < lunchEnd && endMinutes > lunchStart;
   }
 }
