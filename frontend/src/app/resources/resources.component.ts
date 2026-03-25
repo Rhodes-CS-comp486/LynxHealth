@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+//import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-resources',
@@ -10,15 +11,25 @@ import { RouterLink } from '@angular/router';
   templateUrl: './resources.component.html',
   styleUrl: './resources.component.css'
 })
-export class ResourcesComponent {
-  readonly role = this.getRole();
-  readonly isAdmin = this.role === 'admin';
+export class ResourcesComponent implements OnInit {
+  role: 'admin' | 'user' = 'user';
+  isAdmin = false;
   isEditing = false;
+
   section = {
     header: 'Welcome to the Student Health Center!',
     content:
       'The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare resource for our diverse student body. We offer personalized medical services, preventive care, and health education that support academic success and personal growth.'
   };
+
+  ngOnInit(): void {
+    this.role = this.getRole();
+    this.isAdmin = this.role === 'admin';
+
+    // Debug (optional)
+    console.log('Role:', this.role);
+    console.log('isAdmin:', this.isAdmin);
+  }
 
   toggleEditMode(): void {
     this.isEditing = !this.isEditing;

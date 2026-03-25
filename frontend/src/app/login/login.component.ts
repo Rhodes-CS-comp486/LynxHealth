@@ -24,7 +24,14 @@ export class LoginComponent {
   onSubmit(): void {
     const normalizedEmail = this.email.trim().toLowerCase();
 
-    if (this.role === 'admin' && !normalizedEmail.endsWith('@admin.edu')) {
+    if (!normalizedEmail) {
+    this.errorMessage = 'Email is required.';
+    return;
+    }
+
+    const isAdminEmail = normalizedEmail.endsWith('@admin.edu');
+
+    if (this.role === 'admin' && !isAdminEmail) {
       this.errorMessage = 'Admin login requires an email ending in @admin.edu.';
       return;
     }
@@ -33,7 +40,7 @@ export class LoginComponent {
 
     const session = {
       email: normalizedEmail || `${this.role}@lynxhealth.local`,
-      role: this.role
+      role: isAdminEmail ? 'admin' : 'user'
     };
 
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
