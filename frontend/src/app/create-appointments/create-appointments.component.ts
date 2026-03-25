@@ -293,8 +293,20 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   private async tryReadError(response: Response): Promise<string | null> {
     try {
-      const payload = await response.json() as { detail?: string };
-      return payload.detail || null;
+      const payload = await response.json() as {
+        detail?: string | Array<{ msg?: string }>;
+      };
+
+      if (typeof payload.detail === 'string') {
+        return payload.detail;
+      }
+
+      if (Array.isArray(payload.detail)) {
+        const firstMessage = payload.detail.find((detail) => typeof detail.msg === 'string')?.msg;
+        return firstMessage || null;
+      }
+
+      return null;
     } catch {
       return null;
     }
@@ -610,7 +622,10 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   formatAppointmentType(value: string): string {
     return value
       .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .map((segment) => segment
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-'))
       .join(' ');
   }
 

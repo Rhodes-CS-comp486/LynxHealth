@@ -74,6 +74,27 @@ def test_create_appointment_type_request_normalizes_fields() -> None:
     assert request.duration_minutes == 45
 
 
+def test_create_appointment_type_request_allows_hyphens() -> None:
+    request = CreateAppointmentTypeRequest(
+        admin_email='admin@admin.edu',
+        appointment_type=' Check-Up ',
+        duration_minutes=30,
+    )
+
+    assert request.appointment_type == 'check-up'
+
+
+def test_create_appointment_type_request_rejects_unsupported_punctuation() -> None:
+    with pytest.raises(ValidationError) as exception_info:
+        CreateAppointmentTypeRequest(
+            admin_email='admin@admin.edu',
+            appointment_type='Check-Up!',
+            duration_minutes=30,
+        )
+
+    assert "Appointment types cannot include '!'." in str(exception_info.value)
+
+
 def test_create_appointment_type_request_rejects_non_admin() -> None:
     with pytest.raises(ValidationError):
         CreateAppointmentTypeRequest(
@@ -219,6 +240,26 @@ def test_create_appointment_type_persists_new_option_for_admin(appointment_db, m
 
     options = list_appointment_types(db=appointment_db)
     assert any(option.appointment_type == 'physical_exam' and option.duration_minutes == 45 for option in options)
+
+
+def test_create_appointment_type_persists_hyphenated_option_for_admin(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    payload = CreateAppointmentTypeRequest(
+        admin_email='admin@admin.edu',
+        appointment_type='check-up',
+        duration_minutes=30,
+    )
+    response = create_appointment_type(data=payload, db=appointment_db)
+
+    assert response.appointment_type == 'check-up'
+    assert response.duration_minutes == 30
+
+    options = list_appointment_types(db=appointment_db)
+    assert any(option.appointment_type == 'check-up' and option.duration_minutes == 30 for option in options)
 
 
 def test_cancel_my_appointment_rejects_blank_student_email(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

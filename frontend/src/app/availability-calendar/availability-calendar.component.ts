@@ -124,7 +124,10 @@ export class AvailabilityCalendarComponent implements OnInit {
   formatAppointmentType(value: string): string {
     return value
       .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .map((segment) => segment
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-'))
       .join(' ');
   }
 
