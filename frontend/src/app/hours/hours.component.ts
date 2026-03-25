@@ -266,20 +266,21 @@ export class HoursComponent implements OnInit, OnDestroy {
   }
 
   private getSessionEmail(): string {
+    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return '';
+      return fallback;
     }
 
     const data = localStorage.getItem('lynxSession');
     if (!data) {
-      return '';
+      return fallback;
     }
 
     try {
       const parsed = JSON.parse(data) as { email?: string };
-      return typeof parsed.email === 'string' ? parsed.email : '';
+      return typeof parsed.email === 'string' && parsed.email.trim() ? parsed.email : fallback;
     } catch {
-      return '';
+      return fallback;
     }
   }
 }

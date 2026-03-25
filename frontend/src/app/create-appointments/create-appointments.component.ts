@@ -636,16 +636,17 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   private getSessionEmail(): string {
     const data = this.getSessionStorageItem();
+    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
 
     if (!data) {
-      return 'user@lynxhealth.local';
+      return fallback;
     }
 
     try {
       const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email?.trim().toLowerCase() || 'user@lynxhealth.local';
+      return parsed.email?.trim().toLowerCase() || fallback;
     } catch {
-      return 'user@lynxhealth.local';
+      return fallback;
     }
   }
 

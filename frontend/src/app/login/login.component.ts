@@ -32,7 +32,7 @@ export class LoginComponent {
     this.errorMessage = '';
 
     const session = {
-      email: normalizedEmail || `${this.role}@lynxhealth.local`,
+      email: normalizedEmail || (this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local'),
       role: this.role
     };
 
