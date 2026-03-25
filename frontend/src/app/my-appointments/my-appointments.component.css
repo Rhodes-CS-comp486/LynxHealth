@@ -206,6 +206,15 @@ h1 {
   background: #fff;
 }
 
+.cancel-confirmation {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.18);
+  border-radius: 12px;
+  background: #fff5f5;
+}
+
+.cancel-confirmation h4,
 .reschedule-panel h4,
 .reschedule-panel h5 {
   margin: 0 0 8px;

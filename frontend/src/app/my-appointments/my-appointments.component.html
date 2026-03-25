@@ -69,7 +69,7 @@
               <button
                 class="button small"
                 type="button"
-                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions"
+                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions || pendingCancelAppointmentId === appointment.id"
                 (click)="openReschedulePanel(appointment)">
                 {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
               </button>
@@ -77,10 +77,34 @@
                 class="button small cancel-button"
                 type="button"
                 [disabled]="cancelingAppointmentId === appointment.id"
-                (click)="cancelAppointment(appointment.id)">
+                (click)="requestCancelConfirmation(appointment.id)">
                 {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
               </button>
             </div>
+
+            <section class="cancel-confirmation" *ngIf="pendingCancelAppointmentId === appointment.id">
+              <h4>Cancel appointment?</h4>
+              <p class="section-copy">
+                Are you sure you'd like to cancel appointment on
+                {{ appointment.start_time | date: 'EEEE, MMM d, y' }} at {{ appointment.start_time | date: 'h:mm a' }}?
+              </p>
+              <div class="actions-row">
+                <button
+                  class="button small cancel-button"
+                  type="button"
+                  [disabled]="cancelingAppointmentId === appointment.id"
+                  (click)="cancelAppointment(appointment.id)">
+                  {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Yes, cancel appointment' }}
+                </button>
+                <button
+                  class="button small ghost"
+                  type="button"
+                  [disabled]="cancelingAppointmentId === appointment.id"
+                  (click)="dismissCancelConfirmation()">
+                  No, keep appointment
+                </button>
+              </div>
+            </section>
 
             <section class="reschedule-panel" *ngIf="reschedulePanelAppointmentId === appointment.id">
               <h4>Pick a new time</h4>

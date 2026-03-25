@@ -48,6 +48,7 @@ export class MyAppointmentsComponent implements OnInit {
   appointments: BookedAppointment[] = [];
   isLoading = true;
   cancelingAppointmentId: number | null = null;
+  pendingCancelAppointmentId: number | null = null;
   reschedulingAppointmentId: number | null = null;
   reschedulePanelAppointmentId: number | null = null;
   isLoadingRescheduleOptions = false;
@@ -198,6 +199,7 @@ export class MyAppointmentsComponent implements OnInit {
       return;
     }
 
+    this.pendingCancelAppointmentId = null;
     this.cancelingAppointmentId = appointmentId;
     this.error = '';
     this.successMessage = '';
@@ -216,7 +218,7 @@ export class MyAppointmentsComponent implements OnInit {
       }
 
       this.appointments = this.appointments.filter((appointment) => appointment.id !== appointmentId);
-      this.successMessage = 'Appointment canceled.';
+      this.successMessage = 'Appointment has been cancelled.';
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
@@ -227,6 +229,24 @@ export class MyAppointmentsComponent implements OnInit {
       this.cancelingAppointmentId = null;
       this.cdr.detectChanges();
     }
+  }
+
+  requestCancelConfirmation(appointmentId: number): void {
+    if (this.role !== 'user' || this.cancelingAppointmentId === appointmentId) {
+      return;
+    }
+
+    if (this.reschedulePanelAppointmentId === appointmentId) {
+      this.closeReschedulePanel();
+    }
+
+    this.pendingCancelAppointmentId = appointmentId;
+    this.error = '';
+    this.successMessage = '';
+  }
+
+  dismissCancelConfirmation(): void {
+    this.pendingCancelAppointmentId = null;
   }
 
   startEditing(appointment: BookedAppointment): void {
