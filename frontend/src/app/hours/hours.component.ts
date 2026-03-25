@@ -288,7 +288,7 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveState = 'idle';
       this.isSaving = false;
       this.saveStateTimer = null;
-    }, 3000);
+    }, 1000);
   }
 
   private compareHolidays(left: Holiday, right: Holiday): number {
