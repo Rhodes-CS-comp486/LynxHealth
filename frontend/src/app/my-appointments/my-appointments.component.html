@@ -67,16 +67,15 @@
               </div>
             </ng-template>
 
-            <div class="appointment-actions-row">
-               <button
-                *ngIf="editingAppointmentId !== appointment.id"
+            <div class="appointment-actions-row" *ngIf="editingAppointmentId !== appointment.id">
+              <button
                 class="button small"
                 type="button"
                 (click)="startEditing(appointment)">Edit notes</button>
               <button
                 class="button small"
                 type="button"
-                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions"
+                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions || pendingCancelAppointmentId === appointment.id"
                 (click)="openReschedulePanel(appointment)">
                 {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
               </button>
@@ -84,10 +83,34 @@
                 class="button small cancel-button"
                 type="button"
                 [disabled]="cancelingAppointmentId === appointment.id"
-                (click)="cancelAppointment(appointment.id)">
+                (click)="requestCancelConfirmation(appointment.id)">
                 {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
               </button>
             </div>
+
+            <section class="cancel-confirmation" *ngIf="pendingCancelAppointmentId === appointment.id">
+              <h4>Cancel appointment?</h4>
+              <p class="section-copy">
+                Are you sure you'd like to cancel appointment on
+                {{ appointment.start_time | date: 'EEEE, MMM d, y' }} at {{ appointment.start_time | date: 'h:mm a' }}?
+              </p>
+              <div class="actions-row">
+                <button
+                  class="button small cancel-button"
+                  type="button"
+                  [disabled]="cancelingAppointmentId === appointment.id"
+                  (click)="cancelAppointment(appointment.id)">
+                  {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Yes, cancel appointment' }}
+                </button>
+                <button
+                  class="button small ghost"
+                  type="button"
+                  [disabled]="cancelingAppointmentId === appointment.id"
+                  (click)="dismissCancelConfirmation()">
+                  No, keep appointment
+                </button>
+              </div>
+            </section>
 
             <section class="reschedule-panel" *ngIf="reschedulePanelAppointmentId === appointment.id">
               <h4>Pick a new time</h4>
@@ -95,23 +118,89 @@
                 Current time: {{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}
               </p>
 
+              <div class="view-toggle-row" *ngIf="!isLoadingRescheduleOptions && rescheduleOptions.length > 0">
+                <span class="view-toggle-label">Choose a reschedule view:</span>
+                <div class="view-toggle-buttons">
+                  <button
+                    class="button small ghost view-toggle-button"
+                    type="button"
+                    [class.active]="rescheduleViewMode === 'quick'"
+                    [attr.aria-pressed]="rescheduleViewMode === 'quick'"
+                    (click)="setRescheduleViewMode('quick')">
+                    Quick view
+                  </button>
+                  <button
+                    class="button small ghost view-toggle-button"
+                    type="button"
+                    [class.active]="rescheduleViewMode === 'card'"
+                    [attr.aria-pressed]="rescheduleViewMode === 'card'"
+                    (click)="setRescheduleViewMode('card')">
+                    Card view
+                  </button>
+                </div>
+              </div>
+
               <p class="section-copy" *ngIf="isLoadingRescheduleOptions">Loading available times...</p>
               <p class="section-copy" *ngIf="!isLoadingRescheduleOptions && rescheduleOptions.length === 0">
                 No available times were found in the next 14 days.
               </p>
 
-              <div class="reschedule-day-group" *ngFor="let group of rescheduleOptions">
-                <h5>{{ group.slots[0].start_time | date: 'EEEE, MMM d' }}</h5>
-                <div class="slot-grid">
+              <div class="reschedule-week-nav" *ngIf="!isLoadingRescheduleOptions && visibleRescheduleOptions.length > 0">
+                <strong>{{ rescheduleWeekRangeLabel }}</strong>
+                <div class="reschedule-week-actions">
                   <button
-                    class="button small ghost time-slot"
+                    *ngIf="canShowPreviousRescheduleWeek"
+                    class="button ghost week-toggle"
                     type="button"
-                    *ngFor="let slot of group.slots"
-                    [class.selected]="selectedRescheduleStartTime === slot.start_time"
-                    (click)="selectRescheduleTime(slot.start_time)">
-                    {{ slot.start_time | date: 'h:mm a' }}
+                    (click)="showPreviousRescheduleWeek()">
+                    Previous week
+                  </button>
+                  <button
+                    *ngIf="canShowNextRescheduleWeek"
+                    class="button week-toggle"
+                    type="button"
+                    (click)="showNextRescheduleWeek()">
+                    Next week
                   </button>
                 </div>
+              </div>
+
+              <div *ngIf="!isLoadingRescheduleOptions && rescheduleViewMode === 'quick'">
+                <div class="reschedule-day-group" *ngFor="let group of visibleRescheduleOptions">
+                  <h5>{{ group.slots[0].start_time | date: 'EEEE, MMM d' }}</h5>
+                  <div class="slot-grid">
+                    <button
+                      class="button small ghost time-slot"
+                      type="button"
+                      *ngFor="let slot of group.slots"
+                      [class.selected]="selectedRescheduleStartTime === slot.start_time"
+                      (click)="selectRescheduleTime(slot.start_time)">
+                      {{ slot.start_time | date: 'h:mm a' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="reschedule-card-grid" *ngIf="!isLoadingRescheduleOptions && rescheduleViewMode === 'card'">
+                <article class="reschedule-day-card" *ngFor="let group of visibleRescheduleOptions">
+                  <h5>{{ group.slots[0].start_time | date: 'EEEE, MMM d' }}</h5>
+                  <div class="reschedule-card-list">
+                    <button
+                      class="reschedule-slot-card"
+                      type="button"
+                      *ngFor="let slot of group.slots"
+                      [class.selected]="selectedRescheduleStartTime === slot.start_time"
+                      (click)="selectRescheduleTime(slot.start_time)">
+                      <span class="reschedule-slot-time">
+                        {{ slot.start_time | date: 'h:mm a' }} to {{ slot.end_time | date: 'h:mm a' }}
+                      </span>
+                      <span class="reschedule-slot-meta">
+                        {{ slot.duration_minutes }} mins · {{ formatAppointmentType(slot.appointment_type) }}
+                      </span>
+                      <span class="reschedule-slot-state">Available</span>
+                    </button>
+                  </div>
+                </article>
               </div>
 
               <div class="actions-row">
