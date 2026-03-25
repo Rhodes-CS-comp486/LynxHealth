@@ -160,9 +160,6 @@ export class HoursComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.isSaving = true;
-    this.saveState = 'saving';
-    this.queueSaveStateReset();
     this.message = '';
     this.error = '';
 
@@ -174,6 +171,10 @@ export class HoursComponent implements OnInit, OnDestroy {
         return;
       }
     }
+
+    this.isSaving = true;
+    this.saveState = 'saving';
+    this.queueSaveStateReset();
 
     try {
       const response = await fetch('/api/availability/clinic-hours', {
@@ -201,16 +202,12 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
       this.hasUnsavedChanges = false;
-      this.saveState = 'idle';
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
       } else {
         this.error = 'Unable to save clinic hours.';
       }
-      this.saveState = 'idle';
-    } finally {
-      this.isSaving = false;
     }
   }
 
