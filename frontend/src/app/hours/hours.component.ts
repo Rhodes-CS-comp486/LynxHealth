@@ -43,6 +43,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   isSaving = false;
+  hasUnsavedChanges = false;
   error = '';
   message = '';
 
@@ -78,10 +79,14 @@ export class HoursComponent implements OnInit, OnDestroy {
       }
 
       const payload = await response.json() as ClinicHoursResponse;
-      this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
-      this.holidays = payload.holidays
+      const normalizedHolidays = payload.holidays
         .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
-        .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+        .sort((a, b) => this.compareHolidays(a, b));
+      if (this.hasUnsavedChanges) {
+        return;
+      }
+      this.holidays = normalizedHolidays;
+      this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
       this.saveCachedClinicHours(payload);
     } catch (error) {
       if (error instanceof Error) {
@@ -124,15 +129,17 @@ export class HoursComponent implements OnInit, OnDestroy {
         name: normalizedName,
         is_annual: this.newHolidayIsAnnual
       }
-    ].sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+    ].sort((a, b) => this.compareHolidays(a, b));
 
     this.newHolidayDate = '';
     this.newHolidayName = '';
     this.newHolidayIsAnnual = false;
+    this.hasUnsavedChanges = true;
   }
 
   removeHoliday(index: number): void {
     this.holidays = this.holidays.filter((_, itemIndex) => itemIndex !== index);
+    this.hasUnsavedChanges = true;
   }
 
   async saveHours(): Promise<void> {
@@ -174,9 +181,10 @@ export class HoursComponent implements OnInit, OnDestroy {
       this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
       this.holidays = payload.holidays
         .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
-        .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+        .sort((a, b) => this.compareHolidays(a, b));
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
+      this.hasUnsavedChanges = false;
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
@@ -211,7 +219,9 @@ export class HoursComponent implements OnInit, OnDestroy {
     }
 
     this.refreshTimer = window.setInterval(() => {
-      void this.loadClinicHours();
+      if (!this.hasUnsavedChanges) {
+        void this.loadClinicHours();
+      }
     }, 15000);
   }
 
@@ -231,7 +241,7 @@ export class HoursComponent implements OnInit, OnDestroy {
         this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
         this.holidays = payload.holidays
           .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
-          .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+          .sort((a, b) => this.compareHolidays(a, b));
       }
     } catch {
       // ignore invalid cache
@@ -244,6 +254,23 @@ export class HoursComponent implements OnInit, OnDestroy {
     }
 
     localStorage.setItem('lynxClinicHours', JSON.stringify(payload));
+  }
+
+  markDirty(): void {
+    this.hasUnsavedChanges = true;
+  }
+
+  private compareHolidays(left: Holiday, right: Holiday): number {
+    const [leftYear, leftMonth, leftDay] = left.holiday_date.split('-').map(Number);
+    const [rightYear, rightMonth, rightDay] = right.holiday_date.split('-').map(Number);
+
+    if (leftMonth !== rightMonth) {
+      return leftMonth - rightMonth;
+    }
+    if (leftDay !== rightDay) {
+      return leftDay - rightDay;
+    }
+    return leftYear - rightYear;
   }
 
   private getDefaultDailyHours(): DailyHours[] {

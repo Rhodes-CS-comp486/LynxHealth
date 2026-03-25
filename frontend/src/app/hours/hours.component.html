@@ -42,11 +42,11 @@
               <ng-container *ngIf="role === 'admin'; else dayText">
                 <div class="admin-row-controls">
                   <label>
-                    <input type="checkbox" [(ngModel)]="day.is_open" /> Open
+                    <input type="checkbox" [(ngModel)]="day.is_open" (ngModelChange)="markDirty()" /> Open
                   </label>
-                  <input type="time" [(ngModel)]="day.open_time" [disabled]="!day.is_open" />
+                  <input type="time" [(ngModel)]="day.open_time" (ngModelChange)="markDirty()" [disabled]="!day.is_open" />
                   <span>to</span>
-                  <input type="time" [(ngModel)]="day.close_time" [disabled]="!day.is_open" />
+                  <input type="time" [(ngModel)]="day.close_time" (ngModelChange)="markDirty()" [disabled]="!day.is_open" />
                 </div>
               </ng-container>
 
@@ -63,7 +63,7 @@
               <input type="date" [(ngModel)]="newHolidayDate" />
               <input type="text" [(ngModel)]="newHolidayName" placeholder="Holiday name" maxlength="80" />
               <label class="annual-toggle">
-                <input type="checkbox" [(ngModel)]="newHolidayIsAnnual" [ngModelOptions]="{standalone: true}" />
+                <input type="checkbox" [(ngModel)]="newHolidayIsAnnual" (ngModelChange)="markDirty()" [ngModelOptions]="{standalone: true}" />
                 Annual
               </label>
               <button class="button small" type="button" (click)="addHoliday()">Add Holiday</button>
@@ -80,7 +80,7 @@
 
         <div *ngIf="role === 'admin'" class="actions">
           <button class="button save-button" type="button" (click)="saveHours()" [disabled]="isSaving">
-            {{ isSaving ? 'Saving...' : 'Save Hours & Closures' }}
+            Save Hours & Closures
           </button>
         </div>
       </div>
