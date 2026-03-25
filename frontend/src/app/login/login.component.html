@@ -2,32 +2,25 @@
   <div class="login-card">
     <div class="brand-mark">LH</div>
     <h1>Welcome to Lynx Health</h1>
-    <p>Choose a role to continue into the demo portal.</p>
+    <p class="subtitle">Sign in to continue to the healthcare center.</p>
 
-    <form (ngSubmit)="onSubmit()" class="login-form">
-      <label for="email">Email (required for admin)</label>
-      <input
-        id="email"
-        type="email"
-        name="email"
-        placeholder="name@lynx.edu"
-        [(ngModel)]="email"
-      />
+    <!-- SSO: Primary action -->
+    <button type="button" class="button sso-button" (click)="loginWithSaml()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Login with Rhodes SSO
+    </button>
 
-      <label for="role">Privilege level</label>
-      <select id="role" name="role" [(ngModel)]="role">
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
+    <p class="sso-hint">For all students and staff, use your Rhodes credentials.</p>
 
-      <p class="hint">To use admin privileges, your email must end with <strong>@admin.edu</strong>.</p>
-      <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
+    <!-- Divider -->
+    <div class="divider"><span>or</span></div>
 
-      <button type="submit" class="button">Continue to Home</button>
-    </form>
-
-    <div class="divider">or</div>
-    <button type="button" class="button" (click)="loginWithSaml()">Login with Rhodes SSO</button>
-
+    <!-- Admin Panel -->
+    <button type="button" class="guest-toggle-btn" (click)="testAdminLogin()">
+      Test Admin Panel
+    </button>
   </div>
 </div>
