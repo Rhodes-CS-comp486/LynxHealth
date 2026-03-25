@@ -488,7 +488,17 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
         const dayHours = this.clinicDailyHours.get(day.date.getDay() === 0 ? 6 : day.date.getDay() - 1);
         const isHoliday = this.holidayDates.has(day.key);
         const isOpenDay = !!dayHours?.is_open && !!dayHours.open_time && !!dayHours.close_time && !isHoliday;
-        const isWithinDayHours = isOpenDay && slot >= `${dayHours.open_time}:00` && slot < `${dayHours.close_time}:00`;
+        const slotMinutes = this.toMinutes(slot);
+        const dayOpenMinutes = this.toMinutes(dayHours?.open_time);
+        const dayCloseMinutes = this.toMinutes(dayHours?.close_time);
+        const isWithinDayHours = (
+          isOpenDay
+          && slotMinutes !== null
+          && dayOpenMinutes !== null
+          && dayCloseMinutes !== null
+          && slotMinutes >= dayOpenMinutes
+          && slotMinutes < dayCloseMinutes
+        );
         const isOutOfHours = !isWithinDayHours;
 
         return {
@@ -562,6 +572,19 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       });
     }
     this.holidayDates = new Set<string>();
+  }
+
+  private toMinutes(value: string | null | undefined): number | null {
+    if (!value) {
+      return null;
+    }
+    const [hourText, minuteText] = value.split(':');
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) {
+      return null;
+    }
+    return (hour * 60) + minute;
   }
 
 

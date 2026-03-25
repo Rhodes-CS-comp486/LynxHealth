@@ -602,6 +602,24 @@ def test_validate_appointment_window_rejects_day_closed_by_holiday() -> None:
     assert exception_info.value.detail == 'Appointments can only be scheduled on clinic operating days.'
 
 
+def test_validate_appointment_window_rejects_day_closed_by_annual_holiday() -> None:
+    daily_hours_map = {
+        0: DailyHoursSettingResponse(day_of_week=0, day_name='Monday', is_open=True, open_time=time(9, 0), close_time=time(16, 0)),
+    }
+    with pytest.raises(HTTPException) as exception_info:
+        validate_appointment_window(
+            datetime(2027, 1, 4, 9, 0),
+            duration_minutes=30,
+            now=datetime(2027, 1, 3, 9, 0),
+            daily_hours_map=daily_hours_map,
+            holiday_lookup={},
+            annual_holidays={(1, 4)},
+        )
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Appointments can only be scheduled on clinic operating days.'
+
+
 def test_reschedule_appointment_updates_time_and_preserves_details(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
 

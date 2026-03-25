@@ -193,6 +193,7 @@ def ensure_clinic_holidays_schema() -> None:
         migration_steps = [
             ('holiday_date', 'ALTER TABLE clinic_holidays ADD COLUMN holiday_date DATE'),
             ('name', 'ALTER TABLE clinic_holidays ADD COLUMN name VARCHAR'),
+            ('is_annual', 'ALTER TABLE clinic_holidays ADD COLUMN is_annual BOOLEAN DEFAULT FALSE'),
         ]
 
         with engine.begin() as connection:

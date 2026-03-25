@@ -90,6 +90,13 @@ h2 {
   margin-bottom: 0.8rem;
 }
 
+.annual-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
 .holiday-row {
   justify-content: space-between;
   border-top: 1px solid var(--line);
@@ -116,6 +123,9 @@ h2 {
 }
 
 .save-button {
+  background: var(--red-500);
+  color: #fff;
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: 1rem 1.8rem;
   font-size: 1rem;

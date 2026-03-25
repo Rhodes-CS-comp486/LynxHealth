@@ -17,6 +17,7 @@ interface Holiday {
   id?: number;
   holiday_date: string;
   name: string;
+  is_annual?: boolean;
 }
 
 interface ClinicHoursResponse {
@@ -47,6 +48,7 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   newHolidayDate = '';
   newHolidayName = '';
+  newHolidayIsAnnual = false;
 
   get weekdayHours(): DailyHours[] {
     return this.dailyHours.filter((day) => day.day_of_week < 5);
@@ -77,7 +79,9 @@ export class HoursComponent implements OnInit, OnDestroy {
 
       const payload = await response.json() as ClinicHoursResponse;
       this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
-      this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+      this.holidays = payload.holidays
+        .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
+        .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
       this.saveCachedClinicHours(payload);
     } catch (error) {
       if (error instanceof Error) {
@@ -117,12 +121,14 @@ export class HoursComponent implements OnInit, OnDestroy {
       ...this.holidays,
       {
         holiday_date: this.newHolidayDate,
-        name: normalizedName
+        name: normalizedName,
+        is_annual: this.newHolidayIsAnnual
       }
     ].sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
 
     this.newHolidayDate = '';
     this.newHolidayName = '';
+    this.newHolidayIsAnnual = false;
   }
 
   removeHoliday(index: number): void {
@@ -166,7 +172,9 @@ export class HoursComponent implements OnInit, OnDestroy {
 
       const payload = await response.json() as ClinicHoursResponse;
       this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
-      this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+      this.holidays = payload.holidays
+        .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
+        .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
       this.saveCachedClinicHours(payload);
       this.message = 'Clinic hours and holidays were updated.';
     } catch (error) {
@@ -221,7 +229,9 @@ export class HoursComponent implements OnInit, OnDestroy {
       const payload = JSON.parse(cached) as ClinicHoursResponse;
       if (Array.isArray(payload.daily_hours) && Array.isArray(payload.holidays)) {
         this.dailyHours = payload.daily_hours.sort((a, b) => a.day_of_week - b.day_of_week);
-        this.holidays = payload.holidays.sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
+        this.holidays = payload.holidays
+          .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
+          .sort((a, b) => a.holiday_date.localeCompare(b.holiday_date));
       }
     } catch {
       // ignore invalid cache
