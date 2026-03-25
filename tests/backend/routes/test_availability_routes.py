@@ -14,8 +14,12 @@ from backend.database import Base  # noqa: E402
 from backend.models.appointment import Appointment  # noqa: E402
 from backend.models.appointment_type_option import AppointmentTypeOption  # noqa: E402
 from backend.models.availability import Availability  # noqa: E402
+from backend.models.clinic_holiday import ClinicHoliday  # noqa: E402
+from backend.models.clinic_hours import ClinicHours  # noqa: E402
 from backend.models.user import User  # noqa: E402
 from backend.routes.availability_routes import (  # noqa: E402
+    DailyHoursSettingResponse,
+    HolidaySettingResponse,
     CreateAppointmentRequest,
     CreateAppointmentTypeRequest,
     CreateBlockedTimeRequest,
@@ -132,8 +136,8 @@ def test_validate_slot_datetime_returns_time_bounds_for_valid_slot() -> None:
 @pytest.mark.parametrize(
     ('slot_date', 'slot_time', 'error_detail'),
     [
-        (date(2026, 1, 4), time(9, 0), 'Times can only be blocked on weekdays (Monday through Friday).'),
-        (date(2026, 1, 5), time(8, 45), 'Times can only be blocked between 9:00 AM and 3:45 PM.'),
+        (date(2026, 1, 4), time(9, 0), 'Times can only be blocked on clinic operating days.'),
+        (date(2026, 1, 5), time(8, 45), 'Times can only be blocked during clinic operating hours.'),
         (date(2026, 1, 5), time(9, 10), 'Times must be on 15-minute boundaries.'),
         (date(2026, 1, 5), time(12, 0), '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.'),
     ],
@@ -167,7 +171,14 @@ def appointment_db():
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(
         bind=engine,
-        tables=[User.__table__, Availability.__table__, Appointment.__table__, AppointmentTypeOption.__table__],
+        tables=[
+            User.__table__,
+            Availability.__table__,
+            Appointment.__table__,
+            AppointmentTypeOption.__table__,
+            ClinicHours.__table__,
+            ClinicHoliday.__table__,
+        ],
     )
 
     db = testing_session_local()
@@ -178,7 +189,14 @@ def appointment_db():
         db.close()
         Base.metadata.drop_all(
             bind=engine,
-            tables=[AppointmentTypeOption.__table__, Appointment.__table__, Availability.__table__, User.__table__],
+            tables=[
+                ClinicHoliday.__table__,
+                ClinicHours.__table__,
+                AppointmentTypeOption.__table__,
+                Appointment.__table__,
+                Availability.__table__,
+                User.__table__,
+            ],
         )
 
 
@@ -606,6 +624,41 @@ def test_validate_appointment_window_rejects_past_time() -> None:
 
     assert exception_info.value.status_code == 400
     assert exception_info.value.detail == 'Appointments must be scheduled in the future.'
+
+
+def test_validate_appointment_window_rejects_day_closed_by_holiday() -> None:
+    daily_hours_map = {
+        0: DailyHoursSettingResponse(day_of_week=0, day_name='Monday', is_open=True, open_time=time(9, 0), close_time=time(16, 0)),
+    }
+    with pytest.raises(HTTPException) as exception_info:
+        validate_appointment_window(
+            datetime(2026, 1, 5, 9, 0),
+            duration_minutes=30,
+            now=datetime(2026, 1, 4, 9, 0),
+            daily_hours_map=daily_hours_map,
+            holiday_lookup={date(2026, 1, 5): HolidaySettingResponse(holiday_date=date(2026, 1, 5), name='Holiday')},
+        )
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Appointments can only be scheduled on clinic operating days.'
+
+
+def test_validate_appointment_window_rejects_day_closed_by_annual_holiday() -> None:
+    daily_hours_map = {
+        0: DailyHoursSettingResponse(day_of_week=0, day_name='Monday', is_open=True, open_time=time(9, 0), close_time=time(16, 0)),
+    }
+    with pytest.raises(HTTPException) as exception_info:
+        validate_appointment_window(
+            datetime(2027, 1, 4, 9, 0),
+            duration_minutes=30,
+            now=datetime(2027, 1, 3, 9, 0),
+            daily_hours_map=daily_hours_map,
+            holiday_lookup={},
+            annual_holidays={(1, 4)},
+        )
+
+    assert exception_info.value.status_code == 400
+    assert exception_info.value.detail == 'Appointments can only be scheduled on clinic operating days.'
 
 
 def test_reschedule_appointment_updates_time_and_preserves_details(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

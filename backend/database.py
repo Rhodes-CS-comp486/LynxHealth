@@ -23,6 +23,8 @@ _schema_lock = Lock()
 _availability_schema_checked = False
 _appointment_schema_checked = False
 _appointment_type_option_schema_checked = False
+_clinic_hours_schema_checked = False
+_clinic_holidays_schema_checked = False
 
 
 def ensure_availability_schema() -> None:
@@ -134,3 +136,72 @@ def ensure_appointment_type_option_schema() -> None:
             )
 
         _appointment_type_option_schema_checked = True
+
+
+def ensure_clinic_hours_schema() -> None:
+    global _clinic_hours_schema_checked
+
+    if _clinic_hours_schema_checked:
+        return
+
+    with _schema_lock:
+        if _clinic_hours_schema_checked:
+            return
+
+        inspector = inspect(engine)
+
+        if 'clinic_hours' not in inspector.get_table_names():
+            _clinic_hours_schema_checked = True
+            return
+
+        existing_columns = {column['name'] for column in inspector.get_columns('clinic_hours')}
+        migration_steps = [
+            ('day_of_week', 'ALTER TABLE clinic_hours ADD COLUMN day_of_week INTEGER'),
+            ('is_open', 'ALTER TABLE clinic_hours ADD COLUMN is_open BOOLEAN DEFAULT FALSE'),
+            ('open_time', 'ALTER TABLE clinic_hours ADD COLUMN open_time TIME'),
+            ('close_time', 'ALTER TABLE clinic_hours ADD COLUMN close_time TIME'),
+        ]
+
+        with engine.begin() as connection:
+            for column_name, statement in migration_steps:
+                if column_name not in existing_columns:
+                    connection.execute(text(statement))
+            connection.execute(
+                text('CREATE UNIQUE INDEX IF NOT EXISTS idx_clinic_hours_day_of_week ON clinic_hours(day_of_week)')
+            )
+
+        _clinic_hours_schema_checked = True
+
+
+def ensure_clinic_holidays_schema() -> None:
+    global _clinic_holidays_schema_checked
+
+    if _clinic_holidays_schema_checked:
+        return
+
+    with _schema_lock:
+        if _clinic_holidays_schema_checked:
+            return
+
+        inspector = inspect(engine)
+
+        if 'clinic_holidays' not in inspector.get_table_names():
+            _clinic_holidays_schema_checked = True
+            return
+
+        existing_columns = {column['name'] for column in inspector.get_columns('clinic_holidays')}
+        migration_steps = [
+            ('holiday_date', 'ALTER TABLE clinic_holidays ADD COLUMN holiday_date DATE'),
+            ('name', 'ALTER TABLE clinic_holidays ADD COLUMN name VARCHAR'),
+            ('is_annual', 'ALTER TABLE clinic_holidays ADD COLUMN is_annual BOOLEAN DEFAULT FALSE'),
+        ]
+
+        with engine.begin() as connection:
+            for column_name, statement in migration_steps:
+                if column_name not in existing_columns:
+                    connection.execute(text(statement))
+            connection.execute(
+                text('CREATE UNIQUE INDEX IF NOT EXISTS idx_clinic_holidays_date ON clinic_holidays(holiday_date)')
+            )
+
+        _clinic_holidays_schema_checked = True
