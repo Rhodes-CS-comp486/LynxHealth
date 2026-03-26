@@ -38,7 +38,10 @@
           <h1>{{ sectionMap['welcome'].header }}</h1>
           <p class="section-copy">{{ sectionMap['welcome'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Welcome Section</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Welcome Section</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('welcome')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['welcome'].header" />
@@ -55,7 +58,10 @@
           <h2>{{ sectionMap['mission'].header }}</h2>
           <p>{{ sectionMap['mission'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Mission</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Mission</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('mission')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['mission'].header" />
@@ -72,7 +78,10 @@
           <h2>{{ sectionMap['visiting'].header }}</h2>
           <p class="section-content">{{ sectionMap['visiting'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Visiting</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Visiting</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('visiting')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['visiting'].header" />
@@ -89,7 +98,10 @@
           <h2>{{ sectionMap['services'].header }}</h2>
           <p class="section-content">{{ sectionMap['services'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Services</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Services</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('services')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['services'].header" />
@@ -106,7 +118,10 @@
           <h2>{{ sectionMap['cancellation_policy'].header }}</h2>
           <p class="section-content">{{ sectionMap['cancellation_policy'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Cancellation Policy</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Cancellation Policy</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('cancellation_policy')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['cancellation_policy'].header" />
@@ -123,7 +138,10 @@
           <h2>{{ sectionMap['emergency_care'].header }}</h2>
           <p class="section-content">{{ sectionMap['emergency_care'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Emergency Care</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Emergency Care</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('emergency_care')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['emergency_care'].header" />
@@ -140,7 +158,10 @@
           <h2>{{ sectionMap['payment'].header }}</h2>
           <p class="section-content">{{ sectionMap['payment'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Payment</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Payment</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('payment')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['payment'].header" />
@@ -157,7 +178,10 @@
           <h2>{{ sectionMap['self_care'].header }}</h2>
           <p>{{ sectionMap['self_care'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Self-Care Counter</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Self-Care Counter</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('self_care')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['self_care'].header" />
@@ -174,7 +198,10 @@
           <h2>{{ sectionMap['allergy_shots'].header }}</h2>
           <p class="section-content">{{ sectionMap['allergy_shots'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Allergy Shots</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Allergy Shots</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('allergy_shots')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['allergy_shots'].header" />
@@ -191,7 +218,10 @@
           <h2>{{ sectionMap['records'].header }}</h2>
           <p>{{ sectionMap['records'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Questions & Medical Records</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Questions & Medical Records</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('records')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['records'].header" />
@@ -208,7 +238,10 @@
           <h2>{{ sectionMap['opioid_policy'].header }}</h2>
           <p class="section-content">{{ sectionMap['opioid_policy'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Opioid Policy</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Opioid Policy</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('opioid_policy')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['opioid_policy'].header" />
@@ -225,7 +258,10 @@
           <h2>{{ sectionMap['class_excuses'].header }}</h2>
           <p class="section-content">{{ sectionMap['class_excuses'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
-            <span class="edit-section-label">Class & Work Excuses</span>
+            <div class="edit-header-row">
+              <span class="edit-section-label">Class & Work Excuses</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('class_excuses')" title="Remove section">✕</button>
+            </div>
             <label>
               Header
               <input [(ngModel)]="sectionMap['class_excuses'].header" />

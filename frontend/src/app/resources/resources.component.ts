@@ -151,6 +151,35 @@ export class ResourcesComponent implements OnInit {
     this.addedSections.push(newSection);
   }
 
+  async removeSection(key: string): Promise<void> {
+    const section = this.sectionMap[key];
+    if (!section) return;
+
+    if (!confirm(`Are you sure you want to delete the "${section.header}" section?`)) {
+      return;
+    }
+
+    if (section.id) {
+      try {
+        const response = await fetch(`${this.apiUrl}/resources/sections/${section.id}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          console.error('Failed to delete section:', response.status);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to delete section:', error);
+        return;
+      }
+    }
+
+    this.sections = this.sections.filter(s => s.section_key !== key);
+    delete this.sectionMap[key];
+    this.refreshView();
+  }
+
   async removeAddedSection(index: number): Promise<void> {
     const section = this.addedSections[index];
 
