@@ -29,14 +29,31 @@
 .section .button { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 999px; background: var(--red-500); color: #fff; font-weight: 600; padding: 0.9rem 1.4rem; cursor: pointer; }
 .section .button.ghost { background: #fff; color: var(--red-600); border: 1px solid var(--red-200); }
 .section .button:disabled { opacity: 0.6; cursor: not-allowed; }
+.booking-drawer .button { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 999px; background: var(--red-500); color: #fff; font-weight: 600; padding: 0.9rem 1.4rem; cursor: pointer; }
+.booking-drawer .button.ghost { background: #fff; color: var(--red-600); border: 1px solid var(--red-200); }
+.booking-drawer .button.small { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+.booking-drawer .button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .calendar-panel { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 1rem; }
 .calendar-panel h1 { margin: 0 0 0.35rem; font-size: 1.45rem; }
 .section-copy { margin: 0; color: var(--muted); max-width: 680px; }
 
 .filters { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 0.75rem; margin: 1rem 0 1.25rem; }
-.filters label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; color: var(--muted); }
+.filters label,
+.time-filter { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; color: var(--muted); }
 .filters select { border: 1px solid var(--line); border-radius: 10px; padding: 0.55rem 0.65rem; background: #fff; }
+.filter-spacer { font-size: 0.9rem; color: var(--muted); visibility: hidden; }
+.time-toggle { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.time-toggle .button.small {
+  padding: 0.45rem 0.55rem;
+  font-size: 0.75rem;
+}
+.section .button.ghost.active {
+  background: var(--red-500);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(226, 72, 59, 0.25);
+}
 
 h2 { margin: 0; }
 .calendar-week-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 1.25rem 0 0.85rem; }
@@ -61,6 +78,84 @@ h2 { margin: 0; }
 .booking-panel textarea { border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem; resize: vertical; min-height: 96px; font: inherit; }
 .booking-actions { display: flex; gap: 0.65rem; margin-top: 0.8rem; }
 
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 12, 10, 0.4);
+  z-index: 20;
+}
+
+.booking-drawer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(420px, 92vw);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1.2rem;
+  z-index: 21;
+  transform: translate(-50%, -50%) translateX(-140%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.booking-drawer.open {
+  transform: translate(-50%, -50%) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.booking-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.booking-drawer h3 {
+  margin: 0;
+}
+
+.booking-drawer p {
+  margin: 0 0 0.75rem;
+}
+
+.booking-drawer label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.booking-drawer textarea {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem;
+  resize: vertical;
+  min-height: 96px;
+  font: inherit;
+}
+
+.confirmation-details {
+  border: 1px solid #bfe6cb;
+  background: #f1fbf5;
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.confirmation-details p {
+  margin: 0 0 0.45rem;
+}
+
+.confirmation-details p:last-child {
+  margin-bottom: 0;
+}
+
 .confirmation-panel { margin: 1rem 0; border: 1px solid #bfe6cb; background: #f1fbf5; border-radius: 14px; padding: 1rem; }
 .confirmation-panel h3 { margin: 0 0 0.5rem; color: #1f6b3d; }
 .confirmation-panel p { margin: 0 0 0.45rem; }
@@ -73,4 +168,19 @@ h2 { margin: 0; }
   .calendar-week-header { flex-direction: column; align-items: flex-start; }
   .week-grid { grid-template-columns: 1fr; }
   .booking-actions { flex-direction: column; }
+}
+
+@media (max-width: 720px) {
+  .booking-drawer {
+    left: 50%;
+    top: 50%;
+    bottom: auto;
+    width: min(92vw, 420px);
+    border-radius: 18px;
+    transform: translate(-50%, -50%) translateX(-140%);
+  }
+
+  .booking-drawer.open {
+    transform: translate(-50%, -50%) translateX(0);
+  }
 }
