@@ -53,6 +53,140 @@ h1 {
   margin: 0;
 }
 
+.admin-toolbar {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.add-btn {
+  background: var(--red-600, #e2483b);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  opacity: 0.85;
+}
+
+.edit-controls {
+  margin-top: 0.75rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: rgba(226, 72, 59, 0.07);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.edit-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-section-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted, #666);
+}
+
+.delete-btn {
+  color: #e2483b;
+  border-color: #e2483b;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #e2483b;
+  color: #fff;
+}
+
+.edit-controls label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.edit-controls input,
+.edit-controls textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+}
+
+.format-toolbar {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.format-toolbar button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line, #ccc);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.format-toolbar button:hover {
+  background: rgba(226, 72, 59, 0.1);
+}
+
+.format-toolbar .red-btn {
+  color: #e2483b;
+  font-weight: 900;
+}
+
+.rich-editor {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--line, #ccc);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  outline: none;
+  background: #fff;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+.rich-editor:focus {
+  border-color: var(--red-600, #e2483b);
+  box-shadow: 0 0 0 2px rgba(226, 72, 59, 0.15);
+}
+
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+  pointer-events: none;
+}
+
+.rich-editor a,
+.section-content a,
+.section-copy a,
+.info-section p a,
+.info-section a,
+.panel p a,
+.panel div a {
+  color: var(--red-600, #e2483b);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
 h2 {
   margin: 0 0 1rem;
   font-size: clamp(1.8rem, 2vw + 1rem, 2.5rem);
@@ -68,6 +202,10 @@ p {
 .section-copy {
   margin-top: 0.75rem;
   color: var(--muted);
+}
+
+.section-content {
+  white-space: pre-line;
 }
 
 .info-section {
@@ -106,7 +244,6 @@ p {
     font-size: 1.05rem;
   }
 }
-
 
 h3 {
   margin: 2rem 0 0.85rem;

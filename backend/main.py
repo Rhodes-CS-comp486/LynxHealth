@@ -13,7 +13,9 @@ from backend.database import (
     ensure_clinic_holidays_schema,
 )
 from backend.models import user, appointment, availability, appointment_type_option, clinic_hours, clinic_holiday
+from backend.models import page_section
 from backend.routes import auth_routes, availability_routes
+from backend.routes import page_routes
 
 app = FastAPI()
 
@@ -37,6 +39,7 @@ def initialize_database() -> None:
         appointment_type_option.Base.metadata.create_all(bind=engine)
         clinic_hours.Base.metadata.create_all(bind=engine)
         clinic_holiday.Base.metadata.create_all(bind=engine)
+        page_section.Base.metadata.create_all(bind=engine)
         ensure_availability_schema()
         ensure_appointment_schema()
         ensure_appointment_type_option_schema()
@@ -53,3 +56,4 @@ def root():
 
 app.include_router(auth_routes.router, prefix='/auth')
 app.include_router(availability_routes.router, prefix='/availability')
+app.include_router(page_routes.router, prefix='/pages')

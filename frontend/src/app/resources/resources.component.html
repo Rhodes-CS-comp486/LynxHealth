@@ -22,233 +22,395 @@
   <main>
     <section class="section">
       <div class="container panel">
-        <h1>Welcome to the Student Health Center!</h1>
-        <p class="section-copy">
-          The Rhodes College Student Health Center is committed to being an accessible and inclusive healthcare
-          resource for our diverse student body. We offer personalized medical services, preventive care, and health
-          education that support academic success and personal growth.
-        </p>
 
-        <section class="info-section">
-          <h2>Mission</h2>
-          <p>
-            Our mission is to empower students to make informed health decisions, take responsibility for their
-            well-being, and build habits that promote lifelong wellness. In every interaction, we foster an environment
-            of kindness, respect, and cultural humility—reflecting Rhodes College's values of integrity, compassion,
-            and community engagement.
-          </p>
+        <!-- Admin toolbar -->
+        <div class="admin-toolbar" *ngIf="isAdmin">
+          <button class="button small" type="button" (click)="toggleEditMode()" [disabled]="isSaving">
+            {{ isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Page Content') }}
+          </button>
+          <button class="button small add-btn" type="button" *ngIf="isEditing" (click)="addSection()">
+            + Add Section
+          </button>
+        </div>
+
+        <!-- Welcome Section -->
+        <div *ngIf="sectionMap['welcome']">
+          <ng-container *ngIf="!isEditing">
+            <h1 [innerHTML]="sectionMap['welcome'].header"></h1>
+            <p class="section-copy" [innerHTML]="sectionMap['welcome'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Welcome Section</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('welcome')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['welcome'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('welcome', 'content', $event)"
+                 #welcomeEditor>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mission -->
+        <section class="info-section" *ngIf="sectionMap['mission']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['mission'].header"></h2>
+            <p [innerHTML]="sectionMap['mission'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Mission</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('mission')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['mission'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('mission', 'content', $event)"
+                 #missionEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Visiting the Student Health Center</h2>
-          <p>
-            The Rhodes College Student Health Center is located in the <strong>Moore Moore Building</strong>, with the
-            <strong>main entrance on the east side of the building</strong>, along Thomas Lane.
-          </p>
-          <p>
-            Handicap access is available on the south side of the Student Health Center, closest to the Refectory. For
-            students requiring assistance at the handicap entrance to the Moore Moore Building, please call
-            <strong>(901) 843-3895 for the Student Health Center</strong> or
-            <strong>(901) 843-3128 for the Student Counseling Center</strong>.
-          </p>
+        <!-- Visiting -->
+        <section class="info-section" *ngIf="sectionMap['visiting']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['visiting'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['visiting'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Visiting</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('visiting')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['visiting'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('visiting', 'content', $event)"
+                 #visitingEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>On-Site Services Provided in the Health Center</h2>
-          <ul>
-            <li>Illness evaluations, diagnosis, and treatment</li>
-            <li>General physicals, not first-year's admission physicals</li>
-            <li>Gynecological exams</li>
-            <li>Wound care (minor)</li>
-            <li>Allergy shots, flu shots, and other vaccines (please see list below)</li>
-            <li>Health education information</li>
-            <li>Laboratory tests</li>
-            <li>Referrals to local healthcare specialists</li>
-          </ul>
-          <p>
-            Patients with long-term or chronic illnesses will need to be seen by their primary care physician. The
-            Student Health Center can assist with decisions regarding follow-up care with off-campus providers if
-            necessary.
-          </p>
-
-          <h3>Vaccines Offered</h3>
-          <ul>
-            <li>Tdap (Tetanus-Diphtheria-Pertussis) - $55</li>
-            <li>Tuberculosis Skin Test (PPD) - $25</li>
-          </ul>
+        <!-- Services -->
+        <section class="info-section" *ngIf="sectionMap['services']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['services'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['services'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Services</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('services')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['services'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('services', 'content', $event)"
+                 #servicesEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Appointments Cancellation/No Show Policy</h2>
-          <p class="subheading"><strong>Effective October 13, 2025</strong></p>
-          <p>
-            We value your time and strive to provide high-quality care to every student. To help us serve you and
-            others efficiently, please review our updated policy.
-          </p>
-
-          <h3>Cancelling or Rescheduling</h3>
-          <p>
-            If you need to cancel or reschedule, contact the Student Health Center at least 2 hours prior to your
-            appointment by phone or email. Early notice allows us to offer the slot to another student.
-          </p>
-
-          <h3>No-Show &amp; Late Arrival</h3>
-          <p>
-            You'll be charged a <strong>$25 fee</strong> (billed to your student account) if you:
-          </p>
-          <ul>
-            <li>
-              Miss your appointment without notifying the Student Health Center <strong>at least 2 hours</strong> before
-              your appointment by phone <strong>(901-843-3895)</strong> or email
-              <strong>health@rhodes.edu</strong>
-            </li>
-            <li>Arrive more than 15 minutes late without prior notification</li>
-          </ul>
-          <p>
-            Late arrivals may wait to be seen at the provider's next available opening, but on-time patients will be
-            prioritized.
-          </p>
-
-          <h3>Emergency &amp; After-Hours</h3>
-          <p>
-            We understand that emergencies happen. If you're unable to keep a scheduled appointment due to extenuating
-            circumstances:
-          </p>
-          <ul>
-            <li>Call or email us to explain.</li>
-            <li>
-              If it is after hours or on a weekend, leave a message — messages received within the 2-hour window are
-              acceptable.
-            </li>
-          </ul>
+        <!-- Cancellation Policy -->
+        <section class="info-section" *ngIf="sectionMap['cancellation_policy']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['cancellation_policy'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['cancellation_policy'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Cancellation Policy</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('cancellation_policy')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['cancellation_policy'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('cancellation_policy', 'content', $event)"
+                 #cancellationEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Emergency Care</h2>
-          <p>
-            <strong>Rhodes College Campus Safety — (901-843-3880 non-emergency) and (901-843-3333).</strong>
-          </p>
-          <p>
-            In the event of an injury or emergency occurring in the classroom or on campus, please call Campus Safety.
-            <strong>Be prepared to give your name, your exact location, and the nature of the injury or illness.</strong>
-            Campus Safety will respond to the scene and evaluate whether the patient needs to be transported by
-            ambulance to an emergency facility.
-          </p>
-
-          <h3>After-Hours Emergencies</h3>
-          <p>
-            When the Student Health Center is closed, Campus Safety will coordinate emergency medical assistance at
-            (901) 843-3333. The patient may be transferred to a local medical facility if the conditions warrant it.
-            The patient will be responsible for the cost of transfer and care at that facility.
-          </p>
-
-          <h3>After-Hours Health Care and Information</h3>
-          <p>
-            When the Student Health Center is closed, local hospital emergency rooms and some walk-in centers are
-            available. Here is a
-            <a class="resource-link inline-link" href="https://sites.rhodes.edu/health/memphis-health-resources" target="_blank" rel="noreferrer">
-              list of off-campus medical clinics
-            </a>.
-          </p>
+        <!-- Emergency Care -->
+        <section class="info-section" *ngIf="sectionMap['emergency_care']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['emergency_care'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['emergency_care'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Emergency Care</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('emergency_care')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['emergency_care'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('emergency_care', 'content', $event)"
+                 #emergencyEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Payment</h2>
-          <p>
-            There is <strong>NO</strong> charge for clinical office visits and in-house screening and testing such as
-            Strep, COVID, Influenza, Mono, urinalysis, or pregnancy tests.
-          </p>
-          <p>
-            However, a fee for vaccines/immunizations offered at the Student Health Center will be charged to the
-            Student's Rhodes College account.
-          </p>
-          <p>
-            Any services requiring an outside entity, such as blood work, X-rays, ultrasounds, etc., are billed to the
-            student's health insurance. You and/or your parents are responsible for charges not covered by your
-            insurance for off-campus medical services.
-          </p>
-
-          <h3>UnitedHealthcare Student Resources</h3>
-          <p>
-            The 2025-2026 rates and website for
-            <a class="resource-link inline-link" href="https://studentcenter.uhcsr.com/rhodes" target="_blank" rel="noreferrer">
-              UnitedHealthcare Student Resources
-            </a>
-            are available.
-          </p>
+        <!-- Payment -->
+        <section class="info-section" *ngIf="sectionMap['payment']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['payment'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['payment'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Payment</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('payment')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['payment'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('payment', 'content', $event)"
+                 #paymentEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Self-Care Counter</h2>
-          <p>
-            During regular clinic hours, students can visit the Student Health Center's Self-Care Counter for
-            medications and supplies for minor symptoms at no charge. Please speak to the front desk nurse for any
-            questions and concerns.
-          </p>
+        <!-- Self-Care Counter -->
+        <section class="info-section" *ngIf="sectionMap['self_care']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['self_care'].header"></h2>
+            <p [innerHTML]="sectionMap['self_care'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Self-Care Counter</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('self_care')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['self_care'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('self_care', 'content', $event)"
+                 #selfCareEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Allergy Shots</h2>
-          <p>
-            <strong>Requirements:</strong> Your allergy provider will need to send your allergy serums, administration
-            orders, injection protocol, and last provider visit to the Student Health Center. Once all items have been
-            received and verified by the Nurse Practitioner, you may begin scheduling your appointments to receive your
-            injections.
-          </p>
-          <p>
-            The Student Health Center does not accept deliveries of serums and does not initiate treatment therapy; only
-            maintenance therapy is provided.
-          </p>
-          <p>
-            <strong>
-              *Please note that there will be a 30-minute wait time in the office after receiving injections to ensure
-              there are no adverse reactions.
-            </strong>
-          </p>
+        <!-- Allergy Shots -->
+        <section class="info-section" *ngIf="sectionMap['allergy_shots']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['allergy_shots'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['allergy_shots'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Allergy Shots</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('allergy_shots')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['allergy_shots'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('allergy_shots', 'content', $event)"
+                 #allergyEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Questions and Medical Records</h2>
-          <p>
-            For administrative questions, vaccination information, or medical records, please email
-            <a class="resource-link inline-link" href="mailto:health@rhodes.edu">health@rhodes.edu</a>.
-          </p>
-          <p>
-            Steps to
-            <a class="resource-link inline-link" href="https://sites.rhodes.edu/health/request-immunization-record" target="_blank" rel="noreferrer">
-              request an immunization record
-            </a>
-          </p>
+        <!-- Questions and Medical Records -->
+        <section class="info-section" *ngIf="sectionMap['records']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['records'].header"></h2>
+            <p [innerHTML]="sectionMap['records'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Questions & Medical Records</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('records')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['records'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('records', 'content', $event)"
+                 #recordsEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Opioid Analgesics and Mental Health Medication Policy</h2>
-          <p>
-            The Student Health Center does not prescribe opioid analgesics for the treatment of chronic pain. Patients
-            requiring chronic pain or acute pain management, including the use of opioid analgesics, will be referred
-            to an appropriate off-site resource for ongoing care and management of their chronic or acute pain.
-          </p>
-          <p>
-            For initiation or refills of mental health medications, please contact the
-            <strong>Rhodes College Student Counseling Center at (901) 843-3128.</strong>
-          </p>
+        <!-- Opioid Policy -->
+        <section class="info-section" *ngIf="sectionMap['opioid_policy']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['opioid_policy'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['opioid_policy'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Opioid Policy</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('opioid_policy')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['opioid_policy'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('opioid_policy', 'content', $event)"
+                 #opioidEditor>
+            </div>
+          </div>
         </section>
 
-        <section class="info-section">
-          <h2>Class and Work Excuses</h2>
-          <p>
-            The Rhodes College Student Health Center (SHC) encourages the development of responsible healthcare habits.
-            Medical excuses will not routinely be issued for missed classes or examinations. SHC cannot provide medical
-            documentation of illnesses or excuses for class/work.
-          </p>
-          <p>
-            Please review the Rhodes College Student Handbook on
-            <a class="resource-link inline-link" href="https://catalog.rhodes.edu/content.php?catoid=31&navoid=1118" target="_blank" rel="noreferrer">
-              Class Attendance Policy
-            </a>.
-          </p>
+        <!-- Class and Work Excuses -->
+        <section class="info-section" *ngIf="sectionMap['class_excuses']">
+          <ng-container *ngIf="!isEditing">
+            <h2 [innerHTML]="sectionMap['class_excuses'].header"></h2>
+            <p class="section-content" [innerHTML]="sectionMap['class_excuses'].content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Class & Work Excuses</span>
+              <button class="button small delete-btn" type="button" (click)="removeSection('class_excuses')" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="sectionMap['class_excuses'].header" />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncContent('class_excuses', 'content', $event)"
+                 #classEditor>
+            </div>
+          </div>
         </section>
 
+        <!-- Admin-added custom sections -->
+        <section class="info-section" *ngFor="let s of addedSections; let i = index">
+          <ng-container *ngIf="!isEditing && s.header">
+            <h2 [innerHTML]="s.header"></h2>
+            <p class="section-content" [innerHTML]="s.content"></p>
+          </ng-container>
+          <div class="edit-controls" *ngIf="isEditing">
+            <div class="edit-header-row">
+              <span class="edit-section-label">Custom Section</span>
+              <button class="button small delete-btn" type="button" (click)="removeAddedSection(i)" title="Remove section">✕</button>
+            </div>
+            <label>Header</label>
+            <input [(ngModel)]="s.header" placeholder="Section title..." />
+            <label>Content</label>
+            <div class="format-toolbar">
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
+              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+            </div>
+            <div class="rich-editor"
+                 contenteditable="true"
+                 (input)="syncAddedContent(i, 'content', $event)"
+                 data-placeholder="Section content...">
+            </div>
+          </div>
+        </section>
+
+        <!-- Official links (always shown, not editable) -->
         <section class="info-section links-section">
           <h2>Official Rhodes Health Links</h2>
           <div class="link-list">
@@ -263,6 +425,7 @@
             </a>
           </div>
         </section>
+
       </div>
     </section>
   </main>
