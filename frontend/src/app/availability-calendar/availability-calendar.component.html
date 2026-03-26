@@ -28,7 +28,7 @@
         <div class="filters">
           <label>
             Appointment type
-            <select [(ngModel)]="selectedAppointmentType" (change)="onAppointmentTypeChange()">
+            <select [(ngModel)]="selectedAppointmentType" (ngModelChange)="onAppointmentTypeChange($event)">
               <option value="">Choose type</option>
               <option *ngFor="let option of appointmentTypeOptions" [value]="option.appointment_type">
                 {{ formatAppointmentType(option.appointment_type) }} ({{ option.duration_minutes }} mins)
@@ -36,14 +36,32 @@
             </select>
           </label>
 
-          <label>
-            Time of day
-            <select [(ngModel)]="selectedTimeOfDay" (change)="onTimeOfDayChange()">
-              <option value="all">All day</option>
-              <option value="morning">Morning</option>
-              <option value="afternoon">Afternoon</option>
-            </select>
-          </label>
+          <div class="time-filter" role="group" aria-label="Time of day">
+            <span class="filter-spacer" aria-hidden="true">Time of day</span>
+            <div class="time-toggle">
+              <button
+                class="button small ghost"
+                type="button"
+                [class.active]="selectedTimeOfDay === 'all'"
+                (click)="setTimeOfDay('all')">
+                All day
+              </button>
+              <button
+                class="button small ghost"
+                type="button"
+                [class.active]="selectedTimeOfDay === 'morning'"
+                (click)="setTimeOfDay('morning')">
+                Morning
+              </button>
+              <button
+                class="button small ghost"
+                type="button"
+                [class.active]="selectedTimeOfDay === 'afternoon'"
+                (click)="setTimeOfDay('afternoon')">
+                Afternoon
+              </button>
+            </div>
+          </div>
         </div>
 
         <p class="error" *ngIf="error">{{ error }}</p>
@@ -69,46 +87,6 @@
           No available slots match your selected criteria.
         </div>
 
-        <div class="booking-panel" *ngIf="role === 'user' && selectedBookingSlot">
-          <h3>Confirm Appointment</h3>
-          <p>
-            {{ selectedBookingSlot.start_time | date: 'EEE, MMM d, y' }}
-            · {{ selectedBookingSlot.start_time | date: 'h:mm a' }} to {{ selectedBookingSlot.end_time | date: 'h:mm a' }}
-            · {{ formatAppointmentType(selectedBookingSlot.appointment_type) }}
-          </p>
-          <label>
-            Comments or notes for admin (optional)
-            <textarea
-              [(ngModel)]="bookingNotes"
-              rows="4"
-              maxlength="600"
-              placeholder="Add details that can help staff prepare for your visit."></textarea>
-          </label>
-          <div class="booking-actions">
-            <button class="button ghost" type="button" (click)="cancelBooking()" [disabled]="isBooking">
-              Cancel
-            </button>
-            <button class="button" type="button" (click)="submitBooking()" [disabled]="isBooking">
-              {{ isBooking ? 'Booking...' : 'Confirm Appointment' }}
-            </button>
-          </div>
-        </div>
-
-        <div class="confirmation-panel" *ngIf="confirmedBooking">
-          <h3>Booking Confirmed</h3>
-          <p>Your appointment is confirmed and the calendar below has been updated.</p>
-          <p>
-            <strong>Date:</strong> {{ confirmedBooking.start_time | date: 'EEE, MMM d, y' }}
-            · <strong>Time:</strong> {{ confirmedBooking.start_time | date: 'h:mm a' }} to {{ confirmedBooking.end_time | date: 'h:mm a' }}
-          </p>
-          <p>
-            <strong>Type:</strong> {{ formatAppointmentType(confirmedBooking.appointment_type) }}
-            · <strong>Duration:</strong> {{ confirmedBooking.duration_minutes }} mins
-          </p>
-          <p><strong>Notes:</strong> {{ confirmedBooking.notes || 'No notes provided.' }}</p>
-        </div>
-        <p class="error" *ngIf="bookingError">{{ bookingError }}</p>
-
         <div class="week-grid" *ngIf="selectedAppointmentType && (filteredSlots.length > 0 || confirmedBooking)">
           <article class="week-day" *ngFor="let day of visibleWeekDays">
             <h3>{{ day.label }}</h3>
@@ -131,4 +109,63 @@
       </div>
     </section>
   </main>
+
+  <div
+    class="drawer-backdrop"
+    *ngIf="role === 'user' && (selectedBookingSlot || confirmedBooking)"
+    (click)="closeBookingDrawer()"
+    aria-hidden="true"></div>
+  <aside
+    class="booking-drawer"
+    [class.open]="role === 'user' && (selectedBookingSlot || confirmedBooking)"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="booking-drawer-title"
+    [attr.aria-hidden]="!(role === 'user' && (selectedBookingSlot || confirmedBooking))">
+    <div class="booking-drawer-header">
+      <h3 id="booking-drawer-title">{{ confirmedBooking ? 'Booking Confirmed' : 'Confirm Appointment' }}</h3>
+      <button class="button small ghost" type="button" (click)="closeBookingDrawer()" [disabled]="isBooking">
+        Close
+      </button>
+    </div>
+    <div *ngIf="confirmedBooking; else bookingForm">
+      <div class="confirmation-details">
+        <p>Your appointment is confirmed!</p>
+        <p>
+          <strong>Date:</strong> {{ confirmedBooking.start_time | date: 'EEE, MMM d, y' }}
+          · <strong>Time:</strong> {{ confirmedBooking.start_time | date: 'h:mm a' }} to {{ confirmedBooking.end_time | date: 'h:mm a' }}
+        </p>
+        <p>
+          <strong>Type:</strong> {{ formatAppointmentType(confirmedBooking.appointment_type) }}
+          · <strong>Duration:</strong> {{ confirmedBooking.duration_minutes }} mins
+        </p>
+        <p><strong>Notes:</strong> {{ confirmedBooking.notes || 'No notes provided.' }}</p>
+      </div>
+    </div>
+
+    <ng-template #bookingForm>
+      <p *ngIf="selectedBookingSlot">
+        {{ selectedBookingSlot.start_time | date: 'EEE, MMM d, y' }}
+        · {{ selectedBookingSlot.start_time | date: 'h:mm a' }} to {{ selectedBookingSlot.end_time | date: 'h:mm a' }}
+        · {{ formatAppointmentType(selectedBookingSlot.appointment_type) }}
+      </p>
+      <label>
+        Comments or notes for admin (optional)
+        <textarea
+          [(ngModel)]="bookingNotes"
+          rows="4"
+          maxlength="600"
+          placeholder="Add details that can help staff prepare for your visit."></textarea>
+      </label>
+      <div class="booking-actions">
+        <button class="button ghost" type="button" (click)="cancelBooking()" [disabled]="isBooking">
+          Cancel
+        </button>
+        <button class="button" type="button" (click)="submitBooking()" [disabled]="isBooking">
+          {{ isBooking ? 'Booking...' : 'Confirm Appointment' }}
+        </button>
+      </div>
+      <p class="error" *ngIf="bookingError">{{ bookingError }}</p>
+    </ng-template>
+  </aside>
 </div>
