@@ -1,4 +1,3 @@
-import { NgIf } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,7 +5,7 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, NgIf],
+  imports: [FormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -21,21 +20,11 @@ export class LoginComponent {
     window.location.href = 'https://lynxhc.com/auth/saml/login';
   }
 
-  onSubmit(): void {
-    const normalizedEmail = this.email.trim().toLowerCase();
-
-    if (this.role === 'admin' && !normalizedEmail.endsWith('@admin.edu')) {
-      this.errorMessage = 'Admin login requires an email ending in @admin.edu.';
-      return;
-    }
-
-    this.errorMessage = '';
-
+  testAdminLogin(): void {
     const session = {
-      email: normalizedEmail || (this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local'),
-      role: this.role
+      email: 'admin@lynxhealth.local',
+      role: 'admin' as const
     };
-
     if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       localStorage.setItem('lynxSession', JSON.stringify(session));
     }

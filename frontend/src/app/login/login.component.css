@@ -31,61 +31,72 @@ h1 {
   font-family: "Space Grotesk", "Source Sans 3", sans-serif;
 }
 
-p {
-  margin: 0.75rem 0 1.5rem;
+.subtitle {
+  margin: 0.5rem 0 1.5rem;
   color: var(--muted);
-}
-
-.login-form {
-  display: grid;
-  gap: 0.8rem;
-}
-
-label {
-  font-weight: 600;
   font-size: 0.95rem;
 }
 
-input,
-select {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.7rem 0.8rem;
-  font: inherit;
-}
-
-.button {
-  margin-top: 0.8rem;
-  display: inline-flex;
+/* ——— Shared Button Style ——— */
+.button,
+.guest-toggle-btn {
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  width: 100%;
   padding: 0.9rem 1.4rem;
-  border-radius: 999px;
-  border: none;
-  background: var(--red-500);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
   color: white;
-  font-weight: 600;
-  font-family: "Space Grotesk", "Source Sans 3", sans-serif;
-  box-shadow: 0 16px 30px rgba(226, 72, 59, 0.3);
+  background: var(--red-500);
+  border: 2px solid var(--red-500);
+  border-radius: 999px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-align: center;
+  box-shadow: 0 16px 30px rgba(226, 72, 59, 0.3);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.button:hover {
+.button:hover,
+.guest-toggle-btn:hover {
+  background: transparent;
+  color: var(--red-500);
   transform: translateY(-2px);
-  box-shadow: 0 22px 40px rgba(226, 72, 59, 0.35);
+  box-shadow: none;
 }
 
-.hint {
-  margin: 0.25rem 0 0;
+/* SSO button slightly larger */
+.sso-button {
+  padding: 1rem 1.4rem;
+  font-size: 1.05rem;
+}
+
+.sso-hint {
+  text-align: center;
+  font-size: 0.85rem;
   color: var(--muted);
-  font-size: 0.9rem;
+  margin: 0.75rem 0 0;
 }
 
-.error {
-  margin: 0.1rem 0 0;
-  color: #b42318;
-  font-weight: 600;
-  font-size: 0.9rem;
+/* ——— Divider ——— */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.divider span {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
