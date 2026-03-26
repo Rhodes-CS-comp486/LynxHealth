@@ -55,6 +55,21 @@ h1 {
 
 .admin-toolbar {
   margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.add-btn {
+  background: var(--red-600, #e2483b);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  opacity: 0.85;
 }
 
 .edit-controls {
@@ -65,6 +80,29 @@ h1 {
   background: rgba(226, 72, 59, 0.07);
   display: grid;
   gap: 0.75rem;
+}
+
+.edit-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-section-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted, #666);
+}
+
+.delete-btn {
+  color: #e2483b;
+  border-color: #e2483b;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #e2483b;
+  color: #fff;
 }
 
 .edit-controls label {
@@ -97,6 +135,10 @@ p {
 .section-copy {
   margin-top: 0.75rem;
   color: var(--muted);
+}
+
+.section-content {
+  white-space: pre-line;
 }
 
 .info-section {
@@ -135,7 +177,6 @@ p {
     font-size: 1.05rem;
   }
 }
-
 
 h3 {
   margin: 2rem 0 0.85rem;
