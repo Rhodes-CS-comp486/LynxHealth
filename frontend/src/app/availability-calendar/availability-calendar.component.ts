@@ -59,12 +59,13 @@ export class AvailabilityCalendarComponent implements OnInit {
   weekIndex = 0;
 
   selectedTimeOfDay: TimeOfDayFilter = 'all';
-  selectedAppointmentType = '';
+  selectedAppointmentType = 'checkup';
   selectedBookingSlot: CalendarSlot | null = null;
   bookingNotes = '';
   bookingError = '';
   confirmedBooking: AppointmentBookingResponse | null = null;
   isBooking = false;
+  private isBootstrapping = true;
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -72,7 +73,8 @@ export class AvailabilityCalendarComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadAppointmentTypes();
+    void this.loadCalendar({ suppressErrors: true });
+    void this.loadAppointmentTypes();
   }
 
   get weekRangeLabel(): string {
@@ -93,7 +95,10 @@ export class AvailabilityCalendarComponent implements OnInit {
     return this.weekIndex === 1;
   }
 
-  async onAppointmentTypeChange(): Promise<void> {
+  async onAppointmentTypeChange(value?: string): Promise<void> {
+    if (typeof value === 'string') {
+      this.selectedAppointmentType = value;
+    }
     this.weekIndex = 0;
     this.clearBookingState();
     await this.loadCalendar();
@@ -101,6 +106,15 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   onTimeOfDayChange(): void {
     this.updateFilteredSlots();
+  }
+
+  setTimeOfDay(value: TimeOfDayFilter): void {
+    if (this.selectedTimeOfDay === value) {
+      return;
+    }
+
+    this.selectedTimeOfDay = value;
+    this.onTimeOfDayChange();
   }
 
   showNextWeek(): void {
@@ -141,6 +155,13 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   cancelBooking(): void {
     this.selectedBookingSlot = null;
+    this.bookingNotes = '';
+    this.bookingError = '';
+  }
+
+  closeBookingDrawer(): void {
+    this.selectedBookingSlot = null;
+    this.confirmedBooking = null;
     this.bookingNotes = '';
     this.bookingError = '';
   }
@@ -194,9 +215,39 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   private async loadAppointmentTypes(): Promise<void> {
     this.appointmentTypeOptions = await this.appointmentTypeOptionsService.getAppointmentTypes();
+    const defaultType = this.getDefaultAppointmentType();
+    const currentType = this.selectedAppointmentType.trim().toLowerCase();
+    const hasCurrentType = this.appointmentTypeOptions.some(
+      (option) => option.appointment_type.trim().toLowerCase() === currentType
+    );
+
+    if (!hasCurrentType) {
+      this.selectedAppointmentType = defaultType ?? '';
+      if (this.selectedAppointmentType) {
+        await this.onAppointmentTypeChange();
+      } else {
+        this.resetCalendar();
+      }
+    }
+
+    this.isBootstrapping = false;
+    this.cdr.detectChanges();
   }
 
-  private async loadCalendar(): Promise<void> {
+  private getDefaultAppointmentType(): string | null {
+    if (this.appointmentTypeOptions.length === 0) {
+      return null;
+    }
+
+    const normalizeType = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
+    const preferred = this.appointmentTypeOptions.find(
+      (option) => normalizeType(option.appointment_type) === 'checkup'
+    );
+    return preferred?.appointment_type ?? this.appointmentTypeOptions[0]?.appointment_type ?? null;
+  }
+
+  private async loadCalendar(options: { suppressErrors?: boolean } = {}): Promise<void> {
+    const { suppressErrors = false } = options;
     this.error = '';
     this.slots = [];
     this.filteredSlots = [];
@@ -204,6 +255,7 @@ export class AvailabilityCalendarComponent implements OnInit {
     //this.visibleWeekSlotsByDay = new Map<string, CalendarSlot[]>();
 
     if (!this.selectedAppointmentType) {
+      this.resetCalendar();
       return;
     }
 
@@ -216,7 +268,9 @@ export class AvailabilityCalendarComponent implements OnInit {
       );
 
       if (!response.ok) {
-        this.error = 'Unable to load available slots right now.';
+        if (!suppressErrors && !this.isBootstrapping) {
+          this.error = 'Unable to load available slots right now.';
+        }
         this.resetCalendar();
         return;
       }
@@ -225,8 +279,12 @@ export class AvailabilityCalendarComponent implements OnInit {
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
       this.updateFilteredSlots();
     } catch {
-      this.error = 'Unable to load available slots right now.';
+      if (!suppressErrors && !this.isBootstrapping) {
+        this.error = 'Unable to load available slots right now.';
+      }
       this.resetCalendar();
+    } finally {
+      this.cdr.detectChanges();
     }
   }
 
@@ -368,6 +426,7 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.bookingError = '';
     this.confirmedBooking = null;
   }
+
 
   private async tryReadError(response: Response): Promise<string | null> {
     try {
