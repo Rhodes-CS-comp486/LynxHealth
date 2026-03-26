@@ -35,7 +35,7 @@
 
         <!-- Welcome Section -->
         <ng-container *ngIf="getSection('welcome') as s">
-          <div *ngIf="!isEditing">
+          <div *ngIf="!isEditing || isAdmin">
             <h1>{{ s.header }}</h1>
             <p class="section-copy">{{ s.content }}</p>
           </div>
@@ -55,7 +55,7 @@
         <!-- Mission -->
         <section class="info-section">
           <ng-container *ngIf="getSection('mission') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p>{{ s.content }}</p>
             </div>
@@ -76,7 +76,7 @@
         <!-- Visiting -->
         <section class="info-section">
           <ng-container *ngIf="getSection('visiting') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p [innerHTML]="s.content"></p>
             </div>
@@ -97,7 +97,7 @@
         <!-- Services -->
         <section class="info-section">
           <ng-container *ngIf="getSection('services') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -118,7 +118,7 @@
         <!-- Cancellation Policy -->
         <section class="info-section">
           <ng-container *ngIf="getSection('cancellation_policy') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -139,7 +139,7 @@
         <!-- Emergency Care -->
         <section class="info-section">
           <ng-container *ngIf="getSection('emergency_care') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -160,7 +160,7 @@
         <!-- Payment -->
         <section class="info-section">
           <ng-container *ngIf="getSection('payment') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -181,7 +181,7 @@
         <!-- Self-Care Counter -->
         <section class="info-section">
           <ng-container *ngIf="getSection('self_care') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p>{{ s.content }}</p>
             </div>
@@ -202,7 +202,7 @@
         <!-- Allergy Shots -->
         <section class="info-section">
           <ng-container *ngIf="getSection('allergy_shots') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -223,7 +223,7 @@
         <!-- Questions and Medical Records -->
         <section class="info-section">
           <ng-container *ngIf="getSection('records') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p>{{ s.content }}</p>
             </div>
@@ -244,7 +244,7 @@
         <!-- Opioid Policy -->
         <section class="info-section">
           <ng-container *ngIf="getSection('opioid_policy') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -265,7 +265,7 @@
         <!-- Class and Work Excuses -->
         <section class="info-section">
           <ng-container *ngIf="getSection('class_excuses') as s">
-            <div *ngIf="!isEditing">
+            <div *ngIf="!isEditing || isAdmin">
               <h2>{{ s.header }}</h2>
               <p class="section-content">{{ s.content }}</p>
             </div>
@@ -285,7 +285,7 @@
 
         <!-- Admin-added custom sections -->
         <section class="info-section" *ngFor="let s of addedSections; let i = index">
-          <div *ngIf="!isEditing">
+          <div *ngIf="!isEditing || isAdmin">
             <h2>{{ s.header }}</h2>
             <p class="section-content">{{ s.content }}</p>
           </div>
