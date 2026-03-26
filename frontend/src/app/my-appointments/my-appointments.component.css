@@ -159,9 +159,61 @@ h1 {
   background: #fff;
 }
 
+.cancel-confirmation {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.18);
+  border-radius: 12px;
+  background: #fff5f5;
+}
+
+.cancel-confirmation h4,
 .reschedule-panel h4,
 .reschedule-panel h5 {
   margin: 0 0 8px;
+}
+
+.view-toggle-row {
+  margin-top: 14px;
+}
+
+.view-toggle-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.view-toggle-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.section .button.view-toggle-button.active {
+  background: var(--red-500);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(226, 72, 59, 0.18), 0 12px 24px rgba(226, 72, 59, 0.35);
+}
+
+.reschedule-week-nav {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reschedule-week-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.section .button.week-toggle {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8rem;
 }
 
 .reschedule-day-group + .reschedule-day-group {
@@ -185,6 +237,67 @@ h1 {
   box-shadow: 0 10px 22px rgba(226, 72, 59, 0.25);
 }
 
+.reschedule-card-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.reschedule-day-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.reschedule-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.reschedule-slot-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.reschedule-slot-card.selected {
+  border-color: transparent;
+  background: rgba(226, 72, 59, 0.08);
+  box-shadow: 0 12px 24px rgba(226, 72, 59, 0.18);
+}
+
+.reschedule-slot-time {
+  font-weight: 600;
+}
+
+.reschedule-slot-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.reschedule-slot-state {
+  display: inline-block;
+  margin-top: 4px;
+  background: #e7f8ee;
+  color: #17683a;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .cancel-button {
   background: #b91c1c;
 }
@@ -200,8 +313,23 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .view-toggle-buttons,
+  .actions-row {
+    flex-direction: column;
+  }
+
+  .reschedule-week-nav,
+  .reschedule-week-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .section .button.time-slot {
     width: 100%;
     min-width: 0;
+  }
+
+  .reschedule-card-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -31,6 +31,24 @@ interface CalendarDay {
   label: string;
 }
 
+interface DailyHours {
+  day_of_week: number;
+  day_name: string;
+  is_open: boolean;
+  open_time: string | null;
+  close_time: string | null;
+}
+
+interface Holiday {
+  holiday_date: string;
+  name: string;
+}
+
+interface ClinicHoursResponse {
+  daily_hours: DailyHours[];
+  holidays: Holiday[];
+}
+
 interface TimeCell {
   key: string;
   timeLabel: string;
@@ -41,6 +59,7 @@ interface TimeCell {
   isBooked: boolean;
   isLunchBreak: boolean;
   isPast: boolean;
+  isOutOfHours: boolean;
 }
 
 @Component({
@@ -58,11 +77,13 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   readonly role = this.getRole();
   readonly sessionEmail = this.getSessionEmail();
 
-  readonly timeSlots = this.buildTimeSlots();
+  timeSlots: string[] = [];
 
   weekStart = this.getWeekStart(new Date());
   calendarDays: CalendarDay[] = [];
   calendarRows: TimeCell[][] = [];
+  clinicDailyHours = new Map<number, DailyHours>();
+  holidayDates = new Set<string>();
 
   blockedTimes: BlockedTime[] = [];
   blockedMap = new Map<string, number>();
@@ -96,9 +117,15 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     });
   }
 
+  get conflictingAppointmentsCount(): number {
+    return this.bookedAppointmentsForVisibleWeek.filter((appointment) => this.isAppointmentOutsideCurrentRules(appointment)).length;
+  }
+
   ngOnInit(): void {
-    this.buildCalendar();
+    this.setDefaultClinicHours();
+    this.loadClinicHours();
     this.loadAppointmentTypes();
+    this.buildCalendar();
     this.loadBlockedTimes();
     this.loadBookedAppointments();
     this.startAutoRefresh();
@@ -117,14 +144,14 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const next = new Date(this.weekStart);
     next.setDate(next.getDate() - 7);
     this.weekStart = this.getWeekStart(next);
-    this.buildCalendar();
+    this.loadClinicHours();
   }
 
   nextWeek(): void {
     const next = new Date(this.weekStart);
     next.setDate(next.getDate() + 7);
     this.weekStart = this.getWeekStart(next);
-    this.buildCalendar();
+    this.loadClinicHours();
   }
 
   async toggleBlocked(cell: TimeCell): Promise<void> {
@@ -148,6 +175,12 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     if (cell.isLunchBreak) {
       this.adminMessage = '';
       this.adminError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
+      return;
+    }
+
+    if (cell.isOutOfHours) {
+      this.adminMessage = '';
+      this.adminError = 'This time is outside configured clinic hours.';
       return;
     }
 
@@ -260,8 +293,20 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   private async tryReadError(response: Response): Promise<string | null> {
     try {
-      const payload = await response.json() as { detail?: string };
-      return payload.detail || null;
+      const payload = await response.json() as {
+        detail?: string | Array<{ msg?: string }>;
+      };
+
+      if (typeof payload.detail === 'string') {
+        return payload.detail;
+      }
+
+      if (Array.isArray(payload.detail)) {
+        const firstMessage = payload.detail.find((detail) => typeof detail.msg === 'string')?.msg;
+        return firstMessage || null;
+      }
+
+      return null;
     } catch {
       return null;
     }
@@ -291,6 +336,37 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     } catch {
       this.blockedTimes = [];
       this.blockedMap = new Map<string, number>();
+      this.buildCalendar();
+      this.refreshView();
+    }
+  }
+
+  private async loadClinicHours(): Promise<void> {
+    try {
+      const response = await fetch('/api/availability/clinic-hours', { cache: 'no-store' });
+      if (!response.ok) {
+        this.setDefaultClinicHours();
+        this.buildCalendar();
+        this.refreshView();
+        return;
+      }
+
+      const payload = await response.json() as ClinicHoursResponse;
+      this.clinicDailyHours = new Map<number, DailyHours>();
+      this.holidayDates = new Set<string>();
+
+      for (const day of payload.daily_hours) {
+        this.clinicDailyHours.set(day.day_of_week, day);
+      }
+
+      for (const holiday of payload.holidays) {
+        this.holidayDates.add(holiday.holiday_date);
+      }
+
+      this.buildCalendar();
+      this.refreshView();
+    } catch {
+      this.setDefaultClinicHours();
       this.buildCalendar();
       this.refreshView();
     }
@@ -375,6 +451,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.stopAutoRefresh();
     this.autoRefreshTimer = window.setInterval(() => {
       void this.loadBookedAppointments();
+      void this.loadClinicHours();
+      void this.loadBlockedTimes();
     }, this.autoRefreshIntervalMs);
   }
 
@@ -414,6 +492,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       });
     }
 
+    this.timeSlots = this.buildTimeSlotsForWeek();
     this.calendarRows = this.timeSlots.map((slot) =>
       this.calendarDays.map((day) => {
         const key = `${day.key}T${slot}`;
@@ -422,6 +501,21 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
         const isLunchBreak = this.isLunchBreakSlot(slot);
         const slotDateTime = new Date(`${day.key}T${slot}`);
         const isPast = slotDateTime < now;
+        const dayHours = this.clinicDailyHours.get(day.date.getDay() === 0 ? 6 : day.date.getDay() - 1);
+        const isHoliday = this.holidayDates.has(day.key);
+        const isOpenDay = !!dayHours?.is_open && !!dayHours.open_time && !!dayHours.close_time && !isHoliday;
+        const slotMinutes = this.toMinutes(slot);
+        const dayOpenMinutes = this.toMinutes(dayHours?.open_time);
+        const dayCloseMinutes = this.toMinutes(dayHours?.close_time);
+        const isWithinDayHours = (
+          isOpenDay
+          && slotMinutes !== null
+          && dayOpenMinutes !== null
+          && dayCloseMinutes !== null
+          && slotMinutes >= dayOpenMinutes
+          && slotMinutes < dayCloseMinutes
+        );
+        const isOutOfHours = !isWithinDayHours;
 
         return {
           key,
@@ -429,10 +523,11 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
           hourLabel: slot.endsWith(':00') ? this.formatTime(slot) : '',
           date: day.key,
           time: slot,
-          blockedId: isLunchBreak ? -1 : blockedId,
+          blockedId: isOutOfHours || isLunchBreak ? undefined : blockedId,
           isBooked,
           isLunchBreak,
-          isPast
+          isPast,
+          isOutOfHours,
         };
       })
     ).filter((row) => row.some((cell) => !cell.isPast));
@@ -448,10 +543,30 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     return start;
   }
 
-  private buildTimeSlots(): string[] {
+  private buildTimeSlotsForWeek(): string[] {
+    const openTimes: string[] = [];
+    const closeTimes: string[] = [];
+    for (const day of this.calendarDays) {
+      const dayHours = this.clinicDailyHours.get(day.date.getDay() === 0 ? 6 : day.date.getDay() - 1);
+      if (!dayHours?.is_open || !dayHours.open_time || !dayHours.close_time || this.holidayDates.has(day.key)) {
+        continue;
+      }
+      openTimes.push(dayHours.open_time);
+      closeTimes.push(dayHours.close_time);
+    }
+
+    if (openTimes.length === 0 || closeTimes.length === 0) {
+      return [];
+    }
+
+    const earliestOpen = openTimes.sort()[0];
+    const latestClose = closeTimes.sort()[closeTimes.length - 1];
     const slots: string[] = [];
-    const current = new Date(2000, 0, 1, 9, 0, 0, 0);
-    const end = new Date(2000, 0, 1, 15, 45, 0, 0);
+    const [openHour, openMinute] = earliestOpen.split(':').map(Number);
+    const [closeHour, closeMinute] = latestClose.split(':').map(Number);
+    const current = new Date(2000, 0, 1, openHour, openMinute, 0, 0);
+    const end = new Date(2000, 0, 1, closeHour, closeMinute, 0, 0);
+    end.setMinutes(end.getMinutes() - 15);
 
     while (current <= end) {
       slots.push(`${String(current.getHours()).padStart(2, '0')}:${String(current.getMinutes()).padStart(2, '0')}:00`);
@@ -459,6 +574,33 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     return slots;
+  }
+
+  private setDefaultClinicHours(): void {
+    this.clinicDailyHours = new Map<number, DailyHours>();
+    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek += 1) {
+      this.clinicDailyHours.set(dayOfWeek, {
+        day_of_week: dayOfWeek,
+        day_name: '',
+        is_open: dayOfWeek < 5,
+        open_time: dayOfWeek < 5 ? '09:00' : null,
+        close_time: dayOfWeek < 5 ? '16:00' : null,
+      });
+    }
+    this.holidayDates = new Set<string>();
+  }
+
+  private toMinutes(value: string | null | undefined): number | null {
+    if (!value) {
+      return null;
+    }
+    const [hourText, minuteText] = value.split(':');
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) {
+      return null;
+    }
+    return (hour * 60) + minute;
   }
 
 
@@ -480,7 +622,10 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   formatAppointmentType(value: string): string {
     return value
       .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .map((segment) => segment
+        .split('-')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('-'))
       .join(' ');
   }
 
@@ -533,16 +678,17 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   private getSessionEmail(): string {
     const data = this.getSessionStorageItem();
+    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
 
     if (!data) {
-      return 'user@lynxhealth.local';
+      return fallback;
     }
 
     try {
       const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email?.trim().toLowerCase() || 'user@lynxhealth.local';
+      return parsed.email?.trim().toLowerCase() || fallback;
     } catch {
-      return 'user@lynxhealth.local';
+      return fallback;
     }
   }
 
@@ -552,5 +698,40 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     return localStorage.getItem('lynxSession');
+  }
+
+  isAppointmentOutsideCurrentRules(appointment: BookedAppointment): boolean {
+    const start = new Date(appointment.start_time);
+    const end = new Date(appointment.end_time);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      return false;
+    }
+
+    const dayKey = this.formatDateKey(start);
+    if (this.holidayDates.has(dayKey)) {
+      return true;
+    }
+
+    const dayHours = this.clinicDailyHours.get(start.getDay() === 0 ? 6 : start.getDay() - 1);
+    if (!dayHours?.is_open || !dayHours.open_time || !dayHours.close_time) {
+      return true;
+    }
+
+    const dayOpen = this.toMinutes(dayHours.open_time);
+    const dayClose = this.toMinutes(dayHours.close_time);
+    const startMinutes = (start.getHours() * 60) + start.getMinutes();
+    const endMinutes = (end.getHours() * 60) + end.getMinutes();
+
+    if (dayOpen === null || dayClose === null) {
+      return true;
+    }
+
+    if (startMinutes < dayOpen || endMinutes > dayClose) {
+      return true;
+    }
+
+    const lunchStart = 12 * 60;
+    const lunchEnd = 13 * 60;
+    return startMinutes < lunchEnd && endMinutes > lunchStart;
   }
 }

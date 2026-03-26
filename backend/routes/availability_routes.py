@@ -9,17 +9,20 @@ from sqlalchemy.orm import Session
 from backend.database import (
     SessionLocal,
     ensure_availability_schema,
+    ensure_clinic_holidays_schema,
+    ensure_clinic_hours_schema,
     ensure_appointment_schema,
     ensure_appointment_type_option_schema,
 )
 from backend.models.availability import Availability
+from backend.models.clinic_holiday import ClinicHoliday
+from backend.models.clinic_hours import ClinicHours
 from backend.models.appointment import Appointment
 from backend.models.appointment_type_option import AppointmentTypeOption
 
 router = APIRouter(tags=['availability'])
 
 OPEN_TIME = time(9, 0)
-LAST_START_TIME = time(15, 45)
 DEFAULT_SLOT_DURATION_MINUTES = 15
 SLOT_INCREMENT_MINUTES = 15
 SLOT_RANGE_DAYS = 28
@@ -31,6 +34,43 @@ DAY_END_TIME = time(16, 0)
 MAX_APPOINTMENT_NOTES_LENGTH = 600
 MIN_APPOINTMENT_DURATION_MINUTES = 15
 MAX_APPOINTMENT_DURATION_MINUTES = 240
+MAX_HOLIDAY_NAME_LENGTH = 80
+DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+
+
+def format_invalid_appointment_type_characters(invalid_characters: list[str]) -> str:
+    if len(invalid_characters) == 1:
+        return f"Appointment types cannot include '{invalid_characters[0]}'."
+
+    formatted = ', '.join(f"'{character}'" for character in invalid_characters[:-1])
+    formatted += f" or '{invalid_characters[-1]}'"
+    return f'Appointment types cannot include {formatted}.'
+
+
+def normalize_appointment_type_name(value: str) -> str:
+    normalized = ' '.join(value.strip().lower().split())
+
+    if not normalized:
+        raise ValueError('Appointment type is required.')
+
+    invalid_characters: list[str] = []
+    for character in normalized:
+        if character.isalnum() or character in {' ', '-'}:
+            continue
+        if character not in invalid_characters:
+            invalid_characters.append(character)
+
+    if invalid_characters:
+        raise ValueError(format_invalid_appointment_type_characters(invalid_characters))
+
+    slug = normalized.replace(' ', '_')
+
+    if len(slug) > 50:
+        raise ValueError('Appointment type must be 50 characters or fewer.')
+    if slug == BLOCKED_APPOINTMENT_TYPE:
+        raise ValueError('Appointment type name is reserved.')
+
+    return slug
 
 
 def normalize_appointment_notes(value: str | None) -> str | None:
@@ -61,6 +101,102 @@ class CreateBlockedTimeRequest(BaseModel):
             raise ValueError('Only admins can block appointment times.')
 
         return normalized
+
+
+class DailyHoursSettingRequest(BaseModel):
+    day_of_week: int
+    is_open: bool
+    open_time: time | None = None
+    close_time: time | None = None
+
+    @field_validator('day_of_week')
+    @classmethod
+    def validate_day_of_week(cls, value: int) -> int:
+        if value < 0 or value > 6:
+            raise ValueError('day_of_week must be between 0 (Monday) and 6 (Sunday).')
+        return value
+
+    @field_validator('close_time')
+    @classmethod
+    def validate_open_close_times(cls, value: time | None, info):
+        is_open = info.data.get('is_open')
+        open_time_value = info.data.get('open_time')
+
+        if is_open:
+            if open_time_value is None or value is None:
+                raise ValueError('Open days require both open_time and close_time.')
+            if value <= open_time_value:
+                raise ValueError('close_time must be after open_time.')
+        return value
+
+
+class HolidaySettingRequest(BaseModel):
+    holiday_date: date
+    name: str
+    is_annual: bool = False
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError('Holiday name is required.')
+        if len(normalized) > MAX_HOLIDAY_NAME_LENGTH:
+            raise ValueError(f'Holiday name must be {MAX_HOLIDAY_NAME_LENGTH} characters or fewer.')
+        return normalized
+
+
+class UpdateClinicHoursRequest(BaseModel):
+    admin_email: str
+    daily_hours: list[DailyHoursSettingRequest]
+    holidays: list[HolidaySettingRequest] = []
+
+    @field_validator('admin_email')
+    @classmethod
+    def validate_admin_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if not normalized.endswith('@admin.edu'):
+            raise ValueError('Only admins can update clinic hours.')
+        return normalized
+
+    @field_validator('daily_hours')
+    @classmethod
+    def validate_daily_hours(cls, value: list[DailyHoursSettingRequest]) -> list[DailyHoursSettingRequest]:
+        if len(value) != 7:
+            raise ValueError('daily_hours must include all 7 days of the week.')
+        day_indexes = {entry.day_of_week for entry in value}
+        if day_indexes != set(range(7)):
+            raise ValueError('daily_hours must include each day_of_week exactly once.')
+        return value
+
+    @field_validator('holidays')
+    @classmethod
+    def validate_holidays(cls, value: list[HolidaySettingRequest]) -> list[HolidaySettingRequest]:
+        if len({holiday.holiday_date for holiday in value}) != len(value):
+            raise ValueError('Holiday dates must be unique.')
+        return value
+
+
+class DailyHoursSettingResponse(BaseModel):
+    day_of_week: int
+    day_name: str
+    is_open: bool
+    open_time: time | None = None
+    close_time: time | None = None
+
+
+class HolidaySettingResponse(BaseModel):
+    id: int | None = None
+    holiday_date: date
+    name: str
+    is_annual: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ClinicHoursResponse(BaseModel):
+    daily_hours: list[DailyHoursSettingResponse]
+    holidays: list[HolidaySettingResponse]
 
 
 class AvailabilitySlotResponse(BaseModel):
@@ -122,19 +258,7 @@ class CreateAppointmentTypeRequest(BaseModel):
     @field_validator('appointment_type')
     @classmethod
     def validate_appointment_type(cls, value: str) -> str:
-        normalized = ' '.join(value.strip().lower().split())
-        slug = normalized.replace(' ', '_')
-
-        if not slug:
-            raise ValueError('Appointment type is required.')
-        if len(slug) > 50:
-            raise ValueError('Appointment type must be 50 characters or fewer.')
-        if not slug.replace('_', '').isalnum():
-            raise ValueError('Appointment type can only contain letters, numbers, and spaces.')
-        if slug == BLOCKED_APPOINTMENT_TYPE:
-            raise ValueError('Appointment type name is reserved.')
-
-        return slug
+        return normalize_appointment_type_name(value)
 
     @field_validator('duration_minutes')
     @classmethod
@@ -242,11 +366,101 @@ def ensure_database_ready() -> None:
         ensure_availability_schema()
         ensure_appointment_schema()
         ensure_appointment_type_option_schema()
+        ensure_clinic_hours_schema()
+        ensure_clinic_holidays_schema()
     except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
         ) from exc
+
+
+def get_default_daily_hours() -> dict[int, DailyHoursSettingResponse]:
+    defaults: dict[int, DailyHoursSettingResponse] = {}
+    for day_of_week in range(7):
+        weekday_open = day_of_week < 5
+        defaults[day_of_week] = DailyHoursSettingResponse(
+            day_of_week=day_of_week,
+            day_name=DAY_NAMES[day_of_week],
+            is_open=weekday_open,
+            open_time=OPEN_TIME if weekday_open else None,
+            close_time=DAY_END_TIME if weekday_open else None,
+        )
+    return defaults
+
+
+def get_daily_hours_map(db: Session) -> dict[int, DailyHoursSettingResponse]:
+    daily_hours = get_default_daily_hours()
+    rows = db.query(ClinicHours).all()
+
+    for row in rows:
+        if row.day_of_week is None or row.day_of_week < 0 or row.day_of_week > 6:
+            continue
+        daily_hours[row.day_of_week] = DailyHoursSettingResponse(
+            day_of_week=row.day_of_week,
+            day_name=DAY_NAMES[row.day_of_week],
+            is_open=bool(row.is_open),
+            open_time=row.open_time,
+            close_time=row.close_time,
+        )
+
+    return daily_hours
+
+
+def get_holiday_lookup(db: Session) -> dict[date, HolidaySettingResponse]:
+    holidays = db.query(ClinicHoliday).order_by(ClinicHoliday.holiday_date.asc()).all()
+    return {
+        holiday.holiday_date: HolidaySettingResponse(
+            id=holiday.id,
+            holiday_date=holiday.holiday_date,
+            name=holiday.name,
+            is_annual=bool(holiday.is_annual),
+        )
+        for holiday in holidays
+        if holiday.holiday_date is not None and holiday.name
+    }
+
+
+def get_annual_holiday_pairs(holiday_lookup: dict[date, HolidaySettingResponse]) -> set[tuple[int, int]]:
+    return {
+        (holiday_date.month, holiday_date.day)
+        for holiday_date, holiday in holiday_lookup.items()
+        if holiday.is_annual
+    }
+
+
+def is_clinic_closed_on(
+    day: date,
+    daily_hours_map: dict[int, DailyHoursSettingResponse],
+    holiday_lookup: dict[date, HolidaySettingResponse],
+    annual_holidays: set[tuple[int, int]] | None = None,
+) -> bool:
+    annual_holidays = annual_holidays or set()
+    if day in holiday_lookup:
+        return True
+    if (day.month, day.day) in annual_holidays:
+        return True
+    day_hours = daily_hours_map.get(day.weekday())
+    if not day_hours:
+        return True
+    if not day_hours.is_open:
+        return True
+    return day_hours.open_time is None or day_hours.close_time is None
+
+
+def get_clinic_day_bounds(
+    day: date,
+    daily_hours_map: dict[int, DailyHoursSettingResponse],
+    holiday_lookup: dict[date, HolidaySettingResponse],
+    annual_holidays: set[tuple[int, int]] | None = None,
+) -> tuple[datetime, datetime] | None:
+    if is_clinic_closed_on(day, daily_hours_map, holiday_lookup, annual_holidays):
+        return None
+    day_hours = daily_hours_map[day.weekday()]
+    return (
+        datetime.combine(day, day_hours.open_time),
+        datetime.combine(day, day_hours.close_time),
+    )
 
 
 def get_appointment_duration_map(db: Session) -> dict[str, int]:
@@ -303,10 +517,20 @@ def get_appointment_duration_minutes(appointment: Appointment, duration_map: dic
     return SLOT_INCREMENT_MINUTES
 
 
-def validate_appointment_window(start_time: datetime, duration_minutes: int, now: datetime) -> datetime:
+def validate_appointment_window(
+    start_time: datetime,
+    duration_minutes: int,
+    now: datetime,
+    daily_hours_map: dict[int, DailyHoursSettingResponse] | None = None,
+    holiday_lookup: dict[date, HolidaySettingResponse] | None = None,
+    annual_holidays: set[tuple[int, int]] | None = None,
+) -> datetime:
     normalized_start = start_time.replace(second=0, microsecond=0)
     end_time = normalized_start + timedelta(minutes=duration_minutes)
     range_end = now + timedelta(days=BOOKING_RANGE_DAYS)
+    daily_hours_map = daily_hours_map or get_default_daily_hours()
+    holiday_lookup = holiday_lookup or {}
+    annual_holidays = annual_holidays or set()
 
     if normalized_start <= now:
         raise HTTPException(
@@ -320,14 +544,19 @@ def validate_appointment_window(start_time: datetime, duration_minutes: int, now
             detail='Appointments must start on 15-minute boundaries.',
         )
 
-    if normalized_start.date().weekday() >= 5:
+    if is_clinic_closed_on(normalized_start.date(), daily_hours_map, holiday_lookup, annual_holidays):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Appointments can only be scheduled on weekdays.',
+            detail='Appointments can only be scheduled on clinic operating days.',
         )
 
-    day_open = datetime.combine(normalized_start.date(), OPEN_TIME)
-    day_close = datetime.combine(normalized_start.date(), DAY_END_TIME)
+    day_bounds = get_clinic_day_bounds(normalized_start.date(), daily_hours_map, holiday_lookup, annual_holidays)
+    if day_bounds is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Appointments can only be scheduled on clinic operating days.',
+        )
+    day_open, day_close = day_bounds
     if normalized_start < day_open or end_time > day_close:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -386,20 +615,38 @@ def get_blocked_slot_starts(now: datetime, range_end: datetime, db: Session) -> 
     return {blocked_start.replace(second=0, microsecond=0) for blocked_start in blocked_start_times}
 
 
-def validate_slot_datetime(slot_date: date, slot_time: time) -> tuple[datetime, datetime]:
+def validate_slot_datetime(
+    slot_date: date,
+    slot_time: time,
+    daily_hours_map: dict[int, DailyHoursSettingResponse] | None = None,
+    holiday_lookup: dict[date, HolidaySettingResponse] | None = None,
+    annual_holidays: set[tuple[int, int]] | None = None,
+) -> tuple[datetime, datetime]:
+    daily_hours_map = daily_hours_map or get_default_daily_hours()
+    holiday_lookup = holiday_lookup or {}
+    annual_holidays = annual_holidays or set()
     start_time = datetime.combine(slot_date, slot_time)
     end_time = start_time + timedelta(minutes=DEFAULT_SLOT_DURATION_MINUTES)
 
-    if slot_date.weekday() >= 5:
+    if is_clinic_closed_on(slot_date, daily_hours_map, holiday_lookup, annual_holidays):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Times can only be blocked on weekdays (Monday through Friday).',
+            detail='Times can only be blocked on clinic operating days.',
         )
 
-    if slot_time < OPEN_TIME or slot_time > LAST_START_TIME:
+    day_bounds = get_clinic_day_bounds(slot_date, daily_hours_map, holiday_lookup, annual_holidays)
+    if day_bounds is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Times can only be blocked between 9:00 AM and 3:45 PM.',
+            detail='Times can only be blocked on clinic operating days.',
+        )
+    day_open, day_close = day_bounds
+    latest_start = day_close - timedelta(minutes=DEFAULT_SLOT_DURATION_MINUTES)
+
+    if slot_time < day_open.time() or slot_time > latest_start.time():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Times can only be blocked during clinic operating hours.',
         )
 
     if slot_time.minute % SLOT_INCREMENT_MINUTES != 0:
@@ -417,13 +664,100 @@ def validate_slot_datetime(slot_date: date, slot_time: time) -> tuple[datetime, 
     return start_time, end_time
 
 
-@router.post('/slots', response_model=BlockedTimeResponse, status_code=status.HTTP_201_CREATED)
-def create_blocked_time(data: CreateBlockedTimeRequest, db: Session = Depends(get_db)):
-    start_time, end_time = validate_slot_datetime(data.date, data.time)
-
+@router.get('/clinic-hours', response_model=ClinicHoursResponse)
+def get_clinic_hours(db: Session = Depends(get_db)):
     ensure_database_ready()
 
     try:
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+
+        return ClinicHoursResponse(
+            daily_hours=[daily_hours_map[day] for day in range(7)],
+            holidays=list(holiday_lookup.values()),
+        )
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.put('/clinic-hours', response_model=ClinicHoursResponse)
+def update_clinic_hours(data: UpdateClinicHoursRequest, db: Session = Depends(get_db)):
+    ensure_database_ready()
+
+    try:
+        db.query(ClinicHours).delete()
+        db.query(ClinicHoliday).delete()
+
+        daily_hours_rows: list[ClinicHours] = []
+        for day in data.daily_hours:
+            row = ClinicHours(
+                day_of_week=day.day_of_week,
+                is_open=day.is_open,
+                open_time=day.open_time if day.is_open else None,
+                close_time=day.close_time if day.is_open else None,
+            )
+            daily_hours_rows.append(row)
+            db.add(row)
+
+        holiday_rows: list[ClinicHoliday] = []
+        for holiday in data.holidays:
+            holiday_row = ClinicHoliday(
+                holiday_date=holiday.holiday_date,
+                name=holiday.name,
+                is_annual=holiday.is_annual,
+            )
+            holiday_rows.append(holiday_row)
+            db.add(holiday_row)
+
+        db.commit()
+
+        for row in daily_hours_rows:
+            db.refresh(row)
+        for row in holiday_rows:
+            db.refresh(row)
+
+        return ClinicHoursResponse(
+            daily_hours=[
+                DailyHoursSettingResponse(
+                    day_of_week=row.day_of_week,
+                    day_name=DAY_NAMES[row.day_of_week],
+                    is_open=bool(row.is_open),
+                    open_time=row.open_time,
+                    close_time=row.close_time,
+                )
+                for row in sorted(daily_hours_rows, key=lambda item: item.day_of_week)
+            ],
+            holidays=[
+                HolidaySettingResponse(
+                    id=row.id,
+                    holiday_date=row.holiday_date,
+                    name=row.name,
+                    is_annual=bool(row.is_annual),
+                )
+                for row in sorted(holiday_rows, key=lambda item: item.holiday_date)
+            ],
+        )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.post('/slots', response_model=BlockedTimeResponse, status_code=status.HTTP_201_CREATED)
+def create_blocked_time(data: CreateBlockedTimeRequest, db: Session = Depends(get_db)):
+    ensure_database_ready()
+
+    try:
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+        annual_holidays = get_annual_holiday_pairs(holiday_lookup)
+        start_time, end_time = validate_slot_datetime(data.date, data.time, daily_hours_map, holiday_lookup, annual_holidays)
+
         overlapping_block = db.query(Availability).filter(
             Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,
             Availability.start_time < end_time,
@@ -535,6 +869,9 @@ def list_availability_slots(
     try:
         now = datetime.now()
         range_end = now + timedelta(days=SLOT_RANGE_DAYS)
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+        annual_holidays = get_annual_holiday_pairs(holiday_lookup)
 
         blocked_start_times = get_blocked_slot_starts(now, range_end, db)
         booked_start_times = get_booked_slot_starts(now, range_end, db)
@@ -544,9 +881,11 @@ def list_availability_slots(
         generated_id = -1
 
         while current_day <= range_end.date():
-            if current_day.weekday() < 5:
-                current_start = datetime.combine(current_day, OPEN_TIME)
-                last_start = datetime.combine(current_day, LAST_START_TIME)
+            day_bounds = get_clinic_day_bounds(current_day, daily_hours_map, holiday_lookup, annual_holidays)
+            if day_bounds:
+                day_open, day_close = day_bounds
+                current_start = day_open
+                last_start = day_close - timedelta(minutes=DEFAULT_SLOT_DURATION_MINUTES)
 
                 while current_start <= last_start:
                     normalized_start = current_start.replace(second=0, microsecond=0)
@@ -654,6 +993,9 @@ def list_calendar_slots(
         duration_minutes = duration_map[normalized_appointment_type]
         now = datetime.now()
         range_end = now + timedelta(days=days)
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+        annual_holidays = get_annual_holiday_pairs(holiday_lookup)
         blocked_start_times = get_blocked_slot_starts(now, range_end, db)
         booked_start_times = get_booked_slot_starts(now, range_end, db)
 
@@ -661,9 +1003,11 @@ def list_calendar_slots(
         current_day = date.today()
 
         while current_day <= range_end.date():
-            if current_day.weekday() < 5:
-                current_start = datetime.combine(current_day, OPEN_TIME)
-                latest_possible_start = datetime.combine(current_day, DAY_END_TIME) - timedelta(minutes=duration_minutes)
+            day_bounds = get_clinic_day_bounds(current_day, daily_hours_map, holiday_lookup, annual_holidays)
+            if day_bounds:
+                day_open, day_close = day_bounds
+                current_start = day_open
+                latest_possible_start = day_close - timedelta(minutes=duration_minutes)
 
                 while current_start <= latest_possible_start:
                     if (
@@ -833,6 +1177,9 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
 
     try:
         duration_map = get_appointment_duration_map(db)
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+        annual_holidays = get_annual_holiday_pairs(holiday_lookup)
         if data.appointment_type not in duration_map:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -842,7 +1189,14 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
         duration_minutes = duration_map[data.appointment_type]
         start_time = data.start_time.replace(second=0, microsecond=0)
         now = datetime.now()
-        end_time = validate_appointment_window(start_time, duration_minutes, now)
+        end_time = validate_appointment_window(
+            start_time,
+            duration_minutes,
+            now,
+            daily_hours_map,
+            holiday_lookup,
+            annual_holidays,
+        )
 
         blocked_overlap = db.query(Availability).filter(
             Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,
@@ -905,6 +1259,9 @@ def reschedule_appointment(
 
     try:
         duration_map = get_appointment_duration_map(db)
+        daily_hours_map = get_daily_hours_map(db)
+        holiday_lookup = get_holiday_lookup(db)
+        annual_holidays = get_annual_holiday_pairs(holiday_lookup)
         appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
         if not appointment:
             raise HTTPException(
@@ -928,7 +1285,14 @@ def reschedule_appointment(
 
         duration_minutes = get_appointment_duration_minutes(appointment, duration_map)
         start_time = data.start_time.replace(second=0, microsecond=0)
-        end_time = validate_appointment_window(start_time, duration_minutes, now)
+        end_time = validate_appointment_window(
+            start_time,
+            duration_minutes,
+            now,
+            daily_hours_map,
+            holiday_lookup,
+            annual_holidays,
+        )
 
         blocked_overlap = db.query(Availability).filter(
             Availability.appointment_type == BLOCKED_APPOINTMENT_TYPE,

@@ -25,7 +25,7 @@
         <div class="calendar-header">
           <div>
             <h1>Block Off Appointment Times</h1>
-            <p class="section-copy">Weekdays only · 9:00 AM to 3:45 PM. Booked slots are marked and cannot be blocked.</p>
+            <p class="section-copy">Only configured operating hours are editable. Booked and lunch slots cannot be blocked.</p>
           </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>
@@ -39,6 +39,9 @@
             <h2>Appointment Types</h2>
             <p class="section-copy">Only admins can create new appointment types. Students will see these options when booking.</p>
           </div>
+
+          <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
+          <p class="error" *ngIf="adminError">{{ adminError }}</p>
 
           <form class="type-form" (ngSubmit)="createAppointmentType()">
             <label>
@@ -92,8 +95,11 @@
                   <span *ngIf="row[0].hourLabel">{{ row[0].hourLabel }}</span>
                 </th>
                 <td *ngFor="let cell of row">
+                  <span *ngIf="cell.isOutOfHours || cell.isPast" class="out-of-hours">
+                    {{ cell.isOutOfHours ? 'Closed' : '—' }}
+                  </span>
                   <button
-                    *ngIf="!cell.isPast"
+                    *ngIf="!cell.isPast && !cell.isOutOfHours"
                     type="button"
                     class="cell"
                     [ngClass]="{ blocked: !cell.isBooked && !!cell.blockedId, booked: cell.isBooked }"
@@ -112,12 +118,12 @@
           <p class="error" *ngIf="role === 'admin'">No future slots are available in this week.</p>
         </ng-template>
 
-        <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
-        <p class="error" *ngIf="adminError">{{ adminError }}</p>
-
         <div class="booked-panel" *ngIf="role === 'admin'">
           <h2>Upcoming Student Appointments</h2>
           <p class="section-copy">Student comments/notes for the currently viewed week are listed here.</p>
+          <p class="warning" *ngIf="conflictingAppointmentsCount > 0">
+            ⚠ {{ conflictingAppointmentsCount }} appointment(s) conflict with current Hours settings.
+          </p>
 
           <p class="empty-state" *ngIf="bookedAppointmentsForVisibleWeek.length === 0">No upcoming appointments in this week.</p>
 
@@ -126,6 +132,9 @@
               <p><strong>{{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}</strong> to {{ appointment.end_time | date: 'h:mm a' }}</p>
               <p>{{ appointment.duration_minutes }} mins · {{ appointment.appointment_type }}</p>
               <p>Student: {{ appointment.student_email }}</p>
+              <p class="warning" *ngIf="isAppointmentOutsideCurrentRules(appointment)">
+                ⚠ Conflict: this appointment is outside current operating hours/closures.
+              </p>
               <p class="notes"><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
             </article>
           </div>
