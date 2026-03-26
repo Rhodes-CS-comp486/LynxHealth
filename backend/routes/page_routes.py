@@ -58,7 +58,7 @@ class BulkUpdateRequest(BaseModel):
     @classmethod
     def validate_admin_email(cls, value: str) -> str:
         normalized = value.strip().lower()
-        if not normalized.endswith('@admin.edu'):
+        if not (normalized.endswith('@admin.edu') or normalized.endswith('@lynxhealth.local')):
             raise ValueError('Only admins can update page content.')
         return normalized
 
