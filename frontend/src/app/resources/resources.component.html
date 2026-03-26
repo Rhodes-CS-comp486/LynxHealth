@@ -34,258 +34,212 @@
         </div>
 
         <!-- Welcome Section -->
-        <ng-container *ngIf="getSection('welcome') as s">
-          <div *ngIf="!isEditing">
-            <h1>{{ s.header }}</h1>
-            <p class="section-copy">{{ s.content }}</p>
-          </div>
+        <div *ngIf="sectionMap['welcome']">
+          <h1>{{ sectionMap['welcome'].header }}</h1>
+          <p class="section-copy">{{ sectionMap['welcome'].content }}</p>
           <div class="edit-controls" *ngIf="isEditing">
             <span class="edit-section-label">Welcome Section</span>
             <label>
               Header
-              <input [(ngModel)]="s.header" />
+              <input [(ngModel)]="sectionMap['welcome'].header" />
             </label>
             <label>
               Content
-              <textarea rows="4" [(ngModel)]="s.content"></textarea>
+              <textarea rows="4" [(ngModel)]="sectionMap['welcome'].content"></textarea>
             </label>
           </div>
-        </ng-container>
+        </div>
 
         <!-- Mission -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('mission') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p>{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Mission</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="5" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['mission']">
+          <h2>{{ sectionMap['mission'].header }}</h2>
+          <p>{{ sectionMap['mission'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Mission</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['mission'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="5" [(ngModel)]="sectionMap['mission'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Visiting -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('visiting') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p [innerHTML]="s.content"></p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Visiting</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="6" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['visiting']">
+          <h2>{{ sectionMap['visiting'].header }}</h2>
+          <p class="section-content">{{ sectionMap['visiting'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Visiting</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['visiting'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="6" [(ngModel)]="sectionMap['visiting'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Services -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('services') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Services</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content (use bullet • and line breaks)
-                <textarea rows="12" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['services']">
+          <h2>{{ sectionMap['services'].header }}</h2>
+          <p class="section-content">{{ sectionMap['services'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Services</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['services'].header" />
+            </label>
+            <label>
+              Content (use • for bullets, line breaks preserved)
+              <textarea rows="12" [(ngModel)]="sectionMap['services'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Cancellation Policy -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('cancellation_policy') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Cancellation Policy</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="12" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['cancellation_policy']">
+          <h2>{{ sectionMap['cancellation_policy'].header }}</h2>
+          <p class="section-content">{{ sectionMap['cancellation_policy'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Cancellation Policy</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['cancellation_policy'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="12" [(ngModel)]="sectionMap['cancellation_policy'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Emergency Care -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('emergency_care') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Emergency Care</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="10" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['emergency_care']">
+          <h2>{{ sectionMap['emergency_care'].header }}</h2>
+          <p class="section-content">{{ sectionMap['emergency_care'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Emergency Care</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['emergency_care'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="10" [(ngModel)]="sectionMap['emergency_care'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Payment -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('payment') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Payment</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="8" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['payment']">
+          <h2>{{ sectionMap['payment'].header }}</h2>
+          <p class="section-content">{{ sectionMap['payment'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Payment</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['payment'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="8" [(ngModel)]="sectionMap['payment'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Self-Care Counter -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('self_care') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p>{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Self-Care Counter</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="4" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['self_care']">
+          <h2>{{ sectionMap['self_care'].header }}</h2>
+          <p>{{ sectionMap['self_care'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Self-Care Counter</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['self_care'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="4" [(ngModel)]="sectionMap['self_care'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Allergy Shots -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('allergy_shots') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Allergy Shots</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="8" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['allergy_shots']">
+          <h2>{{ sectionMap['allergy_shots'].header }}</h2>
+          <p class="section-content">{{ sectionMap['allergy_shots'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Allergy Shots</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['allergy_shots'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="8" [(ngModel)]="sectionMap['allergy_shots'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Questions and Medical Records -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('records') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p>{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Questions & Medical Records</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="3" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['records']">
+          <h2>{{ sectionMap['records'].header }}</h2>
+          <p>{{ sectionMap['records'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Questions & Medical Records</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['records'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="3" [(ngModel)]="sectionMap['records'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Opioid Policy -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('opioid_policy') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Opioid Policy</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="6" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['opioid_policy']">
+          <h2>{{ sectionMap['opioid_policy'].header }}</h2>
+          <p class="section-content">{{ sectionMap['opioid_policy'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Opioid Policy</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['opioid_policy'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="6" [(ngModel)]="sectionMap['opioid_policy'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Class and Work Excuses -->
-        <section class="info-section">
-          <ng-container *ngIf="getSection('class_excuses') as s">
-            <div *ngIf="!isEditing">
-              <h2>{{ s.header }}</h2>
-              <p class="section-content">{{ s.content }}</p>
-            </div>
-            <div class="edit-controls" *ngIf="isEditing">
-              <span class="edit-section-label">Class & Work Excuses</span>
-              <label>
-                Header
-                <input [(ngModel)]="s.header" />
-              </label>
-              <label>
-                Content
-                <textarea rows="5" [(ngModel)]="s.content"></textarea>
-              </label>
-            </div>
-          </ng-container>
+        <section class="info-section" *ngIf="sectionMap['class_excuses']">
+          <h2>{{ sectionMap['class_excuses'].header }}</h2>
+          <p class="section-content">{{ sectionMap['class_excuses'].content }}</p>
+          <div class="edit-controls" *ngIf="isEditing">
+            <span class="edit-section-label">Class & Work Excuses</span>
+            <label>
+              Header
+              <input [(ngModel)]="sectionMap['class_excuses'].header" />
+            </label>
+            <label>
+              Content
+              <textarea rows="5" [(ngModel)]="sectionMap['class_excuses'].content"></textarea>
+            </label>
+          </div>
         </section>
 
         <!-- Admin-added custom sections -->
         <section class="info-section" *ngFor="let s of addedSections; let i = index">
-          <div *ngIf="!isEditing">
+          <div *ngIf="!isEditing && s.header">
             <h2>{{ s.header }}</h2>
             <p class="section-content">{{ s.content }}</p>
           </div>
