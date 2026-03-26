@@ -81,6 +81,18 @@ export class ResourcesComponent implements OnInit {
       this.saveAllSections();
     } else {
       this.isEditing = true;
+      this.refreshView();
+
+      // Populate rich editors with current content after DOM renders
+      setTimeout(() => {
+        const editors = document.querySelectorAll('.rich-editor');
+        const allSections = [...this.sections, ...this.addedSections];
+        editors.forEach((editor, index) => {
+          if (allSections[index]) {
+            editor.innerHTML = allSections[index].content;
+          }
+        });
+      }, 50);
     }
   }
 
@@ -149,6 +161,15 @@ export class ResourcesComponent implements OnInit {
       display_order: this.sections.length + this.addedSections.length,
     };
     this.addedSections.push(newSection);
+    this.refreshView();
+
+    setTimeout(() => {
+      const elements = document.querySelectorAll('.edit-controls');
+      const last = elements[elements.length - 1];
+      if (last) {
+        last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   }
 
   async removeSection(key: string): Promise<void> {
@@ -182,6 +203,11 @@ export class ResourcesComponent implements OnInit {
 
   async removeAddedSection(index: number): Promise<void> {
     const section = this.addedSections[index];
+    const name = section.header || 'this section';
+
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+      return;
+    }
 
     if (section.id) {
       try {
@@ -206,6 +232,35 @@ export class ResourcesComponent implements OnInit {
 
   private refreshView(): void {
     this.cdr.detectChanges();
+  }
+
+  applyFormat(command: string): void {
+    document.execCommand(command, false);
+  }
+
+  applyRed(): void {
+    document.execCommand('foreColor', false, '#e2483b');
+  }
+
+  insertLink(): void {
+    const url = prompt('Enter URL:');
+    if (url) {
+      document.execCommand('createLink', false, url);
+    }
+  }
+
+  syncContent(sectionKey: string, field: 'header' | 'content', event: Event): void {
+    const el = event.target as HTMLElement;
+    const value = el.innerHTML;
+
+    if (this.sectionMap[sectionKey]) {
+      this.sectionMap[sectionKey][field] = value;
+    }
+  }
+
+  syncAddedContent(index: number, field: 'header' | 'content', event: Event): void {
+    const el = event.target as HTMLElement;
+    this.addedSections[index][field] = el.innerHTML;
   }
 
   private getRole(): 'admin' | 'user' {
