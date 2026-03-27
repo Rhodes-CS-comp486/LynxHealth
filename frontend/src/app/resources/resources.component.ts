@@ -33,7 +33,7 @@ export class ResourcesComponent implements OnInit {
   addedSections: PageSection[] = [];
   sectionMap: { [key: string]: PageSection } = {};
 
-  private readonly apiUrl = 'http://localhost:8000/pages';
+  private readonly apiUrl = '/api/pages';
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
 
