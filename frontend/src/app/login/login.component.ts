@@ -18,7 +18,7 @@ export class LoginComponent {
   constructor(private readonly router: Router) {}
 
   loginWithSaml(): void {
-    window.location.href = 'https://lynxhc.com/auth/saml/login';
+    window.location.href = '/api/auth/sso/login';
   }
 
   testAdminLogin(): void {
