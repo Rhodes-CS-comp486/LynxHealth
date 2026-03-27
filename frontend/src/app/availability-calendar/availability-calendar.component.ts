@@ -3,9 +3,9 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOption, AppointmentTypeOptionsService } from '../appointment-type-options.service';
+import { getClientSession } from '../session';
 
 type SlotStatus = 'available' | 'blocked' | 'booked';
-type SessionRole = 'admin' | 'user';
 type TimeOfDayFilter = 'all' | 'morning' | 'afternoon';
 
 interface CalendarSlot {
@@ -46,8 +46,9 @@ interface AppointmentBookingResponse {
   styleUrl: './availability-calendar.component.css'
 })
 export class AvailabilityCalendarComponent implements OnInit {
-  readonly role = this.getRole();
-  readonly sessionEmail = this.getSessionEmail();
+  readonly session = getClientSession();
+  readonly role = this.session.role;
+  readonly sessionEmail = this.session.requestEmail;
   readonly currentWeekStart = this.getStartOfWeek(new Date());
 
   slots: CalendarSlot[] = [];
@@ -384,43 +385,6 @@ export class AvailabilityCalendarComponent implements OnInit {
     const diffToMonday = day === 0 ? -6 : 1 - day;
     date.setDate(date.getDate() + diffToMonday);
     return date;
-  }
-
-  private getRole(): SessionRole {
-    const data = this.getSessionStorageItem();
-    if (!data) {
-      return 'user';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionEmail(): string {
-    const data = this.getSessionStorageItem();
-    if (!data) {
-      return 'student@lynxhealth.local';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      const normalized = parsed.email?.trim().toLowerCase();
-      return normalized || 'student@lynxhealth.local';
-    } catch {
-      return 'student@lynxhealth.local';
-    }
-  }
-
-  private getSessionStorageItem(): string | null {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    return localStorage.getItem('lynxSession');
   }
 
   private clearBookingState(): void {
