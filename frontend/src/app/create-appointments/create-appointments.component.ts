@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
+import { getClientSession } from '../session';
 
 interface BlockedTime {
   id: number;
@@ -74,8 +75,9 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   private autoRefreshTimer: number | null = null;
   private isDestroyed = false;
 
-  readonly role = this.getRole();
-  readonly sessionEmail = this.getSessionEmail();
+  readonly session = getClientSession();
+  readonly role = this.session.role;
+  readonly sessionEmail = this.session.requestEmail;
 
   timeSlots: string[] = [];
 
@@ -659,45 +661,6 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
     return start;
-  }
-
-  private getRole(): 'admin' | 'user' {
-    const data = this.getSessionStorageItem();
-
-    if (!data) {
-      return 'user';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionEmail(): string {
-    const data = this.getSessionStorageItem();
-    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
-
-    if (!data) {
-      return fallback;
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email?.trim().toLowerCase() || fallback;
-    } catch {
-      return fallback;
-    }
-  }
-
-  private getSessionStorageItem(): string | null {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    return localStorage.getItem('lynxSession');
   }
 
   isAppointmentOutsideCurrentRules(appointment: BookedAppointment): boolean {

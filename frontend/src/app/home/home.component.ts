@@ -1,8 +1,7 @@
 import { NgIf } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-
-type SessionRole = 'admin' | 'user';
+import { getClientSession, saveClientSession, SessionRole } from '../session';
 
 @Component({
   selector: 'app-home',
@@ -32,37 +31,16 @@ export class HomeComponent implements OnInit {
     const session = params.get('session');
 
     if (session) {
-      try {
-        const decoded = decodeURIComponent(session);
-        localStorage.setItem('lynxSession', decoded);
+      const savedSession = saveClientSession(decodeURIComponent(session));
+      if (savedSession) {
+        this.role = savedSession.role;
         window.history.replaceState({}, '', '/home');
-      } catch {
-        // ignore
       }
     }
   }
 
   private getRole(): SessionRole {
-    const data = this.getSessionStorageItem();
-
-    if (!data) {
-      return 'user';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionStorageItem(): string | null {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    return localStorage.getItem('lynxSession');
+    return getClientSession().role;
   }
 
   private shouldRedirectToMyAppointments(): boolean {

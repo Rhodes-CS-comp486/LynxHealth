@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { getClientSession } from '../session';
 
 interface PageSection {
   id?: number;
@@ -20,9 +21,10 @@ interface PageSection {
   styleUrl: './resources.component.css'
 })
 export class ResourcesComponent implements OnInit {
-  readonly role = this.getRole();
+  readonly session = getClientSession();
+  readonly role = this.session.role;
   readonly isAdmin = this.role === 'admin';
-  readonly sessionEmail = this.getSessionEmail();
+  readonly sessionEmail = this.session.requestEmail;
 
   isEditing = false;
   isSaving = false;
@@ -263,36 +265,4 @@ export class ResourcesComponent implements OnInit {
     this.addedSections[index][field] = el.innerHTML;
   }
 
-  private getRole(): 'admin' | 'user' {
-    const data = this.getSessionStorageItem();
-    if (!data) return 'user';
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionEmail(): string {
-    const data = this.getSessionStorageItem();
-    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
-
-    if (!data) return fallback;
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      return parsed.email?.trim().toLowerCase() || fallback;
-    } catch {
-      return fallback;
-    }
-  }
-
-  private getSessionStorageItem(): string | null {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return null;
-    }
-    return localStorage.getItem('lynxSession');
-  }
 }

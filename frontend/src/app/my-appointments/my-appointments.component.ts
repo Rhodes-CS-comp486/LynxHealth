@@ -2,8 +2,8 @@ import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
+import { getClientSession } from '../session';
 
-type SessionRole = 'admin' | 'user';
 type RescheduleViewMode = 'quick' | 'card';
 
 interface BookedAppointment {
@@ -47,8 +47,9 @@ export class MyAppointmentsComponent implements OnInit {
     private readonly cdr: ChangeDetectorRef,
     private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
   ) {}
-  readonly sessionEmail = this.getSessionEmail();
-  readonly role = this.getRole();
+  readonly session = getClientSession();
+  readonly sessionEmail = this.session.requestEmail;
+  readonly role = this.session.role;
 
   appointments: BookedAppointment[] = [];
   isLoading = true;
@@ -446,42 +447,4 @@ export class MyAppointmentsComponent implements OnInit {
     return this.toLocalDateKey(start);
   }
 
-  private getRole(): SessionRole {
-    const data = this.getSessionStorageItem();
-
-    if (!data) {
-      return 'user';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionEmail(): string {
-    const data = this.getSessionStorageItem();
-
-    if (!data) {
-      return 'student@lynxhealth.local';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      const normalized = parsed.email?.trim().toLowerCase();
-      return normalized || 'student@lynxhealth.local';
-    } catch {
-      return 'student@lynxhealth.local';
-    }
-  }
-
-  private getSessionStorageItem(): string | null {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    return localStorage.getItem('lynxSession');
-  }
 }

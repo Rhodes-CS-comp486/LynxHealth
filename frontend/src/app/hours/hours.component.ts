@@ -2,8 +2,7 @@ import { NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-
-type SessionRole = 'admin' | 'user';
+import { getClientSession, SessionRole } from '../session';
 
 interface DailyHours {
   day_of_week: number;
@@ -36,8 +35,9 @@ export class HoursComponent implements OnInit, OnDestroy {
   private refreshTimer: number | null = null;
   private saveStateTimer: number | null = null;
 
-  readonly role: SessionRole = this.getRole();
-  readonly sessionEmail = this.getSessionEmail();
+  readonly session = getClientSession();
+  readonly role: SessionRole = this.session.role;
+  readonly sessionEmail = this.session.requestEmail;
 
   dailyHours: DailyHours[] = this.getDefaultDailyHours();
   holidays: Holiday[] = [];
@@ -322,40 +322,4 @@ export class HoursComponent implements OnInit, OnDestroy {
     }));
   }
 
-  private getRole(): SessionRole {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return 'user';
-    }
-
-    const data = localStorage.getItem('lynxSession');
-    if (!data) {
-      return 'user';
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { role?: string };
-      return parsed.role === 'admin' ? 'admin' : 'user';
-    } catch {
-      return 'user';
-    }
-  }
-
-  private getSessionEmail(): string {
-    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return fallback;
-    }
-
-    const data = localStorage.getItem('lynxSession');
-    if (!data) {
-      return fallback;
-    }
-
-    try {
-      const parsed = JSON.parse(data) as { email?: string };
-      return typeof parsed.email === 'string' && parsed.email.trim() ? parsed.email : fallback;
-    } catch {
-      return fallback;
-    }
-  }
 }

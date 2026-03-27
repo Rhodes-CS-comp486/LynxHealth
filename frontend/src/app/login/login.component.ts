@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { saveClientSession } from '../session';
 
 @Component({
   selector: 'app-login',
@@ -21,13 +22,10 @@ export class LoginComponent {
   }
 
   testAdminLogin(): void {
-    const session = {
-      email: 'admin@lynxhealth.local',
+    saveClientSession(JSON.stringify({
+      email: 'admin@admin.edu',
       role: 'admin' as const
-    };
-    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-      localStorage.setItem('lynxSession', JSON.stringify(session));
-    }
+    }));
     this.router.navigate(['/home']);
   }
 }
