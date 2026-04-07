@@ -313,6 +313,11 @@ class AppointmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DeleteAppointmentTypeResponse(BaseModel):
+    deleted_type: AppointmentTypeOptionResponse
+    upcoming_appointments: list[AppointmentResponse]
+
+
 class UpdateAppointmentNotesRequest(BaseModel):
     student_email: str
     notes: str | None = None
@@ -1017,6 +1022,61 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
             appointment_type=option.appointment_type,
             duration_minutes=option.duration_minutes,
         )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.delete('/appointment-types/{appointment_type}', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type(
+    appointment_type: str,
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = admin_email.strip().lower()
+    if not normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only admins can delete appointment types.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        normalized_type = normalize_appointment_type_name(appointment_type)
+        option = db.query(AppointmentTypeOption).filter(
+            func.lower(func.trim(AppointmentTypeOption.appointment_type)) == normalized_type,
+        ).first()
+
+        if option is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment type not found.',
+            )
+
+        now = datetime.now()
+        upcoming_appointments = db.query(Appointment).filter(
+            func.lower(func.trim(Appointment.appointment_type)) == normalized_type,
+            Appointment.start_time.is_not(None),
+            Appointment.end_time.is_not(None),
+            Appointment.end_time > now,
+        ).order_by(Appointment.start_time.asc()).all()
+
+        deleted_type = AppointmentTypeOptionResponse(
+            appointment_type=option.appointment_type,
+            duration_minutes=option.duration_minutes,
+        )
+        response = DeleteAppointmentTypeResponse(
+            deleted_type=deleted_type,
+            upcoming_appointments=[to_appointment_response(appointment) for appointment in upcoming_appointments],
+        )
+
+        db.delete(option)
+        db.commit()
+        return response
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
