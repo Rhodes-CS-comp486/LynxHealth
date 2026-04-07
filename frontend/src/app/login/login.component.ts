@@ -28,4 +28,12 @@ export class LoginComponent {
     }));
     this.router.navigate(['/home']);
   }
+
+  testUserLogin(): void {
+    saveClientSession(JSON.stringify({
+      email: 'student@lynxhealth.local',
+      role: 'user' as const
+    }));
+    this.router.navigate(['/home']);
+  }
 }

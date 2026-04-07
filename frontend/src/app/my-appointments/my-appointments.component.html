@@ -71,6 +71,12 @@
               <button
                 class="button small"
                 type="button"
+                (click)="toggleCalendarPanel(appointment.id)">
+                {{ calendarPanelAppointmentId === appointment.id ? 'Close calendar options' : 'Add to calendar' }}
+              </button>
+              <button
+                class="button small"
+                type="button"
                 (click)="startEditing(appointment)">Edit notes</button>
               <button
                 class="button small"
@@ -87,6 +93,24 @@
                 {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
               </button>
             </div>
+
+            <section class="calendar-options-panel" *ngIf="calendarPanelAppointmentId === appointment.id">
+              <h4>Add this appointment to your calendar</h4>
+              <p class="section-copy">
+                Select your calendar provider:
+              </p>
+              <div class="actions-row">
+                <a class="button small" [href]="getGoogleCalendarUrl(appointment)" target="_blank" rel="noopener noreferrer">
+                  Add to Google Calendar
+                </a>
+                <a class="button small" [href]="getOutlookCalendarUrl(appointment)" target="_blank" rel="noopener noreferrer">
+                  Add to Outlook Calendar
+                </a>
+                <a class="button small" [href]="getAppleCalendarDownloadUrl(appointment)">
+                  Add to Apple Calendar
+                </a>
+              </div>
+            </section>
 
             <section class="cancel-confirmation" *ngIf="pendingCancelAppointmentId === appointment.id">
               <h4>Cancel appointment?</h4>

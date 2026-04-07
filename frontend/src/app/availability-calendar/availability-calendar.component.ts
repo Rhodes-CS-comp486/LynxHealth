@@ -146,6 +146,40 @@ export class AvailabilityCalendarComponent implements OnInit {
       .join(' ');
   }
 
+  private getCalendarSummary(appointment: AppointmentBookingResponse): string {
+    return `Health Center Appointment: ${this.formatAppointmentType(appointment.appointment_type)}`;
+  }
+
+  private toUtcCalendarTimestamp(value: string): string {
+    const parsed = new Date(value);
+    return parsed.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
+  getGoogleCalendarUrl(appointment: AppointmentBookingResponse): string {
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: this.getCalendarSummary(appointment),
+      dates: `${this.toUtcCalendarTimestamp(appointment.start_time)}/${this.toUtcCalendarTimestamp(appointment.end_time)}`,
+      details: appointment.notes || 'No notes provided.'
+    });
+
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+
+  getOutlookCalendarUrl(appointment: AppointmentBookingResponse): string {
+    const params = new URLSearchParams({
+      subject: this.getCalendarSummary(appointment),
+      startdt: new Date(appointment.start_time).toISOString(),
+      enddt: new Date(appointment.end_time).toISOString(),
+      body: appointment.notes || 'No notes provided.'
+    });
+    return `https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
+  }
+
+  getAppleCalendarDownloadUrl(appointment: AppointmentBookingResponse): string {
+    return `/api/availability/appointments/${appointment.id}/ics?student_email=${encodeURIComponent(this.sessionEmail)}`;
+  }
+
   beginBooking(slot: CalendarSlot): void {
     if (this.role !== 'user') {
       return;
