@@ -55,6 +55,7 @@ export class MyAppointmentsComponent implements OnInit {
   isLoading = true;
   cancelingAppointmentId: number | null = null;
   pendingCancelAppointmentId: number | null = null;
+  calendarPanelAppointmentId: number | null = null;
   reschedulingAppointmentId: number | null = null;
   reschedulePanelAppointmentId: number | null = null;
   isLoadingRescheduleOptions = false;
@@ -95,6 +96,49 @@ export class MyAppointmentsComponent implements OnInit {
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join('-'))
       .join(' ');
+  }
+
+  private getCalendarSummary(appointment: BookedAppointment): string {
+    return `Health Center Appointment: ${this.formatAppointmentType(appointment.appointment_type)}`;
+  }
+
+  private toUtcCalendarTimestamp(value: string): string {
+    const parsed = new Date(value);
+    return parsed.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+  }
+
+  getGoogleCalendarUrl(appointment: BookedAppointment): string {
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: this.getCalendarSummary(appointment),
+      dates: `${this.toUtcCalendarTimestamp(appointment.start_time)}/${this.toUtcCalendarTimestamp(appointment.end_time)}`,
+      details: appointment.notes || 'No notes provided.'
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+
+  getOutlookCalendarUrl(appointment: BookedAppointment): string {
+    const params = new URLSearchParams({
+      subject: this.getCalendarSummary(appointment),
+      startdt: new Date(appointment.start_time).toISOString(),
+      enddt: new Date(appointment.end_time).toISOString(),
+      body: appointment.notes || 'No notes provided.'
+    });
+    return `https://outlook.office.com/calendar/0/deeplink/compose?${params.toString()}`;
+  }
+
+  getAppleCalendarDownloadUrl(appointment: BookedAppointment): string {
+    return `/api/availability/appointments/${appointment.id}/ics?student_email=${encodeURIComponent(this.sessionEmail)}`;
+  }
+
+  toggleCalendarPanel(appointmentId: number): void {
+    this.calendarPanelAppointmentId = this.calendarPanelAppointmentId === appointmentId ? null : appointmentId;
+    if (this.calendarPanelAppointmentId === appointmentId) {
+      this.pendingCancelAppointmentId = null;
+      if (this.reschedulePanelAppointmentId === appointmentId) {
+        this.closeReschedulePanel();
+      }
+    }
   }
 
   get visibleRescheduleOptions(): RescheduleDayGroup[] {
@@ -325,6 +369,9 @@ export class MyAppointmentsComponent implements OnInit {
     if (this.reschedulePanelAppointmentId === appointmentId) {
       this.closeReschedulePanel();
     }
+    if (this.calendarPanelAppointmentId === appointmentId) {
+      this.calendarPanelAppointmentId = null;
+    }
 
     this.pendingCancelAppointmentId = appointmentId;
     this.error = '';
@@ -338,6 +385,7 @@ export class MyAppointmentsComponent implements OnInit {
   startEditing(appointment: BookedAppointment): void {
     this.editingAppointmentId = appointment.id;
     this.closeReschedulePanel();
+    this.calendarPanelAppointmentId = null;
     this.saveError = '';
     this.saveSuccess = '';
     this.draftNotesById[appointment.id] = appointment.notes || '';
