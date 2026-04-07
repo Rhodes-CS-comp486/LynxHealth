@@ -26,6 +26,7 @@ from backend.routes.availability_routes import (  # noqa: E402
     UpdateAppointmentNotesRequest,
     cancel_my_appointment,
     create_appointment_type,
+    delete_appointment_type,
     get_booked_slot_starts,
     iterate_slot_starts,
     list_appointments,
@@ -260,6 +261,53 @@ def test_create_appointment_type_persists_hyphenated_option_for_admin(
 
     options = list_appointment_types(db=appointment_db)
     assert any(option.appointment_type == 'check-up' and option.duration_minutes == 30 for option in options)
+
+
+def test_delete_appointment_type_removes_option_and_returns_upcoming_appointments(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    upcoming = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, minutes=30),
+        status='booked',
+        notes='Bring prior records',
+    )
+    appointment_db.add(upcoming)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='testing',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'testing'
+    assert response.deleted_type.duration_minutes == 30
+    assert len(response.upcoming_appointments) == 1
+    assert response.upcoming_appointments[0].student_email == 'student@example.edu'
+
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'testing' for option in options)
+
+
+def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    with pytest.raises(HTTPException) as exception_info:
+        delete_appointment_type(
+            appointment_type='testing',
+            admin_email='student@example.edu',
+            db=appointment_db,
+        )
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'Only admins can delete appointment types.'
 
 
 def test_cancel_my_appointment_rejects_blank_student_email(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

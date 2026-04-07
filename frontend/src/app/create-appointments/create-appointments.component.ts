@@ -26,6 +26,11 @@ interface AppointmentTypeOption {
   duration_minutes: number;
 }
 
+interface DeletedAppointmentTypeResponse {
+  deleted_type: AppointmentTypeOption;
+  upcoming_appointments: BookedAppointment[];
+}
+
 interface CalendarDay {
   date: Date;
   key: string;
@@ -98,6 +103,9 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   isSaving = false;
   newAppointmentType = '';
   newAppointmentDurationMinutes = 15;
+  isDeleteMode = false;
+  appointmentTypePendingConfirmation: AppointmentTypeOption | null = null;
+  deletedTypeWarning: DeletedAppointmentTypeResponse | null = null;
 
   constructor(
     private readonly cdr: ChangeDetectorRef,
@@ -224,6 +232,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.isSaving = true;
     this.adminError = '';
     this.adminMessage = '';
+    this.deletedTypeWarning = null;
 
     try {
       const response = await fetch('/api/availability/appointment-types', {
@@ -258,6 +267,81 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     } finally {
       this.isSaving = false;
     }
+  }
+
+  toggleDeleteMode(): void {
+    this.isDeleteMode = !this.isDeleteMode;
+    if (!this.isDeleteMode) {
+      this.appointmentTypePendingConfirmation = null;
+    }
+    this.adminError = '';
+    this.adminMessage = '';
+  }
+
+  requestDeleteAppointmentType(option: AppointmentTypeOption): void {
+    if (!this.isDeleteMode || this.isSaving) {
+      return;
+    }
+
+    this.appointmentTypePendingConfirmation = option;
+    this.adminError = '';
+    this.adminMessage = '';
+  }
+
+  cancelDeleteAppointmentType(): void {
+    this.appointmentTypePendingConfirmation = null;
+  }
+
+  async confirmDeleteAppointmentType(): Promise<void> {
+    const option = this.appointmentTypePendingConfirmation;
+    if (this.role !== 'admin') {
+      this.adminError = 'Only admins can delete appointment types.';
+      return;
+    }
+
+    if (!option) {
+      return;
+    }
+
+    this.isSaving = true;
+    this.adminError = '';
+    this.adminMessage = '';
+    this.deletedTypeWarning = null;
+
+    try {
+      const response = await fetch(
+        `/api/availability/appointment-types/${encodeURIComponent(option.appointment_type)}?admin_email=${encodeURIComponent(this.sessionEmail)}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      if (!response.ok) {
+        const payload = await this.tryReadError(response);
+        throw new Error(payload || `Unable to delete appointment type (HTTP ${response.status}).`);
+      }
+
+      const deleted = await response.json() as DeletedAppointmentTypeResponse;
+      this.appointmentTypePendingConfirmation = null;
+      this.isDeleteMode = false;
+      this.deletedTypeWarning = deleted;
+      this.appointmentTypeOptionsService.clearCache();
+      this.adminMessage = `${this.formatAppointmentType(deleted.deleted_type.appointment_type)} has been removed from the booking options.`;
+      await this.loadAppointmentTypes();
+      await this.loadBookedAppointments();
+    } catch (error) {
+      if (error instanceof Error) {
+        this.adminError = error.message;
+      } else {
+        this.adminError = 'Unable to delete appointment type.';
+      }
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  dismissDeletedTypeWarning(): void {
+    this.deletedTypeWarning = null;
   }
 
   private async blockTime(date: string, time: string): Promise<number> {
