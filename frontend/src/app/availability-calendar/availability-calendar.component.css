@@ -158,6 +158,13 @@ h2 { margin: 0; }
 
 .confirmation-actions {
   margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.confirmation-actions .button {
+  text-decoration: none;
 }
 
 .confirmation-panel { margin: 1rem 0; border: 1px solid #bfe6cb; background: #f1fbf5; border-radius: 14px; padding: 1rem; }

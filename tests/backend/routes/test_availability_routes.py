@@ -28,6 +28,7 @@ from backend.routes.availability_routes import (  # noqa: E402
     create_appointment_type,
     create_appointment_ics,
     download_appointment_ics,
+    format_calendar_summary_from_type,
     get_booked_slot_starts,
     iterate_slot_starts,
     list_appointments,
@@ -295,15 +296,20 @@ def test_create_appointment_ics_contains_event_fields() -> None:
         status='booked',
     )
 
-    payload = create_appointment_ics(appointment, 'Lynx Health Appointment: testing')
+    payload = create_appointment_ics(appointment, 'Health Center Appointment: Testing')
 
     assert 'BEGIN:VCALENDAR' in payload
     assert 'BEGIN:VEVENT' in payload
     assert 'UID:appointment-77@lynxhealth.local' in payload
     assert 'DTSTART:20260105T090000' in payload
     assert 'DTEND:20260105T093000' in payload
-    assert 'SUMMARY:Lynx Health Appointment: testing' in payload
+    assert 'SUMMARY:Health Center Appointment: Testing' in payload
     assert 'DESCRIPTION:Bring ID card' in payload
+
+
+def test_format_calendar_summary_from_type_formats_human_readable_summary() -> None:
+    assert format_calendar_summary_from_type('blood_pressure_follow_up') == 'Health Center Appointment: Blood Pressure Follow Up'
+    assert format_calendar_summary_from_type(None) == 'Health Center Appointment: Appointment'
 
 
 def test_download_appointment_ics_returns_calendar_attachment(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -328,7 +334,9 @@ def test_download_appointment_ics_returns_calendar_attachment(appointment_db, mo
 
     assert response.media_type == 'text/calendar; charset=utf-8'
     assert response.headers.get('content-disposition') == f'attachment; filename=\"lynx-health-appointment-{appointment.id}.ics\"'
-    assert 'BEGIN:VCALENDAR' in response.body.decode('utf-8')
+    payload = response.body.decode('utf-8')
+    assert 'BEGIN:VCALENDAR' in payload
+    assert 'SUMMARY:Health Center Appointment: Testing' in payload
 
 
 def test_download_appointment_ics_rejects_non_owner(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -405,6 +405,14 @@ def create_appointment_ics(appointment: Appointment, summary: str) -> str:
     return '\r\n'.join(lines)
 
 
+def format_calendar_summary_from_type(appointment_type: str | None) -> str:
+    normalized = (appointment_type or 'appointment').strip().replace('_', ' ')
+    if not normalized:
+        normalized = 'appointment'
+    title_cased = ' '.join(part.capitalize() for part in normalized.split())
+    return f'Health Center Appointment: {title_cased}'
+
+
 def ensure_database_ready() -> None:
     try:
         ensure_availability_schema()
@@ -1455,7 +1463,7 @@ def download_appointment_ics(
                 detail='You can only download calendar files for your own appointments.',
             )
 
-        summary = f'Lynx Health Appointment: {appointment.appointment_type or "appointment"}'
+        summary = format_calendar_summary_from_type(appointment.appointment_type)
         ics_payload = create_appointment_ics(appointment, summary)
         filename = f'lynx-health-appointment-{appointment_id}.ics'
         headers = {'Content-Disposition': f'attachment; filename="{filename}"'}

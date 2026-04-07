@@ -141,8 +141,14 @@
         </p>
         <p><strong>Notes:</strong> {{ confirmedBooking.notes || 'No notes provided.' }}</p>
         <div class="confirmation-actions">
-          <a class="button" [href]="getCalendarDownloadUrl(confirmedBooking)">
-            Add to Calendar
+          <a class="button" [href]="getGoogleCalendarUrl(confirmedBooking)" target="_blank" rel="noopener noreferrer">
+            Add to Google Calendar
+          </a>
+          <a class="button ghost" [href]="getOutlookCalendarUrl(confirmedBooking)" target="_blank" rel="noopener noreferrer">
+            Add to Outlook Calendar
+          </a>
+          <a class="button ghost" [href]="getAppleCalendarDownloadUrl(confirmedBooking)">
+            Add to Apple Calendar
           </a>
         </div>
       </div>
