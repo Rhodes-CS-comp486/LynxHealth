@@ -36,6 +36,30 @@
   padding: 3rem 0 4rem;
 }
 
+.section .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: var(--red-500);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.9rem 1.4rem;
+  cursor: pointer;
+}
+
+.section .button.ghost {
+  background: #fff;
+  color: var(--red-600);
+  border: 1px solid var(--red-200);
+}
+
+.section .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
@@ -55,9 +79,19 @@ h1 {
 
 .admin-toolbar {
   margin-top: 1rem;
+  margin-bottom: 1.25rem;
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.admin-toolbar .button.small {
+  font-size: 0.9rem;
+  padding: 0.6rem 1.05rem;
+}
+
+.admin-toolbar .cancel-btn {
+  margin-left: auto;
 }
 
 .add-btn {
