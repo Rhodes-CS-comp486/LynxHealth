@@ -33,6 +33,9 @@ export class ResourcesComponent implements OnInit {
   addedSections: PageSection[] = [];
   sectionMap: { [key: string]: PageSection } = {};
 
+  private originalSectionsSnapshot: PageSection[] | null = null;
+  private originalAddedSectionsSnapshot: PageSection[] | null = null;
+
   private readonly apiUrl = '/api/pages';
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
@@ -82,6 +85,8 @@ export class ResourcesComponent implements OnInit {
     if (this.isEditing) {
       this.saveAllSections();
     } else {
+      this.originalSectionsSnapshot = this.sections.map((section) => ({ ...section }));
+      this.originalAddedSectionsSnapshot = this.addedSections.map((section) => ({ ...section }));
       this.isEditing = true;
       this.refreshView();
 
@@ -96,6 +101,26 @@ export class ResourcesComponent implements OnInit {
         });
       }, 50);
     }
+  }
+
+  cancelEditMode(): void {
+    if (this.isSaving) {
+      return;
+    }
+
+    this.isEditing = false;
+    this.isSaving = false;
+    if (this.originalSectionsSnapshot) {
+      this.sections = this.originalSectionsSnapshot.map((section) => ({ ...section }));
+      this.addedSections = (this.originalAddedSectionsSnapshot ?? []).map((section) => ({ ...section }));
+      this.sectionMap = {};
+      for (const section of this.sections) {
+        this.sectionMap[section.section_key] = section;
+      }
+    }
+    this.originalSectionsSnapshot = null;
+    this.originalAddedSectionsSnapshot = null;
+    this.refreshView();
   }
 
   async saveAllSections(): Promise<void> {
@@ -145,6 +170,8 @@ export class ResourcesComponent implements OnInit {
 
       this.isEditing = false;
       this.isSaving = false;
+      this.originalSectionsSnapshot = null;
+      this.originalAddedSectionsSnapshot = null;
       await this.loadSections();
     } catch (error) {
       console.error('Failed to save sections:', error);

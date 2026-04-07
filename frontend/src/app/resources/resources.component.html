@@ -31,6 +31,9 @@
           <button class="button small add-btn" type="button" *ngIf="isEditing" (click)="addSection()">
             + Add Section
           </button>
+          <button class="button small cancel-btn" type="button" *ngIf="isEditing" (click)="cancelEditMode()" [disabled]="isSaving">
+            Cancel
+          </button>
         </div>
 
         <!-- Welcome Section -->
