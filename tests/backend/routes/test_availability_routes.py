@@ -26,6 +26,8 @@ from backend.routes.availability_routes import (  # noqa: E402
     UpdateAppointmentNotesRequest,
     cancel_my_appointment,
     create_appointment_type,
+    create_appointment_ics,
+    download_appointment_ics,
     get_booked_slot_starts,
     iterate_slot_starts,
     list_appointments,
@@ -280,6 +282,78 @@ def test_cancel_my_appointment_rejects_admin_email(appointment_db, monkeypatch: 
 
     assert exception_info.value.status_code == 403
     assert exception_info.value.detail == 'Only students can cancel their own appointments.'
+
+
+def test_create_appointment_ics_contains_event_fields() -> None:
+    appointment = Appointment(
+        id=77,
+        student_email='student@example.edu',
+        appointment_type='testing',
+        notes='Bring ID card',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+
+    payload = create_appointment_ics(appointment, 'Lynx Health Appointment: testing')
+
+    assert 'BEGIN:VCALENDAR' in payload
+    assert 'BEGIN:VEVENT' in payload
+    assert 'UID:appointment-77@lynxhealth.local' in payload
+    assert 'DTSTART:20260105T090000' in payload
+    assert 'DTEND:20260105T093000' in payload
+    assert 'SUMMARY:Lynx Health Appointment: testing' in payload
+    assert 'DESCRIPTION:Bring ID card' in payload
+
+
+def test_download_appointment_ics_returns_calendar_attachment(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+    appointment = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        notes='Bring forms',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+    appointment_db.add(appointment)
+    appointment_db.commit()
+    appointment_db.refresh(appointment)
+
+    response = download_appointment_ics(
+        appointment_id=appointment.id,
+        student_email='student@example.edu',
+        db=appointment_db,
+    )
+
+    assert response.media_type == 'text/calendar; charset=utf-8'
+    assert response.headers.get('content-disposition') == f'attachment; filename=\"lynx-health-appointment-{appointment.id}.ics\"'
+    assert 'BEGIN:VCALENDAR' in response.body.decode('utf-8')
+
+
+def test_download_appointment_ics_rejects_non_owner(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+    appointment = Appointment(
+        student_email='owner@example.edu',
+        appointment_type='testing',
+        notes='owner notes',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+    appointment_db.add(appointment)
+    appointment_db.commit()
+    appointment_db.refresh(appointment)
+
+    with pytest.raises(HTTPException) as exception_info:
+        download_appointment_ics(
+            appointment_id=appointment.id,
+            student_email='other@example.edu',
+            db=appointment_db,
+        )
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'You can only download calendar files for your own appointments.'
 
 
 def test_cancel_my_appointment_returns_not_found_when_missing(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
@@ -359,6 +359,50 @@ def to_appointment_response(appointment: Appointment, duration_map: dict[str, in
         status=appointment.status or 'booked',
         notes=appointment.notes,
     )
+
+
+def format_ics_datetime(value: datetime) -> str:
+    return value.strftime('%Y%m%dT%H%M%S')
+
+
+def escape_ics_text(value: str) -> str:
+    return (
+        value
+        .replace('\\', '\\\\')
+        .replace(';', r'\;')
+        .replace(',', r'\,')
+        .replace('\r\n', r'\n')
+        .replace('\n', r'\n')
+    )
+
+
+def create_appointment_ics(appointment: Appointment, summary: str) -> str:
+    start_time = appointment.start_time
+    end_time = appointment.end_time
+    if start_time is None or end_time is None:
+        raise ValueError('Appointment is missing date or time values.')
+
+    notes = appointment.notes or 'No notes provided.'
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Lynx Health//Appointments//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        f'UID:appointment-{appointment.id}@lynxhealth.local',
+        f'DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}',
+        f'DTSTART:{format_ics_datetime(start_time)}',
+        f'DTEND:{format_ics_datetime(end_time)}',
+        f'SUMMARY:{escape_ics_text(summary)}',
+        f'DESCRIPTION:{escape_ics_text(notes)}',
+        'LOCATION:Lynx Health Center',
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR',
+        '',
+    ]
+    return '\r\n'.join(lines)
 
 
 def ensure_database_ready() -> None:
@@ -1369,6 +1413,54 @@ def update_appointment_notes(
         return to_appointment_response(appointment, duration_map)
     except SQLAlchemyError as exc:
         db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.get('/appointments/{appointment_id}/ics')
+def download_appointment_ics(
+    appointment_id: int,
+    student_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = student_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Student email is required.',
+        )
+
+    if normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only students can download appointment calendar files.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+        if not appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment not found.',
+            )
+
+        appointment_owner_email = (appointment.student_email or '').strip().lower()
+        if appointment_owner_email != normalized_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='You can only download calendar files for your own appointments.',
+            )
+
+        summary = f'Lynx Health Appointment: {appointment.appointment_type or "appointment"}'
+        ics_payload = create_appointment_ics(appointment, summary)
+        filename = f'lynx-health-appointment-{appointment_id}.ics'
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        return Response(content=ics_payload, media_type='text/calendar; charset=utf-8', headers=headers)
+    except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',

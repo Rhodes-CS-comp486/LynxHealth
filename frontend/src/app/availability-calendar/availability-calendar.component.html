@@ -140,6 +140,11 @@
           · <strong>Duration:</strong> {{ confirmedBooking.duration_minutes }} mins
         </p>
         <p><strong>Notes:</strong> {{ confirmedBooking.notes || 'No notes provided.' }}</p>
+        <div class="confirmation-actions">
+          <a class="button" [href]="getCalendarDownloadUrl(confirmedBooking)">
+            Add to Calendar
+          </a>
+        </div>
       </div>
     </div>
 

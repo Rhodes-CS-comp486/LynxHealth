@@ -146,6 +146,10 @@ export class AvailabilityCalendarComponent implements OnInit {
       .join(' ');
   }
 
+  getCalendarDownloadUrl(appointment: AppointmentBookingResponse): string {
+    return `/api/availability/appointments/${appointment.id}/ics?student_email=${encodeURIComponent(this.sessionEmail)}`;
+  }
+
   beginBooking(slot: CalendarSlot): void {
     if (this.role !== 'user') {
       return;
