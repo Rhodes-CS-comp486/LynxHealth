@@ -67,6 +67,10 @@ h1 {
   box-shadow: none;
 }
 
+.guest-toggle-btn + .guest-toggle-btn {
+  margin-top: 0.6rem;
+}
+
 /* SSO button slightly larger */
 .sso-button {
   padding: 1rem 1.4rem;
