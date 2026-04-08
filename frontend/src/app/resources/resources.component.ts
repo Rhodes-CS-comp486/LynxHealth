@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { getClientSession } from '../session';
 
 interface PageSection {
   id?: number;
@@ -21,10 +20,9 @@ interface PageSection {
   styleUrl: './resources.component.css'
 })
 export class ResourcesComponent implements OnInit {
-  readonly session = getClientSession();
-  readonly role = this.session.role;
+  readonly role = this.getRole();
   readonly isAdmin = this.role === 'admin';
-  readonly sessionEmail = this.session.requestEmail;
+  readonly sessionEmail = this.getSessionEmail();
 
   isEditing = false;
   isSaving = false;
@@ -33,10 +31,7 @@ export class ResourcesComponent implements OnInit {
   addedSections: PageSection[] = [];
   sectionMap: { [key: string]: PageSection } = {};
 
-  private originalSectionsSnapshot: PageSection[] | null = null;
-  private originalAddedSectionsSnapshot: PageSection[] | null = null;
-
-  private readonly apiUrl = '/api/pages';
+  private readonly apiUrl = 'http://localhost:8000/pages';
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
 
@@ -85,42 +80,35 @@ export class ResourcesComponent implements OnInit {
     if (this.isEditing) {
       this.saveAllSections();
     } else {
-      this.originalSectionsSnapshot = this.sections.map((section) => ({ ...section }));
-      this.originalAddedSectionsSnapshot = this.addedSections.map((section) => ({ ...section }));
       this.isEditing = true;
       this.refreshView();
 
       // Populate rich editors with current content after DOM renders
       setTimeout(() => {
-        const editors = document.querySelectorAll('.rich-editor');
-        const allSections = [...this.sections, ...this.addedSections];
-        editors.forEach((editor, index) => {
-          if (allSections[index]) {
-            editor.innerHTML = allSections[index].content;
-          }
-        });
+        this.populateEditors();
       }, 50);
     }
   }
 
-  cancelEditMode(): void {
-    if (this.isSaving) {
-      return;
-    }
+  private populateEditors(): void {
+    const editors = document.querySelectorAll('.rich-editor');
+    editors.forEach((editor) => {
+      const el = editor as HTMLElement;
+      const sectionKey = el.getAttribute('data-section-key');
+      const addedIndex = el.getAttribute('data-added-index');
 
-    this.isEditing = false;
-    this.isSaving = false;
-    if (this.originalSectionsSnapshot) {
-      this.sections = this.originalSectionsSnapshot.map((section) => ({ ...section }));
-      this.addedSections = (this.originalAddedSectionsSnapshot ?? []).map((section) => ({ ...section }));
-      this.sectionMap = {};
-      for (const section of this.sections) {
-        this.sectionMap[section.section_key] = section;
+      if (sectionKey) {
+        const section = this.sections.find(s => s.section_key === sectionKey);
+        if (section) {
+          el.innerHTML = section.content;
+        }
+      } else if (addedIndex !== null) {
+        const idx = parseInt(addedIndex, 10);
+        if (this.addedSections[idx]) {
+          el.innerHTML = this.addedSections[idx].content;
+        }
       }
-    }
-    this.originalSectionsSnapshot = null;
-    this.originalAddedSectionsSnapshot = null;
-    this.refreshView();
+    });
   }
 
   async saveAllSections(): Promise<void> {
@@ -140,6 +128,18 @@ export class ResourcesComponent implements OnInit {
     this.isSaving = true;
     this.refreshView();
 
+    // Ensure all links have target="_blank" before saving
+    const processContent = (html: string): string => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const links = temp.querySelectorAll('a');
+      links.forEach(link => {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noreferrer');
+      });
+      return temp.innerHTML;
+    };
+
     const allSections = [...this.sections, ...validAdded];
 
     const payload = {
@@ -147,7 +147,7 @@ export class ResourcesComponent implements OnInit {
       sections: allSections.map((s, i) => ({
         section_key: s.section_key,
         header: s.header,
-        content: s.content,
+        content: processContent(s.content),
         display_order: i,
       }))
     };
@@ -170,8 +170,6 @@ export class ResourcesComponent implements OnInit {
 
       this.isEditing = false;
       this.isSaving = false;
-      this.originalSectionsSnapshot = null;
-      this.originalAddedSectionsSnapshot = null;
       await this.loadSections();
     } catch (error) {
       console.error('Failed to save sections:', error);
@@ -267,15 +265,127 @@ export class ResourcesComponent implements OnInit {
     document.execCommand(command, false);
   }
 
-  applyRed(): void {
-    document.execCommand('foreColor', false, '#e2483b');
+  insertLink(): void {
+    // Check if the current selection is inside an existing link
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    let node: Node | null = selection.anchorNode;
+    let existingLink: HTMLAnchorElement | null = null;
+
+    while (node) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'A') {
+        existingLink = node as HTMLAnchorElement;
+        break;
+      }
+      node = node.parentNode;
+    }
+
+    if (existingLink) {
+      // Editing existing link
+      const action = prompt(
+        `Current URL: ${existingLink.href}\n\nEnter new URL, or type "remove" to delete the link:`,
+        existingLink.href
+      );
+
+      if (action === null) return;
+
+      if (action.toLowerCase().trim() === 'remove') {
+        // Unwrap the link, keep text
+        const range = document.createRange();
+        range.selectNodeContents(existingLink);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand('unlink', false);
+      } else if (action.trim()) {
+        existingLink.href = action.trim();
+        existingLink.target = '_blank';
+        existingLink.rel = 'noreferrer';
+      }
+    } else {
+      // Creating new link
+      if (selection.toString().trim() === '') {
+        alert('Please select the text you want to turn into a link first.');
+        return;
+      }
+
+      const url = prompt('Enter URL:');
+      if (url) {
+        document.execCommand('createLink', false, url);
+        // Find the newly created link and add target="_blank"
+        setTimeout(() => {
+          const editors = document.querySelectorAll('.rich-editor');
+          editors.forEach(editor => {
+            const links = editor.querySelectorAll('a:not([target])');
+            links.forEach(link => {
+              (link as HTMLAnchorElement).target = '_blank';
+              (link as HTMLAnchorElement).rel = 'noreferrer';
+            });
+          });
+        }, 10);
+      }
+    }
   }
 
-  insertLink(): void {
-    const url = prompt('Enter URL:');
-    if (url) {
-      document.execCommand('createLink', false, url);
-    }
+  moveSectionByIndex(index: number, direction: number): void {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= this.sections.length) return;
+
+    // Sync any pending edits from the editors before swapping
+    this.syncAllEditorsToModel();
+
+    [this.sections[index], this.sections[newIndex]] = [this.sections[newIndex], this.sections[index]];
+    this.refreshView();
+
+    // Repopulate editors with new order
+    setTimeout(() => this.populateEditors(), 50);
+  }
+
+  moveSectionUp(key: string): void {
+    const index = this.sections.findIndex(s => s.section_key === key);
+    this.moveSectionByIndex(index, -1);
+  }
+
+  moveSectionDown(key: string): void {
+    const index = this.sections.findIndex(s => s.section_key === key);
+    this.moveSectionByIndex(index, 1);
+  }
+
+  moveAddedSectionUp(index: number): void {
+    if (index <= 0) return;
+    this.syncAllEditorsToModel();
+    [this.addedSections[index - 1], this.addedSections[index]] = [this.addedSections[index], this.addedSections[index - 1]];
+    this.refreshView();
+    setTimeout(() => this.populateEditors(), 50);
+  }
+
+  moveAddedSectionDown(index: number): void {
+    if (index >= this.addedSections.length - 1) return;
+    this.syncAllEditorsToModel();
+    [this.addedSections[index], this.addedSections[index + 1]] = [this.addedSections[index + 1], this.addedSections[index]];
+    this.refreshView();
+    setTimeout(() => this.populateEditors(), 50);
+  }
+
+  private syncAllEditorsToModel(): void {
+    const editors = document.querySelectorAll('.rich-editor');
+    editors.forEach((editor) => {
+      const el = editor as HTMLElement;
+      const sectionKey = el.getAttribute('data-section-key');
+      const addedIndex = el.getAttribute('data-added-index');
+
+      if (sectionKey) {
+        const section = this.sections.find(s => s.section_key === sectionKey);
+        if (section) {
+          section.content = el.innerHTML;
+        }
+      } else if (addedIndex !== null) {
+        const idx = parseInt(addedIndex, 10);
+        if (this.addedSections[idx]) {
+          this.addedSections[idx].content = el.innerHTML;
+        }
+      }
+    });
   }
 
   syncContent(sectionKey: string, field: 'header' | 'content', event: Event): void {
@@ -292,4 +402,40 @@ export class ResourcesComponent implements OnInit {
     this.addedSections[index][field] = el.innerHTML;
   }
 
+  trackBySectionKey(_index: number, section: PageSection): string {
+    return section.section_key;
+  }
+
+  private getRole(): 'admin' | 'user' {
+    const data = this.getSessionStorageItem();
+    if (!data) return 'user';
+
+    try {
+      const parsed = JSON.parse(data) as { role?: string };
+      return parsed.role === 'admin' ? 'admin' : 'user';
+    } catch {
+      return 'user';
+    }
+  }
+
+  private getSessionEmail(): string {
+    const data = this.getSessionStorageItem();
+    const fallback = this.role === 'admin' ? 'admin@admin.edu' : 'user@lynxhealth.local';
+
+    if (!data) return fallback;
+
+    try {
+      const parsed = JSON.parse(data) as { email?: string };
+      return parsed.email?.trim().toLowerCase() || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private getSessionStorageItem(): string | null {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+    return localStorage.getItem('lynxSession');
+  }
 }
