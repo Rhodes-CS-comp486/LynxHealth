@@ -67,7 +67,7 @@
               </div>
             </ng-template>
 
-            <div class="appointment-actions-row" *ngIf="editingAppointmentId !== appointment.id">
+            <div class="appointment-actions-row">
               <button
                 *ngIf="isCalendarActionVisible(appointment.id)"
                 class="button small"
@@ -79,7 +79,7 @@
                 *ngIf="isEditNotesActionVisible(appointment.id)"
                 class="button small"
                 type="button"
-                (click)="startEditing(appointment)">Edit notes</button>
+                (click)="toggleEditing(appointment)">{{ editingAppointmentId === appointment.id ? 'Close edit notes' : 'Edit notes' }}</button>
               <button
                 *ngIf="isRescheduleActionVisible(appointment.id)"
                 class="button small"
@@ -93,8 +93,8 @@
                 class="button small cancel-button"
                 type="button"
                 [disabled]="cancelingAppointmentId === appointment.id"
-                (click)="requestCancelConfirmation(appointment.id)">
-                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
+                (click)="toggleCancelConfirmation(appointment.id)">
+                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : (pendingCancelAppointmentId === appointment.id ? 'Close cancel appointment' : 'Cancel appointment') }}
               </button>
             </div>
 

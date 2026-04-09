@@ -386,8 +386,13 @@ export class MyAppointmentsComponent implements OnInit {
     }
   }
 
-  requestCancelConfirmation(appointmentId: number): void {
+  toggleCancelConfirmation(appointmentId: number): void {
     if (this.role !== 'user' || this.cancelingAppointmentId === appointmentId) {
+      return;
+    }
+
+    if (this.pendingCancelAppointmentId === appointmentId) {
+      this.dismissCancelConfirmation();
       return;
     }
 
@@ -405,6 +410,15 @@ export class MyAppointmentsComponent implements OnInit {
 
   dismissCancelConfirmation(): void {
     this.pendingCancelAppointmentId = null;
+  }
+
+  toggleEditing(appointment: BookedAppointment): void {
+    if (this.editingAppointmentId === appointment.id) {
+      this.cancelEditing();
+      return;
+    }
+
+    this.startEditing(appointment);
   }
 
   startEditing(appointment: BookedAppointment): void {
