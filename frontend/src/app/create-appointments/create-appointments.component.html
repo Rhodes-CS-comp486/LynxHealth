@@ -67,7 +67,7 @@
           <div class="confirmation-panel" *ngIf="adminMessage">
             <p>{{ adminMessage }}</p>
           </div>
-          <p class="error" *ngIf="adminError">{{ adminError }}</p>
+          <p class="error error-alert" *ngIf="adminError" role="alert" aria-live="polite">{{ adminError }}</p>
 
           <form class="type-form" (ngSubmit)="createAppointmentType()">
             <label>

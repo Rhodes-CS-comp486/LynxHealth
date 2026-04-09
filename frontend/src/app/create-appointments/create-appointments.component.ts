@@ -225,7 +225,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   async createAppointmentType(): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can create appointment types.';
+      this.adminError = 'Only admins can add appointment types.';
       return;
     }
 
@@ -260,9 +260,9 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       await this.loadAppointmentTypes();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = error.message;
+        this.adminError = this.formatAppointmentTypeAdminError(error.message);
       } else {
-        this.adminError = 'Unable to create appointment type.';
+        this.adminError = 'We could not add that appointment type right now. Please try again.';
       }
     } finally {
       this.isSaving = false;
@@ -396,6 +396,24 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     } catch {
       return null;
     }
+  }
+
+  private formatAppointmentTypeAdminError(message: string): string {
+    const normalized = message.trim();
+
+    if (!normalized || normalized.startsWith('Unable to create appointment type (HTTP')) {
+      return 'We could not add that appointment type right now. Please try again.';
+    }
+
+    if (normalized === 'Only admins can create appointment types.') {
+      return 'Only admins can add appointment types.';
+    }
+
+    if (normalized === 'Appointment type already exists.') {
+      return 'That appointment type is already on the list. Try a different name.';
+    }
+
+    return normalized;
   }
 
   private async loadBlockedTimes(): Promise<void> {
