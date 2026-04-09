@@ -96,7 +96,7 @@ def test_create_appointment_type_request_rejects_unsupported_punctuation() -> No
             duration_minutes=30,
         )
 
-    assert "Appointment types cannot include '!'." in str(exception_info.value)
+    assert "Please use only letters, numbers, spaces, or hyphens in the type name. Remove '!'." in str(exception_info.value)
 
 
 def test_create_appointment_type_request_rejects_non_admin() -> None:

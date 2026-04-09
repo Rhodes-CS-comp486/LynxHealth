@@ -93,6 +93,13 @@
 .confirmation-panel { margin-top: 1rem; border: 1px solid #bfe6cb; background: #f1fbf5; border-radius: 14px; box-shadow: 0 0 0 1px rgba(47, 125, 65, 0.05), 0 12px 28px rgba(47, 125, 65, 0.1); padding: 1rem; }
 .confirmation-panel p { margin: 0; color: #1f6b3d; font-weight: 600; }
 .error { margin-top: 1rem; color: #b4332b; font-weight: 600; }
+.error-alert {
+  padding: 0.95rem 1rem;
+  border: 1px solid #efb3ad;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff7f6 0%, #fff1ef 100%);
+  box-shadow: 0 0 0 1px rgba(226, 72, 59, 0.08), 0 12px 28px rgba(180, 51, 43, 0.14);
+}
 .warning { margin-top: 0.55rem; color: #b45309; font-weight: 700; }
 
 .booked-panel { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }

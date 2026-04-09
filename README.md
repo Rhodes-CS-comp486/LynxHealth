@@ -1,6 +1,53 @@
 # LynxHealth
 An app for Rhodes Health Center
 
+## Running the App
+
+Start from the project root:
+
+### Windows
+
+Use PowerShell:
+
+```powershell
+.\start.ps1
+```
+
+If PowerShell blocks the script, run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\start.ps1
+```
+
+What this script does:
+- activates the Python virtual environment if `.venv` exists
+- starts the frontend from `frontend`
+- starts the FastAPI backend on `http://localhost:8000`
+
+### macOS or Linux
+
+```bash
+./start.sh
+```
+
+If needed, make it executable first:
+
+```bash
+chmod +x ./start.sh
+./start.sh
+```
+
+### First-time setup
+
+If startup fails because dependencies are missing:
+
+```bash
+pip install -r requirements.txt
+cd frontend
+npm install
+```
+
 ## Planning
 
 [Google Drive](https://drive.google.com/drive/u/1/folders/1ygJ4fZOfbDO0bYAbOHXsf_lC90die02E)

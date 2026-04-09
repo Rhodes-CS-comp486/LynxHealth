@@ -40,18 +40,18 @@ DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 
 def format_invalid_appointment_type_characters(invalid_characters: list[str]) -> str:
     if len(invalid_characters) == 1:
-        return f"Appointment types cannot include '{invalid_characters[0]}'."
+        return f"Please use only letters, numbers, spaces, or hyphens in the type name. Remove '{invalid_characters[0]}'."
 
     formatted = ', '.join(f"'{character}'" for character in invalid_characters[:-1])
     formatted += f" or '{invalid_characters[-1]}'"
-    return f'Appointment types cannot include {formatted}.'
+    return f'Please use only letters, numbers, spaces, or hyphens in the type name. Remove {formatted}.'
 
 
 def normalize_appointment_type_name(value: str) -> str:
     normalized = ' '.join(value.strip().lower().split())
 
     if not normalized:
-        raise ValueError('Appointment type is required.')
+        raise ValueError('Enter a name for the appointment type.')
 
     invalid_characters: list[str] = []
     for character in normalized:
@@ -66,9 +66,9 @@ def normalize_appointment_type_name(value: str) -> str:
     slug = normalized.replace(' ', '_')
 
     if len(slug) > 50:
-        raise ValueError('Appointment type must be 50 characters or fewer.')
+        raise ValueError('Keep the type name to 50 characters or fewer.')
     if slug == BLOCKED_APPOINTMENT_TYPE:
-        raise ValueError('Appointment type name is reserved.')
+        raise ValueError('That name is reserved. Please choose a different appointment type.')
 
     return slug
 
@@ -1007,7 +1007,7 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail='Appointment type already exists.',
+                detail='That appointment type is already on the list. Try a different name.',
             )
 
         option = AppointmentTypeOption(
