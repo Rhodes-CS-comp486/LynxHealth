@@ -69,16 +69,19 @@
 
             <div class="appointment-actions-row" *ngIf="editingAppointmentId !== appointment.id">
               <button
+                *ngIf="isCalendarActionVisible(appointment.id)"
                 class="button small"
                 type="button"
                 (click)="toggleCalendarPanel(appointment.id)">
                 {{ calendarPanelAppointmentId === appointment.id ? 'Close calendar options' : 'Add to calendar' }}
               </button>
               <button
+                *ngIf="isEditNotesActionVisible(appointment.id)"
                 class="button small"
                 type="button"
                 (click)="startEditing(appointment)">Edit notes</button>
               <button
+                *ngIf="isRescheduleActionVisible(appointment.id)"
                 class="button small"
                 type="button"
                 [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions || pendingCancelAppointmentId === appointment.id"
@@ -86,6 +89,7 @@
                 {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
               </button>
               <button
+                *ngIf="isCancelActionVisible(appointment.id)"
                 class="button small cancel-button"
                 type="button"
                 [disabled]="cancelingAppointmentId === appointment.id"
