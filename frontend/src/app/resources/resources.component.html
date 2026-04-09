@@ -25,364 +25,80 @@
 
         <!-- Admin toolbar -->
         <div class="admin-toolbar" *ngIf="isAdmin">
-          <button class="button small" type="button" (click)="toggleEditMode()" [disabled]="isSaving">
+          <button class="edit-toggle-btn" type="button" (click)="toggleEditMode()" [disabled]="isSaving">
             {{ isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Page Content') }}
           </button>
-          <button class="button small add-btn" type="button" *ngIf="isEditing" (click)="addSection()">
-            + Add Section
-          </button>
-          <button class="button small cancel-btn" type="button" *ngIf="isEditing" (click)="cancelEditMode()" [disabled]="isSaving">
-            Cancel
+          <button class="add-section-btn" type="button" *ngIf="isEditing" (click)="addSection()">
+            <span class="btn-icon">+</span> Add Section
           </button>
         </div>
 
-        <!-- Welcome Section -->
-        <div *ngIf="sectionMap['welcome']">
-          <ng-container *ngIf="!isEditing">
-            <h1 [innerHTML]="sectionMap['welcome'].header"></h1>
-            <p class="section-copy" [innerHTML]="sectionMap['welcome'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Welcome Section</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('welcome')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['welcome'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('welcome', 'content', $event)"
-                 #welcomeEditor>
+        <!-- Default sections rendered via ngFor for proper reordering -->
+        <ng-container *ngFor="let s of sections; let i = index; trackBy: trackBySectionKey">
+          <!-- Welcome (first section uses h2 to match other headers) -->
+          <div *ngIf="i === 0">
+            <ng-container *ngIf="!isEditing">
+              <h2 [innerHTML]="s.header"></h2>
+              <p class="section-copy" [innerHTML]="s.content"></p>
+            </ng-container>
+            <div class="edit-controls" *ngIf="isEditing">
+              <div class="edit-header-row">
+                <span class="edit-section-label">{{ s.header || 'Section' }}</span>
+                <div class="section-actions">
+                  <button class="icon-btn" type="button" (click)="moveSectionByIndex(i, -1)" [disabled]="i === 0" title="Move up">▲</button>
+                  <button class="icon-btn" type="button" (click)="moveSectionByIndex(i, 1)" [disabled]="i === sections.length - 1" title="Move down">▼</button>
+                  <button class="icon-btn delete-btn" type="button" (click)="removeSection(s.section_key)" title="Remove section">✕</button>
+                </div>
+              </div>
+              <label>Header</label>
+              <input [(ngModel)]="s.header" />
+              <label>Content</label>
+              <div class="format-toolbar">
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert/edit link">🔗</button>
+              </div>
+              <div class="rich-editor"
+                   contenteditable="true"
+                   [attr.data-section-key]="s.section_key"
+                   (input)="syncContent(s.section_key, 'content', $event)">
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Mission -->
-        <section class="info-section" *ngIf="sectionMap['mission']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['mission'].header"></h2>
-            <p [innerHTML]="sectionMap['mission'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Mission</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('mission')" title="Remove section">✕</button>
+          <!-- All other default sections -->
+          <section class="info-section" *ngIf="i > 0">
+            <ng-container *ngIf="!isEditing">
+              <h2 [innerHTML]="s.header"></h2>
+              <p class="section-content" [innerHTML]="s.content"></p>
+            </ng-container>
+            <div class="edit-controls" *ngIf="isEditing">
+              <div class="edit-header-row">
+                <span class="edit-section-label">{{ s.header || 'Section' }}</span>
+                <div class="section-actions">
+                  <button class="icon-btn" type="button" (click)="moveSectionByIndex(i, -1)" [disabled]="i === 0" title="Move up">▲</button>
+                  <button class="icon-btn" type="button" (click)="moveSectionByIndex(i, 1)" [disabled]="i === sections.length - 1" title="Move down">▼</button>
+                  <button class="icon-btn delete-btn" type="button" (click)="removeSection(s.section_key)" title="Remove section">✕</button>
+                </div>
+              </div>
+              <label>Header</label>
+              <input [(ngModel)]="s.header" />
+              <label>Content</label>
+              <div class="format-toolbar">
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
+                <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert/edit link">🔗</button>
+              </div>
+              <div class="rich-editor"
+                   contenteditable="true"
+                   [attr.data-section-key]="s.section_key"
+                   (input)="syncContent(s.section_key, 'content', $event)">
+              </div>
             </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['mission'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('mission', 'content', $event)"
-                 #missionEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Visiting -->
-        <section class="info-section" *ngIf="sectionMap['visiting']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['visiting'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['visiting'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Visiting</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('visiting')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['visiting'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('visiting', 'content', $event)"
-                 #visitingEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Services -->
-        <section class="info-section" *ngIf="sectionMap['services']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['services'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['services'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Services</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('services')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['services'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('services', 'content', $event)"
-                 #servicesEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Cancellation Policy -->
-        <section class="info-section" *ngIf="sectionMap['cancellation_policy']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['cancellation_policy'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['cancellation_policy'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Cancellation Policy</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('cancellation_policy')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['cancellation_policy'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('cancellation_policy', 'content', $event)"
-                 #cancellationEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Emergency Care -->
-        <section class="info-section" *ngIf="sectionMap['emergency_care']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['emergency_care'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['emergency_care'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Emergency Care</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('emergency_care')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['emergency_care'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('emergency_care', 'content', $event)"
-                 #emergencyEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Payment -->
-        <section class="info-section" *ngIf="sectionMap['payment']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['payment'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['payment'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Payment</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('payment')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['payment'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('payment', 'content', $event)"
-                 #paymentEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Self-Care Counter -->
-        <section class="info-section" *ngIf="sectionMap['self_care']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['self_care'].header"></h2>
-            <p [innerHTML]="sectionMap['self_care'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Self-Care Counter</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('self_care')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['self_care'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('self_care', 'content', $event)"
-                 #selfCareEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Allergy Shots -->
-        <section class="info-section" *ngIf="sectionMap['allergy_shots']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['allergy_shots'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['allergy_shots'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Allergy Shots</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('allergy_shots')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['allergy_shots'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('allergy_shots', 'content', $event)"
-                 #allergyEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Questions and Medical Records -->
-        <section class="info-section" *ngIf="sectionMap['records']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['records'].header"></h2>
-            <p [innerHTML]="sectionMap['records'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Questions & Medical Records</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('records')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['records'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('records', 'content', $event)"
-                 #recordsEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Opioid Policy -->
-        <section class="info-section" *ngIf="sectionMap['opioid_policy']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['opioid_policy'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['opioid_policy'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Opioid Policy</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('opioid_policy')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['opioid_policy'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('opioid_policy', 'content', $event)"
-                 #opioidEditor>
-            </div>
-          </div>
-        </section>
-
-        <!-- Class and Work Excuses -->
-        <section class="info-section" *ngIf="sectionMap['class_excuses']">
-          <ng-container *ngIf="!isEditing">
-            <h2 [innerHTML]="sectionMap['class_excuses'].header"></h2>
-            <p class="section-content" [innerHTML]="sectionMap['class_excuses'].content"></p>
-          </ng-container>
-          <div class="edit-controls" *ngIf="isEditing">
-            <div class="edit-header-row">
-              <span class="edit-section-label">Class & Work Excuses</span>
-              <button class="button small delete-btn" type="button" (click)="removeSection('class_excuses')" title="Remove section">✕</button>
-            </div>
-            <label>Header</label>
-            <input [(ngModel)]="sectionMap['class_excuses'].header" />
-            <label>Content</label>
-            <div class="format-toolbar">
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
-            </div>
-            <div class="rich-editor"
-                 contenteditable="true"
-                 (input)="syncContent('class_excuses', 'content', $event)"
-                 #classEditor>
-            </div>
-          </div>
-        </section>
+          </section>
+        </ng-container>
 
         <!-- Admin-added custom sections -->
         <section class="info-section" *ngFor="let s of addedSections; let i = index">
@@ -392,8 +108,12 @@
           </ng-container>
           <div class="edit-controls" *ngIf="isEditing">
             <div class="edit-header-row">
-              <span class="edit-section-label">Custom Section</span>
-              <button class="button small delete-btn" type="button" (click)="removeAddedSection(i)" title="Remove section">✕</button>
+              <span class="edit-section-label">{{ s.header || 'Custom Section' }}</span>
+              <div class="section-actions">
+                <button class="icon-btn" type="button" (click)="moveAddedSectionUp(i)" [disabled]="i === 0" title="Move up">▲</button>
+                <button class="icon-btn" type="button" (click)="moveAddedSectionDown(i)" [disabled]="i === addedSections.length - 1" title="Move down">▼</button>
+                <button class="icon-btn delete-btn" type="button" (click)="removeAddedSection(i)" title="Remove section">✕</button>
+              </div>
             </div>
             <label>Header</label>
             <input [(ngModel)]="s.header" placeholder="Section title..." />
@@ -402,11 +122,11 @@
               <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('bold')"><b>B</b></button>
               <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('italic')"><i>I</i></button>
               <button type="button" (mousedown)="$event.preventDefault()" (click)="applyFormat('underline')"><u>U</u></button>
-              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert link">🔗</button>
-              <button type="button" class="red-btn" (mousedown)="$event.preventDefault()" (click)="applyRed()" title="Red text">A</button>
+              <button type="button" (mousedown)="$event.preventDefault()" (click)="insertLink()" title="Insert/edit link">🔗</button>
             </div>
             <div class="rich-editor"
                  contenteditable="true"
+                 [attr.data-added-index]="i"
                  (input)="syncAddedContent(i, 'content', $event)"
                  data-placeholder="Section content...">
             </div>

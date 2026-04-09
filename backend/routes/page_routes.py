@@ -58,7 +58,7 @@ class BulkUpdateRequest(BaseModel):
     @classmethod
     def validate_admin_email(cls, value: str) -> str:
         normalized = value.strip().lower()
-        if not (normalized.endswith('@admin.edu') or normalized.endswith('@lynxhealth.local')):
+        if not normalized.endswith('@admin.edu'):
             raise ValueError('Only admins can update page content.')
         return normalized
 
@@ -221,7 +221,8 @@ RESOURCES_DEFAULT_SECTIONS: list[dict] = [
             'to a local medical facility if the conditions warrant it. The patient will be responsible '
             'for the cost of transfer and care at that facility.\n\n'
             'After-Hours Health Care and Information: When the Student Health Center is closed, local '
-            'hospital emergency rooms and some walk-in centers are available.'
+            'hospital emergency rooms and some walk-in centers are available. Here is a '
+            '<a href="https://sites.rhodes.edu/health/memphis-health-resources" target="_blank" rel="noreferrer">list of off-campus medical clinics</a>.'
         ),
         'display_order': 5,
     },
@@ -235,7 +236,9 @@ RESOURCES_DEFAULT_SECTIONS: list[dict] = [
             'charged to the Student\'s Rhodes College account.\n\n'
             'Any services requiring an outside entity, such as blood work, X-rays, ultrasounds, etc., '
             'are billed to the student\'s health insurance. You and/or your parents are responsible for '
-            'charges not covered by your insurance for off-campus medical services.'
+            'charges not covered by your insurance for off-campus medical services.\n\n'
+            'The 2025-2026 rates and website for '
+            '<a href="https://studentcenter.uhcsr.com/school-page" target="_blank" rel="noreferrer">UnitedHealthcare Student Resources</a> are available.'
         ),
         'display_order': 6,
     },
@@ -269,7 +272,8 @@ RESOURCES_DEFAULT_SECTIONS: list[dict] = [
         'header': 'Questions and Medical Records',
         'content': (
             'For administrative questions, vaccination information, or medical records, please email '
-            'health@rhodes.edu.'
+            'health@rhodes.edu. Steps to '
+            '<a href="https://sites.rhodes.edu/health/health-awareness-resources/request-immunization-record" target="_blank" rel="noreferrer">request an immunization record</a>.'
         ),
         'display_order': 9,
     },
@@ -294,7 +298,8 @@ RESOURCES_DEFAULT_SECTIONS: list[dict] = [
             'healthcare habits. Medical excuses will not routinely be issued for missed classes or '
             'examinations. SHC cannot provide medical documentation of illnesses or excuses for '
             'class/work.\n\n'
-            'Please review the Rhodes College Student Handbook on Class Attendance Policy.'
+            'Please review the Rhodes College Student Handbook on '
+            '<a href="https://handbook.rhodes.edu/student-handbook/academics-rhodes/class-attendance-policy" target="_blank" rel="noreferrer">Class Attendance Policy</a>.'
         ),
         'display_order': 11,
     },
