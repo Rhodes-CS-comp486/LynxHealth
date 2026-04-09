@@ -131,6 +131,31 @@ export class MyAppointmentsComponent implements OnInit {
     return `/api/availability/appointments/${appointment.id}/ics?student_email=${encodeURIComponent(this.sessionEmail)}`;
   }
 
+
+  isCalendarActionVisible(appointmentId: number): boolean {
+    return this.editingAppointmentId !== appointmentId
+      && this.reschedulePanelAppointmentId !== appointmentId
+      && this.pendingCancelAppointmentId !== appointmentId;
+  }
+
+  isEditNotesActionVisible(appointmentId: number): boolean {
+    return this.calendarPanelAppointmentId !== appointmentId
+      && this.reschedulePanelAppointmentId !== appointmentId
+      && this.pendingCancelAppointmentId !== appointmentId;
+  }
+
+  isRescheduleActionVisible(appointmentId: number): boolean {
+    return this.calendarPanelAppointmentId !== appointmentId
+      && this.editingAppointmentId !== appointmentId
+      && this.pendingCancelAppointmentId !== appointmentId;
+  }
+
+  isCancelActionVisible(appointmentId: number): boolean {
+    return this.calendarPanelAppointmentId !== appointmentId
+      && this.editingAppointmentId !== appointmentId
+      && this.reschedulePanelAppointmentId !== appointmentId;
+  }
+
   toggleCalendarPanel(appointmentId: number): void {
     this.calendarPanelAppointmentId = this.calendarPanelAppointmentId === appointmentId ? null : appointmentId;
     if (this.calendarPanelAppointmentId === appointmentId) {
@@ -361,8 +386,13 @@ export class MyAppointmentsComponent implements OnInit {
     }
   }
 
-  requestCancelConfirmation(appointmentId: number): void {
+  toggleCancelConfirmation(appointmentId: number): void {
     if (this.role !== 'user' || this.cancelingAppointmentId === appointmentId) {
+      return;
+    }
+
+    if (this.pendingCancelAppointmentId === appointmentId) {
+      this.dismissCancelConfirmation();
       return;
     }
 
@@ -380,6 +410,15 @@ export class MyAppointmentsComponent implements OnInit {
 
   dismissCancelConfirmation(): void {
     this.pendingCancelAppointmentId = null;
+  }
+
+  toggleEditing(appointment: BookedAppointment): void {
+    if (this.editingAppointmentId === appointment.id) {
+      this.cancelEditing();
+      return;
+    }
+
+    this.startEditing(appointment);
   }
 
   startEditing(appointment: BookedAppointment): void {

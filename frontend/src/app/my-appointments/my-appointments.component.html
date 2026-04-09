@@ -44,6 +44,37 @@
             </p>
             <p><strong>Status:</strong> {{ appointment.status }}</p>
 
+            <div class="appointment-actions-row">
+              <button
+                *ngIf="isCalendarActionVisible(appointment.id)"
+                class="button small"
+                type="button"
+                (click)="toggleCalendarPanel(appointment.id)">
+                {{ calendarPanelAppointmentId === appointment.id ? 'Close calendar options' : 'Add to calendar' }}
+              </button>
+              <button
+                *ngIf="isEditNotesActionVisible(appointment.id)"
+                class="button small"
+                type="button"
+                (click)="toggleEditing(appointment)">{{ editingAppointmentId === appointment.id ? 'Close edit notes' : 'Edit notes' }}</button>
+              <button
+                *ngIf="isRescheduleActionVisible(appointment.id)"
+                class="button small"
+                type="button"
+                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions || pendingCancelAppointmentId === appointment.id"
+                (click)="openReschedulePanel(appointment)">
+                {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
+              </button>
+              <button
+                *ngIf="isCancelActionVisible(appointment.id)"
+                class="button small cancel-button"
+                type="button"
+                [disabled]="cancelingAppointmentId === appointment.id"
+                (click)="toggleCancelConfirmation(appointment.id)">
+                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : (pendingCancelAppointmentId === appointment.id ? 'Close cancel appointment' : 'Cancel appointment') }}
+              </button>
+            </div>
+
             <ng-container *ngIf="editingAppointmentId !== appointment.id; else editNotesTemplate">
               <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
             </ng-container>
@@ -66,33 +97,6 @@
                 </button>
               </div>
             </ng-template>
-
-            <div class="appointment-actions-row" *ngIf="editingAppointmentId !== appointment.id">
-              <button
-                class="button small"
-                type="button"
-                (click)="toggleCalendarPanel(appointment.id)">
-                {{ calendarPanelAppointmentId === appointment.id ? 'Close calendar options' : 'Add to calendar' }}
-              </button>
-              <button
-                class="button small"
-                type="button"
-                (click)="startEditing(appointment)">Edit notes</button>
-              <button
-                class="button small"
-                type="button"
-                [disabled]="reschedulingAppointmentId === appointment.id || isLoadingRescheduleOptions || pendingCancelAppointmentId === appointment.id"
-                (click)="openReschedulePanel(appointment)">
-                {{ reschedulePanelAppointmentId === appointment.id ? 'Close reschedule' : 'Reschedule appointment' }}
-              </button>
-              <button
-                class="button small cancel-button"
-                type="button"
-                [disabled]="cancelingAppointmentId === appointment.id"
-                (click)="requestCancelConfirmation(appointment.id)">
-                {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : 'Cancel appointment' }}
-              </button>
-            </div>
 
             <section class="calendar-options-panel" *ngIf="calendarPanelAppointmentId === appointment.id">
               <h4>Add this appointment to your calendar</h4>
