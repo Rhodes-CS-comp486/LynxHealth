@@ -299,6 +299,39 @@ def test_delete_appointment_type_removes_option_and_returns_upcoming_appointment
     assert all(option.appointment_type != 'testing' for option in options)
 
 
+def test_delete_appointment_type_matches_legacy_spaced_name(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    upcoming = Appointment(
+        student_email='student@example.edu',
+        appointment_type='Physical Exam',
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, minutes=45),
+        status='booked',
+        notes='Legacy appointment type formatting',
+    )
+    appointment_db.add(upcoming)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='physical exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'Physical Exam'
+    assert len(response.upcoming_appointments) == 1
+    assert response.upcoming_appointments[0].appointment_type == 'Physical Exam'
+
+
 def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
 
@@ -311,6 +344,30 @@ def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: 
 
     assert exception_info.value.status_code == 403
     assert exception_info.value.detail == 'Only admins can delete appointment types.'
+
+
+def test_create_appointment_type_rejects_duplicate_legacy_spaced_name(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+    appointment_db.commit()
+
+    payload = CreateAppointmentTypeRequest(
+        admin_email='admin@admin.edu',
+        appointment_type='physical exam',
+        duration_minutes=45,
+    )
+
+    with pytest.raises(HTTPException) as exception_info:
+        create_appointment_type(payload, db=appointment_db)
+
+    assert exception_info.value.status_code == 409
+    assert exception_info.value.detail == 'That appointment type is already on the list. Try a different name.'
 
 
 def test_cancel_my_appointment_rejects_blank_student_email(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
