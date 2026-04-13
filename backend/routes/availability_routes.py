@@ -73,6 +73,20 @@ def normalize_appointment_type_name(value: str) -> str:
     return slug
 
 
+def normalize_stored_appointment_type_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = ' '.join(value.strip().split())
+    if not normalized:
+        return None
+
+    try:
+        return normalize_appointment_type_name(normalized)
+    except ValueError:
+        return normalized.lower()
+
+
 def normalize_appointment_notes(value: str | None) -> str | None:
     if value is None:
         return None
@@ -1000,9 +1014,13 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
     ensure_database_ready()
 
     try:
-        existing = db.query(AppointmentTypeOption).filter(
-            func.lower(func.trim(AppointmentTypeOption.appointment_type)) == data.appointment_type,
-        ).first()
+        existing = next(
+            (
+                option for option in db.query(AppointmentTypeOption).all()
+                if normalize_stored_appointment_type_name(option.appointment_type) == data.appointment_type
+            ),
+            None,
+        )
 
         if existing:
             raise HTTPException(
@@ -1047,9 +1065,13 @@ def delete_appointment_type(
 
     try:
         normalized_type = normalize_appointment_type_name(appointment_type)
-        option = db.query(AppointmentTypeOption).filter(
-            func.lower(func.trim(AppointmentTypeOption.appointment_type)) == normalized_type,
-        ).first()
+        option = next(
+            (
+                stored_option for stored_option in db.query(AppointmentTypeOption).all()
+                if normalize_stored_appointment_type_name(stored_option.appointment_type) == normalized_type
+            ),
+            None,
+        )
 
         if option is None:
             raise HTTPException(
@@ -1058,12 +1080,14 @@ def delete_appointment_type(
             )
 
         now = datetime.now()
-        upcoming_appointments = db.query(Appointment).filter(
-            func.lower(func.trim(Appointment.appointment_type)) == normalized_type,
-            Appointment.start_time.is_not(None),
-            Appointment.end_time.is_not(None),
-            Appointment.end_time > now,
-        ).order_by(Appointment.start_time.asc()).all()
+        upcoming_appointments = [
+            appointment for appointment in db.query(Appointment).filter(
+                Appointment.start_time.is_not(None),
+                Appointment.end_time.is_not(None),
+                Appointment.end_time > now,
+            ).order_by(Appointment.start_time.asc()).all()
+            if normalize_stored_appointment_type_name(appointment.appointment_type) == normalized_type
+        ]
 
         deleted_type = AppointmentTypeOptionResponse(
             appointment_type=option.appointment_type,
