@@ -309,8 +309,12 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.deletedTypeWarning = null;
 
     try {
+      const params = new URLSearchParams({
+        appointment_type: option.appointment_type,
+        admin_email: this.sessionEmail
+      });
       const response = await fetch(
-        `/api/availability/appointment-types/${encodeURIComponent(option.appointment_type)}?admin_email=${encodeURIComponent(this.sessionEmail)}`,
+        `/api/availability/appointment-types?${params.toString()}`,
         {
           method: 'DELETE'
         }

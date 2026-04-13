@@ -87,6 +87,16 @@ def normalize_stored_appointment_type_name(value: str | None) -> str | None:
         return normalized.lower()
 
 
+def normalize_appointment_type_lookup_name(value: str) -> str:
+    try:
+        return normalize_appointment_type_name(value)
+    except ValueError:
+        try:
+            return normalize_appointment_type_name(value.replace('_', ' '))
+        except ValueError:
+            return ' '.join(value.strip().lower().split())
+
+
 def normalize_appointment_notes(value: str | None) -> str | None:
     if value is None:
         return None
@@ -1048,11 +1058,10 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
         ) from exc
 
 
-@router.delete('/appointment-types/{appointment_type}', response_model=DeleteAppointmentTypeResponse)
-def delete_appointment_type(
+def delete_appointment_type_by_name(
     appointment_type: str,
-    admin_email: str = Query(...),
-    db: Session = Depends(get_db),
+    admin_email: str,
+    db: Session,
 ):
     normalized_email = admin_email.strip().lower()
     if not normalized_email.endswith('@admin.edu'):
@@ -1064,7 +1073,7 @@ def delete_appointment_type(
     ensure_database_ready()
 
     try:
-        normalized_type = normalize_appointment_type_name(appointment_type)
+        normalized_type = normalize_appointment_type_lookup_name(appointment_type)
         option = next(
             (
                 stored_option for stored_option in db.query(AppointmentTypeOption).all()
@@ -1107,6 +1116,32 @@ def delete_appointment_type(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
         ) from exc
+
+
+@router.delete('/appointment-types', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type_from_query(
+    appointment_type: str = Query(...),
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_name(
+        appointment_type=appointment_type,
+        admin_email=admin_email,
+        db=db,
+    )
+
+
+@router.delete('/appointment-types/{appointment_type}', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type(
+    appointment_type: str,
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_name(
+        appointment_type=appointment_type,
+        admin_email=admin_email,
+        db=db,
+    )
 
 
 @router.get('/calendar', response_model=list[CalendarSlotResponse])

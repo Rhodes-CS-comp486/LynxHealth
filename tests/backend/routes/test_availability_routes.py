@@ -27,6 +27,7 @@ from backend.routes.availability_routes import (  # noqa: E402
     cancel_my_appointment,
     create_appointment_type,
     delete_appointment_type,
+    delete_appointment_type_from_query,
     create_appointment_ics,
     download_appointment_ics,
     format_calendar_summary_from_type,
@@ -299,6 +300,27 @@ def test_delete_appointment_type_removes_option_and_returns_upcoming_appointment
     assert all(option.appointment_type != 'testing' for option in options)
 
 
+def test_delete_appointment_type_accepts_stored_slug_with_underscores(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='physical_exam', duration_minutes=45)
+    appointment_db.add(option)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'physical_exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'physical_exam' for option in options)
+
+
 def test_delete_appointment_type_matches_legacy_spaced_name(
     appointment_db,
     monkeypatch: pytest.MonkeyPatch,
@@ -330,6 +352,28 @@ def test_delete_appointment_type_matches_legacy_spaced_name(
     assert response.deleted_type.appointment_type == 'Physical Exam'
     assert len(response.upcoming_appointments) == 1
     assert response.upcoming_appointments[0].appointment_type == 'Physical Exam'
+
+
+def test_delete_appointment_type_from_query_handles_spaced_names(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+    appointment_db.commit()
+
+    response = delete_appointment_type_from_query(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'Physical Exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'Physical Exam' for option in options)
 
 
 def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
