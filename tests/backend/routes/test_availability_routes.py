@@ -22,11 +22,13 @@ from backend.routes.availability_routes import (  # noqa: E402
     HolidaySettingResponse,
     CreateAppointmentRequest,
     CreateAppointmentTypeRequest,
+    DeleteAppointmentTypeRequest,
     CreateBlockedTimeRequest,
     UpdateAppointmentNotesRequest,
     cancel_my_appointment,
     create_appointment_type,
     delete_appointment_type,
+    delete_appointment_type_from_body,
     delete_appointment_type_from_query,
     create_appointment_ics,
     download_appointment_ics,
@@ -106,6 +108,24 @@ def test_create_appointment_type_request_rejects_non_admin() -> None:
             admin_email='student@example.edu',
             appointment_type='physical exam',
             duration_minutes=45,
+        )
+
+
+def test_delete_appointment_type_request_allows_stored_slugs() -> None:
+    request = DeleteAppointmentTypeRequest(
+        admin_email=' ADMIN@ADMIN.EDU ',
+        appointment_type=' physical_exam ',
+    )
+
+    assert request.admin_email == 'admin@admin.edu'
+    assert request.appointment_type == 'physical_exam'
+
+
+def test_delete_appointment_type_request_rejects_non_admin() -> None:
+    with pytest.raises(ValidationError):
+        DeleteAppointmentTypeRequest(
+            admin_email='student@example.edu',
+            appointment_type='physical_exam',
         )
 
 
@@ -374,6 +394,30 @@ def test_delete_appointment_type_from_query_handles_spaced_names(
     assert response.deleted_type.appointment_type == 'Physical Exam'
     options = list_appointment_types(db=appointment_db)
     assert all(option.appointment_type != 'Physical Exam' for option in options)
+
+
+def test_delete_appointment_type_from_body_handles_stored_slugs(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='physical_exam', duration_minutes=45)
+    appointment_db.add(option)
+    appointment_db.commit()
+
+    payload = DeleteAppointmentTypeRequest(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+    )
+    response = delete_appointment_type_from_body(
+        data=payload,
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'physical_exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'physical_exam' for option in options)
 
 
 def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

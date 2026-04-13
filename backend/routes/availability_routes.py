@@ -294,6 +294,29 @@ class CreateAppointmentTypeRequest(BaseModel):
         return value
 
 
+class DeleteAppointmentTypeRequest(BaseModel):
+    admin_email: str
+    appointment_type: str
+
+    @field_validator('admin_email')
+    @classmethod
+    def validate_admin_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+
+        if not normalized.endswith('@admin.edu'):
+            raise ValueError('Only admins can delete appointment types.')
+
+        return normalized
+
+    @field_validator('appointment_type')
+    @classmethod
+    def validate_appointment_type(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError('Enter a name for the appointment type.')
+        return normalized
+
+
 class CreateAppointmentRequest(BaseModel):
     student_email: str
     appointment_type: str
@@ -1127,6 +1150,18 @@ def delete_appointment_type_from_query(
     return delete_appointment_type_by_name(
         appointment_type=appointment_type,
         admin_email=admin_email,
+        db=db,
+    )
+
+
+@router.post('/appointment-types/delete', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type_from_body(
+    data: DeleteAppointmentTypeRequest,
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_name(
+        appointment_type=data.appointment_type,
+        admin_email=data.admin_email,
         db=db,
     )
 

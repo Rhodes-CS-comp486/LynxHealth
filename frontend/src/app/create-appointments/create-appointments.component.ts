@@ -309,16 +309,16 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.deletedTypeWarning = null;
 
     try {
-      const params = new URLSearchParams({
-        appointment_type: option.appointment_type,
-        admin_email: this.sessionEmail
+      const response = await fetch('/api/availability/appointment-types/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          appointment_type: option.appointment_type,
+          admin_email: this.sessionEmail
+        })
       });
-      const response = await fetch(
-        `/api/availability/appointment-types?${params.toString()}`,
-        {
-          method: 'DELETE'
-        }
-      );
 
       if (!response.ok) {
         const payload = await this.tryReadError(response);
