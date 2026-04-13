@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -260,6 +260,7 @@ class CalendarSlotResponse(BaseModel):
 
 
 class AppointmentTypeOptionResponse(BaseModel):
+    id: int | None = None
     appointment_type: str
     duration_minutes: int
 
@@ -296,7 +297,8 @@ class CreateAppointmentTypeRequest(BaseModel):
 
 class DeleteAppointmentTypeRequest(BaseModel):
     admin_email: str
-    appointment_type: str
+    appointment_type: str | None = None
+    appointment_type_id: int | None = None
 
     @field_validator('admin_email')
     @classmethod
@@ -310,11 +312,18 @@ class DeleteAppointmentTypeRequest(BaseModel):
 
     @field_validator('appointment_type')
     @classmethod
-    def validate_appointment_type(cls, value: str) -> str:
+    def validate_appointment_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
         normalized = value.strip()
-        if not normalized:
-            raise ValueError('Enter a name for the appointment type.')
-        return normalized
+        return normalized or None
+
+    @model_validator(mode='after')
+    def require_delete_target(self):
+        if self.appointment_type_id is None and not self.appointment_type:
+            raise ValueError('Choose an appointment type to delete.')
+        return self
 
 
 class CreateAppointmentRequest(BaseModel):
@@ -1030,10 +1039,16 @@ def list_appointment_types(db: Session = Depends(get_db)):
     ensure_database_ready()
 
     try:
-        duration_map = get_appointment_duration_map(db)
         return [
-            AppointmentTypeOptionResponse(appointment_type=appointment_type, duration_minutes=duration_minutes)
-            for appointment_type, duration_minutes in duration_map.items()
+            AppointmentTypeOptionResponse(
+                id=option.id,
+                appointment_type=option.appointment_type,
+                duration_minutes=option.duration_minutes,
+            )
+            for option in db.query(AppointmentTypeOption).order_by(
+                AppointmentTypeOption.appointment_type.asc()
+            ).all()
+            if option.appointment_type and option.duration_minutes
         ]
     except SQLAlchemyError as exc:
         raise HTTPException(
@@ -1070,6 +1085,7 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
         db.refresh(option)
 
         return AppointmentTypeOptionResponse(
+            id=option.id,
             appointment_type=option.appointment_type,
             duration_minutes=option.duration_minutes,
         )
@@ -1081,10 +1097,11 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
         ) from exc
 
 
-def delete_appointment_type_by_name(
-    appointment_type: str,
+def delete_appointment_type_by_identifier(
     admin_email: str,
     db: Session,
+    appointment_type: str | None = None,
+    appointment_type_id: int | None = None,
 ):
     normalized_email = admin_email.strip().lower()
     if not normalized_email.endswith('@admin.edu'):
@@ -1096,14 +1113,22 @@ def delete_appointment_type_by_name(
     ensure_database_ready()
 
     try:
-        normalized_type = normalize_appointment_type_lookup_name(appointment_type)
-        option = next(
-            (
-                stored_option for stored_option in db.query(AppointmentTypeOption).all()
-                if normalize_stored_appointment_type_name(stored_option.appointment_type) == normalized_type
-            ),
-            None,
-        )
+        option = None
+
+        if appointment_type_id is not None:
+            option = db.query(AppointmentTypeOption).filter(
+                AppointmentTypeOption.id == appointment_type_id
+            ).first()
+
+        if option is None and appointment_type:
+            normalized_type = normalize_appointment_type_lookup_name(appointment_type)
+            option = next(
+                (
+                    stored_option for stored_option in db.query(AppointmentTypeOption).all()
+                    if normalize_stored_appointment_type_name(stored_option.appointment_type) == normalized_type
+                ),
+                None,
+            )
 
         if option is None:
             raise HTTPException(
@@ -1111,6 +1136,7 @@ def delete_appointment_type_by_name(
                 detail='Appointment type not found.',
             )
 
+        normalized_type = normalize_stored_appointment_type_name(option.appointment_type)
         now = datetime.now()
         upcoming_appointments = [
             appointment for appointment in db.query(Appointment).filter(
@@ -1122,6 +1148,7 @@ def delete_appointment_type_by_name(
         ]
 
         deleted_type = AppointmentTypeOptionResponse(
+            id=option.id,
             appointment_type=option.appointment_type,
             duration_minutes=option.duration_minutes,
         )
@@ -1147,7 +1174,7 @@ def delete_appointment_type_from_query(
     admin_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
-    return delete_appointment_type_by_name(
+    return delete_appointment_type_by_identifier(
         appointment_type=appointment_type,
         admin_email=admin_email,
         db=db,
@@ -1159,8 +1186,9 @@ def delete_appointment_type_from_body(
     data: DeleteAppointmentTypeRequest,
     db: Session = Depends(get_db),
 ):
-    return delete_appointment_type_by_name(
+    return delete_appointment_type_by_identifier(
         appointment_type=data.appointment_type,
+        appointment_type_id=data.appointment_type_id,
         admin_email=data.admin_email,
         db=db,
     )
@@ -1172,7 +1200,7 @@ def delete_appointment_type(
     admin_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
-    return delete_appointment_type_by_name(
+    return delete_appointment_type_by_identifier(
         appointment_type=appointment_type,
         admin_email=admin_email,
         db=db,
