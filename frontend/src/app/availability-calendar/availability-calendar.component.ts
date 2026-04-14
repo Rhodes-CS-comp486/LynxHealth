@@ -60,7 +60,7 @@ export class AvailabilityCalendarComponent implements OnInit {
   weekIndex = 0;
 
   selectedTimeOfDay: TimeOfDayFilter = 'all';
-  selectedAppointmentType = 'checkup';
+  selectedAppointmentType = 'check-up';
   selectedBookingSlot: CalendarSlot | null = null;
   bookingNotes = '';
   bookingError = '';
@@ -279,7 +279,7 @@ export class AvailabilityCalendarComponent implements OnInit {
 
     const normalizeType = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
     const preferred = this.appointmentTypeOptions.find(
-      (option) => normalizeType(option.appointment_type) === 'checkup'
+      (option) => normalizeType(option.appointment_type) === 'checkup' || option.appointment_type === 'check-up'
     );
     return preferred?.appointment_type ?? this.appointmentTypeOptions[0]?.appointment_type ?? null;
   }
