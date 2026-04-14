@@ -187,6 +187,26 @@ def test_saml_callback_returns_400_when_saml_errors_exist(monkeypatch) -> None:
     assert json.loads(response.body) == {'error': ['invalid_response']}
 
 
+def test_saml_callback_returns_400_when_response_processing_fails(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def process_response(self):
+            raise ValueError('missing SAMLResponse')
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.saml_callback(_FakeRequest(path='/saml/callback')))
+
+    assert response.status_code == 400
+    assert json.loads(response.body) == {
+        'error': 'SAML response could not be processed',
+        'detail': 'missing SAMLResponse',
+    }
+
+
 def test_saml_callback_returns_401_for_unauthenticated_response(monkeypatch) -> None:
     class FakeSamlAuth:
         def __init__(self, _req, _settings):
