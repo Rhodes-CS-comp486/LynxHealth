@@ -25,9 +25,9 @@ auth_routes = _load_auth_routes_module()
 
 
 class _FakeRequest:
-    def __init__(self, *, path: str, host: str = 'localhost:8000', query_params=None, form_data=None):
-        self.headers = {'host': host}
-        self.url = SimpleNamespace(path=path)
+    def __init__(self, *, path: str, host: str = 'localhost:8000', scheme: str = 'http', headers=None, query_params=None, form_data=None):
+        self.headers = {'host': host, **(headers or {})}
+        self.url = SimpleNamespace(path=path, scheme=scheme)
         self.query_params = query_params or {}
         self._form_data = form_data or {}
 
@@ -52,6 +52,25 @@ def test_prepare_saml_request_builds_expected_payload() -> None:
         'get_data': {'relay': 'abc'},
         'post_data': {'SAMLResponse': 'xyz'},
     }
+
+
+def test_prepare_saml_request_uses_forwarded_public_origin() -> None:
+    request = _FakeRequest(
+        path='/auth/saml/callback',
+        host='127.0.0.1:8000',
+        headers={
+            'x-forwarded-host': 'lynxhc.com',
+            'x-forwarded-proto': 'https',
+            'x-forwarded-port': '443',
+        },
+    )
+
+    payload = asyncio.run(auth_routes.prepare_saml_request(request))
+
+    assert payload['https'] == 'on'
+    assert payload['http_host'] == 'lynxhc.com'
+    assert payload['server_port'] == '443'
+    assert payload['script_name'] == '/auth/saml/callback'
 
 
 def test_saml_login_redirects_to_identity_provider(monkeypatch) -> None:
