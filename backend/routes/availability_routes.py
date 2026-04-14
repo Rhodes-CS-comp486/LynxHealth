@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -95,6 +95,33 @@ def normalize_appointment_type_lookup_name(value: str) -> str:
             return normalize_appointment_type_name(value.replace('_', ' '))
         except ValueError:
             return ' '.join(value.strip().lower().split())
+
+
+def get_appointment_type_lookup_keys(value: str | None) -> set[str]:
+    if value is None:
+        return set()
+
+    compacted = ' '.join(value.strip().split())
+    if not compacted:
+        return set()
+
+    lower_value = compacted.lower()
+    keys = {
+        lower_value,
+        lower_value.replace('_', ' '),
+        lower_value.replace('-', ' '),
+        lower_value.replace('_', '-'),
+        lower_value.replace('-', '_'),
+    }
+
+    normalized = normalize_stored_appointment_type_name(compacted)
+    if normalized:
+        keys.add(normalized)
+        keys.add(normalized.replace('_', ' '))
+        keys.add(normalized.replace('-', ' '))
+
+    keys.add(''.join(character for character in lower_value if character.isalnum()))
+    return {key for key in keys if key}
 
 
 def normalize_appointment_notes(value: str | None) -> str | None:
@@ -298,7 +325,12 @@ class CreateAppointmentTypeRequest(BaseModel):
 class DeleteAppointmentTypeRequest(BaseModel):
     admin_email: str
     appointment_type: str | None = None
-    appointment_type_id: int | None = None
+    appointment_type_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices('appointment_type_id', 'appointmentTypeId', 'appointmentTypeID', 'id'),
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
 
     @field_validator('admin_email')
     @classmethod
@@ -1121,11 +1153,11 @@ def delete_appointment_type_by_identifier(
             ).first()
 
         if option is None and appointment_type:
-            normalized_type = normalize_appointment_type_lookup_name(appointment_type)
+            requested_keys = get_appointment_type_lookup_keys(appointment_type)
             option = next(
                 (
                     stored_option for stored_option in db.query(AppointmentTypeOption).all()
-                    if normalize_stored_appointment_type_name(stored_option.appointment_type) == normalized_type
+                    if get_appointment_type_lookup_keys(stored_option.appointment_type) & requested_keys
                 ),
                 None,
             )
@@ -1136,7 +1168,7 @@ def delete_appointment_type_by_identifier(
                 detail='Appointment type not found.',
             )
 
-        normalized_type = normalize_stored_appointment_type_name(option.appointment_type)
+        deleted_type_keys = get_appointment_type_lookup_keys(option.appointment_type)
         now = datetime.now()
         upcoming_appointments = [
             appointment for appointment in db.query(Appointment).filter(
@@ -1144,7 +1176,7 @@ def delete_appointment_type_by_identifier(
                 Appointment.end_time.is_not(None),
                 Appointment.end_time > now,
             ).order_by(Appointment.start_time.asc()).all()
-            if normalize_stored_appointment_type_name(appointment.appointment_type) == normalized_type
+            if get_appointment_type_lookup_keys(appointment.appointment_type) & deleted_type_keys
         ]
 
         deleted_type = AppointmentTypeOptionResponse(
@@ -1182,6 +1214,7 @@ def delete_appointment_type_from_query(
 
 
 @router.post('/appointment-types/delete', response_model=DeleteAppointmentTypeResponse)
+@router.post('/appointment-types/delete/', response_model=DeleteAppointmentTypeResponse)
 def delete_appointment_type_from_body(
     data: DeleteAppointmentTypeRequest,
     db: Session = Depends(get_db),
