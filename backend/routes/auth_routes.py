@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from urllib.parse import urlsplit
 from fastapi import APIRouter, Request
@@ -6,6 +7,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 
 router = APIRouter(tags=['auth'])
+logger = logging.getLogger(__name__)
 
 
 def get_user_role_from_email(email: str | None) -> str:
@@ -59,7 +61,12 @@ async def sso_login(request: Request):
 async def saml_callback(request: Request):
     req = await prepare_saml_request(request)
     auth = OneLogin_Saml2_Auth(req, get_saml_settings())
-    auth.process_response()
+    try:
+        auth.process_response()
+    except Exception as exc:
+        logger.exception('SAML response processing failed')
+        return JSONResponse({'error': 'SAML response could not be processed', 'detail': str(exc)}, status_code=400)
+
     errors = auth.get_errors()
 
     if errors:
