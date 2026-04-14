@@ -71,6 +71,23 @@ def test_saml_login_redirects_to_identity_provider(monkeypatch) -> None:
     assert response.headers['location'] == 'https://idp.example.com/login'
 
 
+def test_sso_login_redirects_to_identity_provider(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def login(self):
+            return 'https://idp.example.com/login'
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.sso_login(_FakeRequest(path='/sso/login')))
+
+    assert response.status_code == 307
+    assert response.headers['location'] == 'https://idp.example.com/login'
+
+
 def test_saml_callback_returns_admin_role_for_admin_domain(monkeypatch) -> None:
     class FakeSamlAuth:
         def __init__(self, _req, _settings):

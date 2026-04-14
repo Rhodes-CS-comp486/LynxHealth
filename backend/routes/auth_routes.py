@@ -39,6 +39,11 @@ async def saml_login(request: Request):
     return RedirectResponse(url=login_url)
 
 
+@router.get('/sso/login')
+async def sso_login(request: Request):
+    return await saml_login(request)
+
+
 @router.post('/saml/callback')
 async def saml_callback(request: Request):
     req = await prepare_saml_request(request)
