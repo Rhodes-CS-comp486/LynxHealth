@@ -1,3 +1,10 @@
+"""
+Database configuration and schema migration utilities for LynxHealth backend.
+
+This module sets up the SQLAlchemy engine, session, and base class, and provides
+functions to ensure that all required tables and columns exist in the database.
+"""
+
 import os
 from dotenv import load_dotenv
 from threading import Lock

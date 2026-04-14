@@ -24,7 +24,7 @@
       <div class="container panel">
         <div>
           <h1>{{ role === 'admin' ? 'Operating Hours & Closures' : 'Rhodes Health Center Hours' }}</h1>
-          <p class="section-copy" *ngIf="role === 'admin'">Use this page to update overall clinic hours, open days, and holiday closures. To block specific time slots or make daily availability changes, visit the Manage Availability page.</p>
+          <p class="section-copy" *ngIf="role === 'admin'">Use this page to update overall clinic hours, open days, and all-day closures. To block specific time slots or make daily availability changes, visit the Manage Availability page.</p>
           <p class="section-copy" *ngIf="role === 'user'">Plan your visit using current clinic operating hours and closures.</p>
           <div class="notice" *ngIf="role === 'user'">
             <span>Notice</span>
@@ -62,7 +62,7 @@
           </section>
 
           <section class="holiday-panel">
-            <h2>Holiday Closures</h2>
+            <h2>All-Day Closures</h2>
 
             <div class="holiday-form" *ngIf="role === 'admin'">
               <input type="date" [(ngModel)]="newHolidayDate" />
@@ -71,10 +71,10 @@
                 <input type="checkbox" [(ngModel)]="newHolidayIsAnnual" (ngModelChange)="markDirty()" [ngModelOptions]="{standalone: true}" />
                 Annual
               </label>
-              <button class="button small" type="button" (click)="addHoliday()">Add Holiday</button>
+              <button class="button small" type="button" (click)="addHoliday()">Add All-Day Closure</button>
             </div>
 
-            <div *ngIf="holidays.length === 0" class="muted-text">No holiday closures configured.</div>
+            <div *ngIf="holidays.length === 0" class="muted-text">No all-day closures configured.</div>
 
             <div *ngFor="let holiday of holidays; let i = index" class="holiday-row">
               <span>{{ holiday.holiday_date }} — {{ holiday.name }} <em *ngIf="holiday.is_annual">(Annual)</em></span>

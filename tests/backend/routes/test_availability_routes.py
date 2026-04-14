@@ -2,10 +2,12 @@ import os
 from datetime import date, datetime, time, timedelta
 
 import pytest
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 os.environ.setdefault('DATABASE_URL', 'sqlite:///./test.db')
 
@@ -22,10 +24,17 @@ from backend.routes.availability_routes import (  # noqa: E402
     HolidaySettingResponse,
     CreateAppointmentRequest,
     CreateAppointmentTypeRequest,
+    DeleteAppointmentTypeRequest,
     CreateBlockedTimeRequest,
     UpdateAppointmentNotesRequest,
     cancel_my_appointment,
     create_appointment_type,
+    delete_appointment_type,
+    delete_appointment_type_from_body,
+    delete_appointment_type_from_query,
+    create_appointment_ics,
+    download_appointment_ics,
+    format_calendar_summary_from_type,
     get_booked_slot_starts,
     iterate_slot_starts,
     list_appointments,
@@ -92,7 +101,7 @@ def test_create_appointment_type_request_rejects_unsupported_punctuation() -> No
             duration_minutes=30,
         )
 
-    assert "Appointment types cannot include '!'." in str(exception_info.value)
+    assert "Please use only letters, numbers, spaces, or hyphens in the type name. Remove '!'." in str(exception_info.value)
 
 
 def test_create_appointment_type_request_rejects_non_admin() -> None:
@@ -101,6 +110,44 @@ def test_create_appointment_type_request_rejects_non_admin() -> None:
             admin_email='student@example.edu',
             appointment_type='physical exam',
             duration_minutes=45,
+        )
+
+
+def test_delete_appointment_type_request_allows_stored_slugs() -> None:
+    request = DeleteAppointmentTypeRequest(
+        admin_email=' ADMIN@ADMIN.EDU ',
+        appointment_type=' physical_exam ',
+        appointment_type_id=12,
+    )
+
+    assert request.admin_email == 'admin@admin.edu'
+    assert request.appointment_type == 'physical_exam'
+    assert request.appointment_type_id == 12
+
+
+def test_delete_appointment_type_request_accepts_id_aliases() -> None:
+    for payload in (
+        {'admin_email': 'admin@admin.edu', 'appointment_type': 'fallback', 'id': 7},
+        {'admin_email': 'admin@admin.edu', 'appointment_type': 'fallback', 'appointmentTypeId': 8},
+        {'admin_email': 'admin@admin.edu', 'appointment_type': 'fallback', 'appointmentTypeID': 9},
+    ):
+        request = DeleteAppointmentTypeRequest(**payload)
+
+        assert request.appointment_type_id in {7, 8, 9}
+
+
+def test_delete_appointment_type_request_requires_target() -> None:
+    with pytest.raises(ValidationError):
+        DeleteAppointmentTypeRequest(
+            admin_email='admin@admin.edu',
+        )
+
+
+def test_delete_appointment_type_request_rejects_non_admin() -> None:
+    with pytest.raises(ValidationError):
+        DeleteAppointmentTypeRequest(
+            admin_email='student@example.edu',
+            appointment_type='physical_exam',
         )
 
 
@@ -211,6 +258,45 @@ def _seed_appointment_types(db) -> None:
     db.commit()
 
 
+@pytest.fixture
+def appointment_http_db():
+    engine = create_engine(
+        'sqlite://',
+        connect_args={'check_same_thread': False},
+        poolclass=StaticPool,
+    )
+    testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.create_all(
+        bind=engine,
+        tables=[
+            User.__table__,
+            Availability.__table__,
+            Appointment.__table__,
+            AppointmentTypeOption.__table__,
+            ClinicHours.__table__,
+            ClinicHoliday.__table__,
+        ],
+    )
+
+    db = testing_session_local()
+    try:
+        _seed_appointment_types(db)
+        yield db
+    finally:
+        db.close()
+        Base.metadata.drop_all(
+            bind=engine,
+            tables=[
+                ClinicHoliday.__table__,
+                ClinicHours.__table__,
+                AppointmentTypeOption.__table__,
+                Appointment.__table__,
+                Availability.__table__,
+                User.__table__,
+            ],
+        )
+
+
 def test_list_appointment_types_returns_database_values(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
 
@@ -223,6 +309,7 @@ def test_list_appointment_types_returns_database_values(appointment_db, monkeypa
         'other',
         'prescription',
     }
+    assert all(option.id is not None for option in response)
 
 
 def test_create_appointment_type_persists_new_option_for_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -262,6 +349,287 @@ def test_create_appointment_type_persists_hyphenated_option_for_admin(
     assert any(option.appointment_type == 'check-up' and option.duration_minutes == 30 for option in options)
 
 
+def test_delete_appointment_type_removes_option_and_returns_upcoming_appointments(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    upcoming = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, minutes=30),
+        status='booked',
+        notes='Bring prior records',
+    )
+    appointment_db.add(upcoming)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='testing',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'testing'
+    assert response.deleted_type.duration_minutes == 30
+    assert len(response.upcoming_appointments) == 1
+    assert response.upcoming_appointments[0].student_email == 'student@example.edu'
+
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'testing' for option in options)
+
+
+def test_delete_appointment_type_accepts_stored_slug_with_underscores(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='physical_exam', duration_minutes=45)
+    appointment_db.add(option)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'physical_exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'physical_exam' for option in options)
+
+
+def test_delete_appointment_type_matches_legacy_spaced_name(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+
+    now = datetime.now().replace(second=0, microsecond=0)
+    upcoming = Appointment(
+        student_email='student@example.edu',
+        appointment_type='Physical Exam',
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, minutes=45),
+        status='booked',
+        notes='Legacy appointment type formatting',
+    )
+    appointment_db.add(upcoming)
+    appointment_db.commit()
+
+    response = delete_appointment_type(
+        appointment_type='physical exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'Physical Exam'
+    assert len(response.upcoming_appointments) == 1
+    assert response.upcoming_appointments[0].appointment_type == 'Physical Exam'
+
+
+def test_delete_appointment_type_from_query_handles_spaced_names(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+    appointment_db.commit()
+
+    response = delete_appointment_type_from_query(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'Physical Exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'Physical Exam' for option in options)
+
+
+def test_delete_appointment_type_from_body_handles_stored_slugs(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='physical_exam', duration_minutes=45)
+    appointment_db.add(option)
+    appointment_db.commit()
+
+    payload = DeleteAppointmentTypeRequest(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+    )
+    response = delete_appointment_type_from_body(
+        data=payload,
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'physical_exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'physical_exam' for option in options)
+
+
+def test_delete_appointment_type_from_body_prefers_database_id(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='server_only_name', duration_minutes=30)
+    appointment_db.add(option)
+    appointment_db.commit()
+    appointment_db.refresh(option)
+
+    payload = DeleteAppointmentTypeRequest(
+        appointment_type_id=option.id,
+        appointment_type='stale_ui_name',
+        admin_email='admin@admin.edu',
+    )
+    response = delete_appointment_type_from_body(
+        data=payload,
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.id == option.id
+    assert response.deleted_type.appointment_type == 'server_only_name'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'server_only_name' for option in options)
+
+
+def test_delete_appointment_type_from_body_matches_flexible_display_names(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='Physical-Exam', duration_minutes=45)
+    appointment_db.add(option)
+    appointment_db.commit()
+
+    payload = DeleteAppointmentTypeRequest(
+        appointment_type='physical_exam',
+        admin_email='admin@admin.edu',
+    )
+    response = delete_appointment_type_from_body(
+        data=payload,
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.appointment_type == 'Physical-Exam'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'Physical-Exam' for option in options)
+
+
+def test_delete_appointment_type_http_route_deletes_by_id(
+    appointment_http_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='server_route_type', duration_minutes=30)
+    appointment_http_db.add(option)
+    appointment_http_db.commit()
+    appointment_http_db.refresh(option)
+
+    app = FastAPI()
+    app.include_router(availability_routes.router, prefix='/availability')
+    app.dependency_overrides[availability_routes.get_db] = lambda: appointment_http_db
+
+    client = TestClient(app)
+    response = client.post(
+        '/availability/appointment-types/delete',
+        json={
+            'admin_email': 'admin@admin.edu',
+            'id': option.id,
+            'appointment_type': 'wrong_name',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()['deleted_type']['id'] == option.id
+    options = list_appointment_types(db=appointment_http_db)
+    assert all(option.appointment_type != 'server_route_type' for option in options)
+
+
+def test_delete_appointment_type_http_route_accepts_trailing_slash(
+    appointment_http_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='slash_route_type', duration_minutes=30)
+    appointment_http_db.add(option)
+    appointment_http_db.commit()
+    appointment_http_db.refresh(option)
+
+    app = FastAPI()
+    app.include_router(availability_routes.router, prefix='/availability')
+    app.dependency_overrides[availability_routes.get_db] = lambda: appointment_http_db
+
+    client = TestClient(app)
+    response = client.post(
+        '/availability/appointment-types/delete/',
+        json={
+            'admin_email': 'admin@admin.edu',
+            'appointmentTypeId': option.id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()['deleted_type']['appointment_type'] == 'slash_route_type'
+
+
+def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    with pytest.raises(HTTPException) as exception_info:
+        delete_appointment_type(
+            appointment_type='testing',
+            admin_email='student@example.edu',
+            db=appointment_db,
+        )
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'Only admins can delete appointment types.'
+
+
+def test_create_appointment_type_rejects_duplicate_legacy_spaced_name(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    legacy_option = appointment_db.query(AppointmentTypeOption).filter_by(appointment_type='testing').first()
+    assert legacy_option is not None
+    legacy_option.appointment_type = 'Physical Exam'
+    appointment_db.commit()
+
+    payload = CreateAppointmentTypeRequest(
+        admin_email='admin@admin.edu',
+        appointment_type='physical exam',
+        duration_minutes=45,
+    )
+
+    with pytest.raises(HTTPException) as exception_info:
+        create_appointment_type(payload, db=appointment_db)
+
+    assert exception_info.value.status_code == 409
+    assert exception_info.value.detail == 'That appointment type is already on the list. Try a different name.'
+
+
 def test_cancel_my_appointment_rejects_blank_student_email(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
 
@@ -280,6 +648,85 @@ def test_cancel_my_appointment_rejects_admin_email(appointment_db, monkeypatch: 
 
     assert exception_info.value.status_code == 403
     assert exception_info.value.detail == 'Only students can cancel their own appointments.'
+
+
+def test_create_appointment_ics_contains_event_fields() -> None:
+    appointment = Appointment(
+        id=77,
+        student_email='student@example.edu',
+        appointment_type='testing',
+        notes='Bring ID card',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+
+    payload = create_appointment_ics(appointment, 'Health Center Appointment: Testing')
+
+    assert 'BEGIN:VCALENDAR' in payload
+    assert 'BEGIN:VEVENT' in payload
+    assert 'UID:appointment-77@lynxhealth.local' in payload
+    assert 'DTSTART:20260105T090000' in payload
+    assert 'DTEND:20260105T093000' in payload
+    assert 'SUMMARY:Health Center Appointment: Testing' in payload
+    assert 'DESCRIPTION:Bring ID card' in payload
+
+
+def test_format_calendar_summary_from_type_formats_human_readable_summary() -> None:
+    assert format_calendar_summary_from_type('blood_pressure_follow_up') == 'Health Center Appointment: Blood Pressure Follow Up'
+    assert format_calendar_summary_from_type(None) == 'Health Center Appointment: Appointment'
+
+
+def test_download_appointment_ics_returns_calendar_attachment(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+    appointment = Appointment(
+        student_email='student@example.edu',
+        appointment_type='testing',
+        notes='Bring forms',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+    appointment_db.add(appointment)
+    appointment_db.commit()
+    appointment_db.refresh(appointment)
+
+    response = download_appointment_ics(
+        appointment_id=appointment.id,
+        student_email='student@example.edu',
+        db=appointment_db,
+    )
+
+    assert response.media_type == 'text/calendar; charset=utf-8'
+    assert response.headers.get('content-disposition') == f'attachment; filename=\"lynx-health-appointment-{appointment.id}.ics\"'
+    payload = response.body.decode('utf-8')
+    assert 'BEGIN:VCALENDAR' in payload
+    assert 'SUMMARY:Health Center Appointment: Testing' in payload
+
+
+def test_download_appointment_ics_rejects_non_owner(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+    appointment = Appointment(
+        student_email='owner@example.edu',
+        appointment_type='testing',
+        notes='owner notes',
+        start_time=datetime(2026, 1, 5, 9, 0),
+        end_time=datetime(2026, 1, 5, 9, 30),
+        status='booked',
+    )
+    appointment_db.add(appointment)
+    appointment_db.commit()
+    appointment_db.refresh(appointment)
+
+    with pytest.raises(HTTPException) as exception_info:
+        download_appointment_ics(
+            appointment_id=appointment.id,
+            student_email='other@example.edu',
+            db=appointment_db,
+        )
+
+    assert exception_info.value.status_code == 403
+    assert exception_info.value.detail == 'You can only download calendar files for your own appointments.'
 
 
 def test_cancel_my_appointment_returns_not_found_when_missing(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:

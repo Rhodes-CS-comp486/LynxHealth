@@ -1,10 +1,13 @@
 import json
+import logging
 import os
+from urllib.parse import urlsplit
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 
 router = APIRouter(tags=['auth'])
+logger = logging.getLogger(__name__)
 
 
 def get_user_role_from_email(email: str | None) -> str:
@@ -21,10 +24,20 @@ def get_saml_settings():
 
 async def prepare_saml_request(request: Request):
     form_data = await request.form()
+    host = request.headers.get('x-forwarded-host') or request.headers.get('host', 'localhost:8000')
+    forwarded_proto = request.headers.get('x-forwarded-proto')
+    proto = forwarded_proto.split(',')[0].strip() if forwarded_proto else request.url.scheme
+    if proto not in {'http', 'https'}:
+        proto = 'http'
+
+    forwarded_port = request.headers.get('x-forwarded-port')
+    host_port = urlsplit(f'//{host}').port
+    server_port = forwarded_port or (str(host_port) if host_port else ('443' if proto == 'https' else '80'))
+
     return {
-        'https': 'off',
-        'http_host': request.headers.get('host', 'localhost:8000'),
-        'server_port': '8000',
+        'https': 'on' if proto == 'https' else 'off',
+        'http_host': host,
+        'server_port': server_port,
         'script_name': request.url.path,
         'get_data': dict(request.query_params),
         'post_data': dict(form_data)
@@ -39,11 +52,21 @@ async def saml_login(request: Request):
     return RedirectResponse(url=login_url)
 
 
+@router.get('/sso/login')
+async def sso_login(request: Request):
+    return await saml_login(request)
+
+
 @router.post('/saml/callback')
 async def saml_callback(request: Request):
     req = await prepare_saml_request(request)
     auth = OneLogin_Saml2_Auth(req, get_saml_settings())
-    auth.process_response()
+    try:
+        auth.process_response()
+    except Exception as exc:
+        logger.exception('SAML response processing failed')
+        return JSONResponse({'error': 'SAML response could not be processed', 'detail': str(exc)}, status_code=400)
+
     errors = auth.get_errors()
 
     if errors:
@@ -62,3 +85,8 @@ async def saml_callback(request: Request):
     encoded = session.replace('"', '%22').replace(' ', '%20')
 
     return RedirectResponse(url=f'https://lynxhc.com/home?session={encoded}', status_code=302)
+
+
+@router.post('/sso/acs')
+async def sso_acs(request: Request):
+    return await saml_callback(request)

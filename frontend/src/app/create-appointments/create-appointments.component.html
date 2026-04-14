@@ -35,13 +35,39 @@
         </div>
 
         <div class="type-panel" *ngIf="role === 'admin'">
-          <div>
-            <h2>Appointment Types</h2>
-            <p class="section-copy">Only admins can create new appointment types. Students will see these options when booking.</p>
+          <div class="type-panel-header">
+            <div>
+              <h2>Appointment Types</h2>
+              <p class="section-copy">Only admins can create new appointment types. Students will see these options when booking.</p>
+            </div>
+            <button class="button ghost small" type="button" (click)="toggleDeleteMode()" [disabled]="isSaving">
+              {{ isDeleteMode ? 'Done' : 'Delete Types' }}
+            </button>
           </div>
 
-          <p class="success" *ngIf="adminMessage">{{ adminMessage }}</p>
-          <p class="error" *ngIf="adminError">{{ adminError }}</p>
+          <section class="delete-warning-panel" *ngIf="deletedTypeWarning && deletedTypeWarning.upcoming_appointments.length > 0">
+            <div class="delete-warning-header">
+              <div>
+                <p class="warning-title">Upcoming appointments still use {{ formatAppointmentType(deletedTypeWarning.deleted_type.appointment_type) }}.</p>
+                <p class="section-copy">That type has been removed for future booking, but these appointments are still on the calendar and may need follow-up.</p>
+              </div>
+              <button class="button ghost small" type="button" (click)="dismissDeletedTypeWarning()" [disabled]="isSaving">Dismiss</button>
+            </div>
+
+            <div class="delete-warning-list">
+              <article class="delete-warning-card" *ngFor="let appointment of deletedTypeWarning.upcoming_appointments">
+                <p><strong>{{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}</strong> to {{ appointment.end_time | date: 'h:mm a' }}</p>
+                <p>{{ appointment.duration_minutes }} mins · {{ formatAppointmentType(appointment.appointment_type) }}</p>
+                <p>Student: {{ appointment.student_email }}</p>
+                <p class="notes"><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+              </article>
+            </div>
+          </section>
+
+          <div class="confirmation-panel" *ngIf="adminMessage">
+            <p>{{ adminMessage }}</p>
+          </div>
+          <p class="error error-alert" *ngIf="adminError" role="alert" aria-live="polite">{{ adminError }}</p>
 
           <form class="type-form" (ngSubmit)="createAppointmentType()">
             <label>
@@ -74,9 +100,17 @@
           </form>
 
           <div class="type-list" *ngIf="appointmentTypeOptions.length > 0">
-            <article class="type-card" *ngFor="let option of appointmentTypeOptions">
-              <strong>{{ formatAppointmentType(option.appointment_type) }}</strong>
-              <span>{{ option.duration_minutes }} mins</span>
+            <article
+              class="type-card"
+              *ngFor="let option of appointmentTypeOptions"
+              [class.delete-mode]="isDeleteMode"
+              [class.delete-target]="isDeleteMode"
+              [class.confirming]="appointmentTypePendingConfirmation?.appointment_type === option.appointment_type"
+              (click)="requestDeleteAppointmentType(option)">
+              <div class="type-card-copy">
+                <strong>{{ formatAppointmentType(option.appointment_type) }}</strong>
+                <span>{{ option.duration_minutes }} mins</span>
+              </div>
             </article>
           </div>
         </div>
@@ -142,4 +176,37 @@
       </div>
     </section>
   </main>
+
+  <div
+    class="delete-modal-backdrop"
+    *ngIf="appointmentTypePendingConfirmation"
+    (click)="cancelDeleteAppointmentType()"
+    aria-hidden="true"></div>
+  <aside
+    class="delete-modal"
+    [class.open]="!!appointmentTypePendingConfirmation"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-type-modal-title"
+    [attr.aria-hidden]="!appointmentTypePendingConfirmation">
+    <div class="delete-modal-header">
+      <h3 id="delete-type-modal-title">Delete appointment type?</h3>
+      <button class="button small ghost" type="button" (click)="cancelDeleteAppointmentType()" [disabled]="isSaving">
+        Close
+      </button>
+    </div>
+    <p *ngIf="appointmentTypePendingConfirmation">
+      Are you sure you'd like to delete
+      <strong>{{ formatAppointmentType(appointmentTypePendingConfirmation.appointment_type) }}</strong>?
+    </p>
+    <p class="section-copy">This removes the type from future booking options. Upcoming appointments using it will be listed afterward.</p>
+    <div class="delete-modal-actions">
+      <button class="button danger-button" type="button" (click)="confirmDeleteAppointmentType()" [disabled]="isSaving">
+        {{ isSaving ? 'Deleting...' : 'Yes, delete type' }}
+      </button>
+      <button class="button ghost" type="button" (click)="cancelDeleteAppointmentType()" [disabled]="isSaving">
+        No, keep type
+      </button>
+    </div>
+  </aside>
 </div>

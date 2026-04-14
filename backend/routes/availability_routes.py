@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -41,18 +41,18 @@ DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 
 def format_invalid_appointment_type_characters(invalid_characters: list[str]) -> str:
     if len(invalid_characters) == 1:
-        return f"Appointment types cannot include '{invalid_characters[0]}'."
+        return f"Please use only letters, numbers, spaces, or hyphens in the type name. Remove '{invalid_characters[0]}'."
 
     formatted = ', '.join(f"'{character}'" for character in invalid_characters[:-1])
     formatted += f" or '{invalid_characters[-1]}'"
-    return f'Appointment types cannot include {formatted}.'
+    return f'Please use only letters, numbers, spaces, or hyphens in the type name. Remove {formatted}.'
 
 
 def normalize_appointment_type_name(value: str) -> str:
     normalized = ' '.join(value.strip().lower().split())
 
     if not normalized:
-        raise ValueError('Appointment type is required.')
+        raise ValueError('Enter a name for the appointment type.')
 
     invalid_characters: list[str] = []
     for character in normalized:
@@ -67,11 +67,62 @@ def normalize_appointment_type_name(value: str) -> str:
     slug = normalized.replace(' ', '_')
 
     if len(slug) > 50:
-        raise ValueError('Appointment type must be 50 characters or fewer.')
+        raise ValueError('Keep the type name to 50 characters or fewer.')
     if slug == BLOCKED_APPOINTMENT_TYPE:
-        raise ValueError('Appointment type name is reserved.')
+        raise ValueError('That name is reserved. Please choose a different appointment type.')
 
     return slug
+
+
+def normalize_stored_appointment_type_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = ' '.join(value.strip().split())
+    if not normalized:
+        return None
+
+    try:
+        return normalize_appointment_type_name(normalized)
+    except ValueError:
+        return normalized.lower()
+
+
+def normalize_appointment_type_lookup_name(value: str) -> str:
+    try:
+        return normalize_appointment_type_name(value)
+    except ValueError:
+        try:
+            return normalize_appointment_type_name(value.replace('_', ' '))
+        except ValueError:
+            return ' '.join(value.strip().lower().split())
+
+
+def get_appointment_type_lookup_keys(value: str | None) -> set[str]:
+    if value is None:
+        return set()
+
+    compacted = ' '.join(value.strip().split())
+    if not compacted:
+        return set()
+
+    lower_value = compacted.lower()
+    keys = {
+        lower_value,
+        lower_value.replace('_', ' '),
+        lower_value.replace('-', ' '),
+        lower_value.replace('_', '-'),
+        lower_value.replace('-', '_'),
+    }
+
+    normalized = normalize_stored_appointment_type_name(compacted)
+    if normalized:
+        keys.add(normalized)
+        keys.add(normalized.replace('_', ' '))
+        keys.add(normalized.replace('-', ' '))
+
+    keys.add(''.join(character for character in lower_value if character.isalnum()))
+    return {key for key in keys if key}
 
 
 def normalize_appointment_notes(value: str | None) -> str | None:
@@ -237,6 +288,7 @@ class CalendarSlotResponse(BaseModel):
 
 
 class AppointmentTypeOptionResponse(BaseModel):
+    id: int | None = None
     appointment_type: str
     duration_minutes: int
 
@@ -269,6 +321,42 @@ class CreateAppointmentTypeRequest(BaseModel):
         if value % SLOT_INCREMENT_MINUTES != 0:
             raise ValueError('Duration must be in 15-minute increments.')
         return value
+
+
+class DeleteAppointmentTypeRequest(BaseModel):
+    admin_email: str
+    appointment_type: str | None = None
+    appointment_type_id: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices('appointment_type_id', 'appointmentTypeId', 'appointmentTypeID', 'id'),
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator('admin_email')
+    @classmethod
+    def validate_admin_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+
+        if not normalized.endswith('@admin.edu'):
+            raise ValueError('Only admins can delete appointment types.')
+
+        return normalized
+
+    @field_validator('appointment_type')
+    @classmethod
+    def validate_appointment_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized = value.strip()
+        return normalized or None
+
+    @model_validator(mode='after')
+    def require_delete_target(self):
+        if self.appointment_type_id is None and not self.appointment_type:
+            raise ValueError('Choose an appointment type to delete.')
+        return self
 
 
 class CreateAppointmentRequest(BaseModel):
@@ -312,6 +400,11 @@ class AppointmentResponse(BaseModel):
     notes: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DeleteAppointmentTypeResponse(BaseModel):
+    deleted_type: AppointmentTypeOptionResponse
+    upcoming_appointments: list[AppointmentResponse]
 
 
 class UpdateAppointmentNotesRequest(BaseModel):
@@ -360,6 +453,58 @@ def to_appointment_response(appointment: Appointment, duration_map: dict[str, in
         status=appointment.status or 'booked',
         notes=appointment.notes,
     )
+
+
+def format_ics_datetime(value: datetime) -> str:
+    return value.strftime('%Y%m%dT%H%M%S')
+
+
+def escape_ics_text(value: str) -> str:
+    return (
+        value
+        .replace('\\', '\\\\')
+        .replace(';', r'\;')
+        .replace(',', r'\,')
+        .replace('\r\n', r'\n')
+        .replace('\n', r'\n')
+    )
+
+
+def create_appointment_ics(appointment: Appointment, summary: str) -> str:
+    start_time = appointment.start_time
+    end_time = appointment.end_time
+    if start_time is None or end_time is None:
+        raise ValueError('Appointment is missing date or time values.')
+
+    notes = appointment.notes or 'No notes provided.'
+    lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Lynx Health//Appointments//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        f'UID:appointment-{appointment.id}@lynxhealth.local',
+        f'DTSTAMP:{datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")}',
+        f'DTSTART:{format_ics_datetime(start_time)}',
+        f'DTEND:{format_ics_datetime(end_time)}',
+        f'SUMMARY:{escape_ics_text(summary)}',
+        f'DESCRIPTION:{escape_ics_text(notes)}',
+        'LOCATION:Lynx Health Center',
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR',
+        '',
+    ]
+    return '\r\n'.join(lines)
+
+
+def format_calendar_summary_from_type(appointment_type: str | None) -> str:
+    normalized = (appointment_type or 'appointment').strip().replace('_', ' ')
+    if not normalized:
+        normalized = 'appointment'
+    title_cased = ' '.join(part.capitalize() for part in normalized.split())
+    return f'Health Center Appointment: {title_cased}'
 
 
 def ensure_database_ready() -> None:
@@ -927,10 +1072,16 @@ def list_appointment_types(db: Session = Depends(get_db)):
     ensure_database_ready()
 
     try:
-        duration_map = get_appointment_duration_map(db)
         return [
-            AppointmentTypeOptionResponse(appointment_type=appointment_type, duration_minutes=duration_minutes)
-            for appointment_type, duration_minutes in duration_map.items()
+            AppointmentTypeOptionResponse(
+                id=option.id,
+                appointment_type=option.appointment_type,
+                duration_minutes=option.duration_minutes,
+            )
+            for option in db.query(AppointmentTypeOption).order_by(
+                AppointmentTypeOption.appointment_type.asc()
+            ).all()
+            if option.appointment_type and option.duration_minutes
         ]
     except SQLAlchemyError as exc:
         raise HTTPException(
@@ -944,14 +1095,18 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
     ensure_database_ready()
 
     try:
-        existing = db.query(AppointmentTypeOption).filter(
-            func.lower(func.trim(AppointmentTypeOption.appointment_type)) == data.appointment_type,
-        ).first()
+        existing = next(
+            (
+                option for option in db.query(AppointmentTypeOption).all()
+                if normalize_stored_appointment_type_name(option.appointment_type) == data.appointment_type
+            ),
+            None,
+        )
 
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail='Appointment type already exists.',
+                detail='That appointment type is already on the list. Try a different name.',
             )
 
         option = AppointmentTypeOption(
@@ -963,6 +1118,7 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
         db.refresh(option)
 
         return AppointmentTypeOptionResponse(
+            id=option.id,
             appointment_type=option.appointment_type,
             duration_minutes=option.duration_minutes,
         )
@@ -972,6 +1128,117 @@ def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = De
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
         ) from exc
+
+
+def delete_appointment_type_by_identifier(
+    admin_email: str,
+    db: Session,
+    appointment_type: str | None = None,
+    appointment_type_id: int | None = None,
+):
+    normalized_email = admin_email.strip().lower()
+    if not normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only admins can delete appointment types.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        option = None
+
+        if appointment_type_id is not None:
+            option = db.query(AppointmentTypeOption).filter(
+                AppointmentTypeOption.id == appointment_type_id
+            ).first()
+
+        if option is None and appointment_type:
+            requested_keys = get_appointment_type_lookup_keys(appointment_type)
+            option = next(
+                (
+                    stored_option for stored_option in db.query(AppointmentTypeOption).all()
+                    if get_appointment_type_lookup_keys(stored_option.appointment_type) & requested_keys
+                ),
+                None,
+            )
+
+        if option is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment type not found.',
+            )
+
+        deleted_type_keys = get_appointment_type_lookup_keys(option.appointment_type)
+        now = datetime.now()
+        upcoming_appointments = [
+            appointment for appointment in db.query(Appointment).filter(
+                Appointment.start_time.is_not(None),
+                Appointment.end_time.is_not(None),
+                Appointment.end_time > now,
+            ).order_by(Appointment.start_time.asc()).all()
+            if get_appointment_type_lookup_keys(appointment.appointment_type) & deleted_type_keys
+        ]
+
+        deleted_type = AppointmentTypeOptionResponse(
+            id=option.id,
+            appointment_type=option.appointment_type,
+            duration_minutes=option.duration_minutes,
+        )
+        response = DeleteAppointmentTypeResponse(
+            deleted_type=deleted_type,
+            upcoming_appointments=[to_appointment_response(appointment) for appointment in upcoming_appointments],
+        )
+
+        db.delete(option)
+        db.commit()
+        return response
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.delete('/appointment-types', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type_from_query(
+    appointment_type: str = Query(...),
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_identifier(
+        appointment_type=appointment_type,
+        admin_email=admin_email,
+        db=db,
+    )
+
+
+@router.post('/appointment-types/delete', response_model=DeleteAppointmentTypeResponse)
+@router.post('/appointment-types/delete/', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type_from_body(
+    data: DeleteAppointmentTypeRequest,
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_identifier(
+        appointment_type=data.appointment_type,
+        appointment_type_id=data.appointment_type_id,
+        admin_email=data.admin_email,
+        db=db,
+    )
+
+
+@router.delete('/appointment-types/{appointment_type}', response_model=DeleteAppointmentTypeResponse)
+def delete_appointment_type(
+    appointment_type: str,
+    admin_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return delete_appointment_type_by_identifier(
+        appointment_type=appointment_type,
+        admin_email=admin_email,
+        db=db,
+    )
 
 
 @router.get('/calendar', response_model=list[CalendarSlotResponse])
@@ -1393,6 +1660,54 @@ def update_appointment_notes(
         return to_appointment_response(appointment, duration_map)
     except SQLAlchemyError as exc:
         db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',
+        ) from exc
+
+
+@router.get('/appointments/{appointment_id}/ics')
+def download_appointment_ics(
+    appointment_id: int,
+    student_email: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    normalized_email = student_email.strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Student email is required.',
+        )
+
+    if normalized_email.endswith('@admin.edu'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='Only students can download appointment calendar files.',
+        )
+
+    ensure_database_ready()
+
+    try:
+        appointment = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+        if not appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Appointment not found.',
+            )
+
+        appointment_owner_email = (appointment.student_email or '').strip().lower()
+        if appointment_owner_email != normalized_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='You can only download calendar files for your own appointments.',
+            )
+
+        summary = format_calendar_summary_from_type(appointment.appointment_type)
+        ics_payload = create_appointment_ics(appointment, summary)
+        filename = f'lynx-health-appointment-{appointment_id}.ics'
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        return Response(content=ics_payload, media_type='text/calendar; charset=utf-8', headers=headers)
+    except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='Database unavailable. Verify DATABASE_URL and Postgres credentials.',

@@ -25,9 +25,9 @@ auth_routes = _load_auth_routes_module()
 
 
 class _FakeRequest:
-    def __init__(self, *, path: str, host: str = 'localhost:8000', query_params=None, form_data=None):
-        self.headers = {'host': host}
-        self.url = SimpleNamespace(path=path)
+    def __init__(self, *, path: str, host: str = 'localhost:8000', scheme: str = 'http', headers=None, query_params=None, form_data=None):
+        self.headers = {'host': host, **(headers or {})}
+        self.url = SimpleNamespace(path=path, scheme=scheme)
         self.query_params = query_params or {}
         self._form_data = form_data or {}
 
@@ -54,6 +54,25 @@ def test_prepare_saml_request_builds_expected_payload() -> None:
     }
 
 
+def test_prepare_saml_request_uses_forwarded_public_origin() -> None:
+    request = _FakeRequest(
+        path='/auth/saml/callback',
+        host='127.0.0.1:8000',
+        headers={
+            'x-forwarded-host': 'lynxhc.com',
+            'x-forwarded-proto': 'https',
+            'x-forwarded-port': '443',
+        },
+    )
+
+    payload = asyncio.run(auth_routes.prepare_saml_request(request))
+
+    assert payload['https'] == 'on'
+    assert payload['http_host'] == 'lynxhc.com'
+    assert payload['server_port'] == '443'
+    assert payload['script_name'] == '/auth/saml/callback'
+
+
 def test_saml_login_redirects_to_identity_provider(monkeypatch) -> None:
     class FakeSamlAuth:
         def __init__(self, _req, _settings):
@@ -66,6 +85,23 @@ def test_saml_login_redirects_to_identity_provider(monkeypatch) -> None:
     monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
 
     response = asyncio.run(auth_routes.saml_login(_FakeRequest(path='/saml/login')))
+
+    assert response.status_code == 307
+    assert response.headers['location'] == 'https://idp.example.com/login'
+
+
+def test_sso_login_redirects_to_identity_provider(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def login(self):
+            return 'https://idp.example.com/login'
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.sso_login(_FakeRequest(path='/sso/login')))
 
     assert response.status_code == 307
     assert response.headers['location'] == 'https://idp.example.com/login'
@@ -125,6 +161,34 @@ def test_saml_callback_returns_user_role_for_non_admin_domain(monkeypatch) -> No
     assert '"role": "user"' in decoded_session
 
 
+def test_sso_acs_returns_user_session_redirect(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def process_response(self):
+            return None
+
+        def get_errors(self):
+            return []
+
+        def is_authenticated(self):
+            return True
+
+        def get_attributes(self):
+            return {'Email': ['student@example.edu'], 'FirstName': ['Student'], 'LastName': ['User']}
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.sso_acs(_FakeRequest(path='/sso/acs')))
+    decoded_session = _decode_session_value_from_redirect(response.headers['location'])
+
+    assert response.status_code == 302
+    assert response.headers['location'].startswith('https://lynxhc.com/home?session=')
+    assert '"role": "user"' in decoded_session
+
+
 def test_saml_callback_returns_400_when_saml_errors_exist(monkeypatch) -> None:
     class FakeSamlAuth:
         def __init__(self, _req, _settings):
@@ -149,6 +213,26 @@ def test_saml_callback_returns_400_when_saml_errors_exist(monkeypatch) -> None:
 
     assert response.status_code == 400
     assert json.loads(response.body) == {'error': ['invalid_response']}
+
+
+def test_saml_callback_returns_400_when_response_processing_fails(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def process_response(self):
+            raise ValueError('missing SAMLResponse')
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.saml_callback(_FakeRequest(path='/saml/callback')))
+
+    assert response.status_code == 400
+    assert json.loads(response.body) == {
+        'error': 'SAML response could not be processed',
+        'detail': 'missing SAMLResponse',
+    }
 
 
 def test_saml_callback_returns_401_for_unauthenticated_response(monkeypatch) -> None:
