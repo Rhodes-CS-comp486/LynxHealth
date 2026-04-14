@@ -19,6 +19,7 @@ from backend.models.clinic_holiday import ClinicHoliday
 from backend.models.clinic_hours import ClinicHours
 from backend.models.appointment import Appointment
 from backend.models.appointment_type_option import AppointmentTypeOption
+from backend.email_utils import send_email
 
 router = APIRouter(tags=['availability'])
 
@@ -1497,6 +1498,29 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
         db.add(appointment)
         db.commit()
         db.refresh(appointment)
+
+        # Send confirmation email
+        try:
+            send_email(
+                to_address=appointment.student_email,
+                subject="Your Appointment is Confirmed",
+                body=f"""
+Hello,
+
+Your appointment for '{appointment.appointment_type}' is confirmed.
+
+Date: {appointment.start_time.strftime('%A, %B %d, %Y')}
+Time: {appointment.start_time.strftime('%I:%M %p')} - {appointment.end_time.strftime('%I:%M %p')}
+
+If you have questions or need to reschedule, please contact us.
+
+Thank you,
+LynxHealth Team
+"""
+            )
+        except Exception as e:
+            # Log or handle email failure (optional)
+            pass
 
         return AppointmentResponse(
             id=appointment.id,
