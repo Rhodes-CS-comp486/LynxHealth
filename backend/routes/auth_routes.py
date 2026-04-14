@@ -1,5 +1,6 @@
 import json
 import os
+from urllib.parse import urlsplit
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -21,10 +22,20 @@ def get_saml_settings():
 
 async def prepare_saml_request(request: Request):
     form_data = await request.form()
+    host = request.headers.get('x-forwarded-host') or request.headers.get('host', 'localhost:8000')
+    forwarded_proto = request.headers.get('x-forwarded-proto')
+    proto = forwarded_proto.split(',')[0].strip() if forwarded_proto else request.url.scheme
+    if proto not in {'http', 'https'}:
+        proto = 'http'
+
+    forwarded_port = request.headers.get('x-forwarded-port')
+    host_port = urlsplit(f'//{host}').port
+    server_port = forwarded_port or (str(host_port) if host_port else ('443' if proto == 'https' else '80'))
+
     return {
-        'https': 'off',
-        'http_host': request.headers.get('host', 'localhost:8000'),
-        'server_port': '8000',
+        'https': 'on' if proto == 'https' else 'off',
+        'http_host': host,
+        'server_port': server_port,
         'script_name': request.url.path,
         'get_data': dict(request.query_params),
         'post_data': dict(form_data)
