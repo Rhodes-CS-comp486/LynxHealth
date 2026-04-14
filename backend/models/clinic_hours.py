@@ -1,9 +1,13 @@
+"""
+SQLAlchemy model for clinic operating hours in the LynxHealth system.
+"""
 from sqlalchemy import Boolean, Column, Integer, Time
 
 from backend.database import Base
 
 
 class ClinicHours(Base):
+    """Represents the open/close hours for a day of the week."""
     __tablename__ = 'clinic_hours'
 
     id = Column(Integer, primary_key=True)

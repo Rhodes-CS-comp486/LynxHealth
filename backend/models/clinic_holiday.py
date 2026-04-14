@@ -1,9 +1,13 @@
+"""
+SQLAlchemy model for clinic holidays in the LynxHealth system.
+"""
 from sqlalchemy import Boolean, Column, Date, Integer, String
 
 from backend.database import Base
 
 
 class ClinicHoliday(Base):
+    """Represents a holiday when the clinic is closed."""
     __tablename__ = 'clinic_holidays'
 
     id = Column(Integer, primary_key=True)
