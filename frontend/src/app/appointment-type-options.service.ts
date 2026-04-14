@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 
 export interface AppointmentTypeOption {
+  id?: number;
   appointment_type: string;
   duration_minutes: number;
 }

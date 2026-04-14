@@ -22,6 +22,7 @@ interface BookedAppointment {
 }
 
 interface AppointmentTypeOption {
+  id?: number;
   appointment_type: string;
   duration_minutes: number;
 }
@@ -315,6 +316,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+          appointment_type_id: option.id,
           appointment_type: option.appointment_type,
           admin_email: this.sessionEmail
         })

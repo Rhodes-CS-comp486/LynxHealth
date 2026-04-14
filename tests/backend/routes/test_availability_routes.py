@@ -115,10 +115,19 @@ def test_delete_appointment_type_request_allows_stored_slugs() -> None:
     request = DeleteAppointmentTypeRequest(
         admin_email=' ADMIN@ADMIN.EDU ',
         appointment_type=' physical_exam ',
+        appointment_type_id=12,
     )
 
     assert request.admin_email == 'admin@admin.edu'
     assert request.appointment_type == 'physical_exam'
+    assert request.appointment_type_id == 12
+
+
+def test_delete_appointment_type_request_requires_target() -> None:
+    with pytest.raises(ValidationError):
+        DeleteAppointmentTypeRequest(
+            admin_email='admin@admin.edu',
+        )
 
 
 def test_delete_appointment_type_request_rejects_non_admin() -> None:
@@ -248,6 +257,7 @@ def test_list_appointment_types_returns_database_values(appointment_db, monkeypa
         'other',
         'prescription',
     }
+    assert all(option.id is not None for option in response)
 
 
 def test_create_appointment_type_persists_new_option_for_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -418,6 +428,33 @@ def test_delete_appointment_type_from_body_handles_stored_slugs(
     assert response.deleted_type.appointment_type == 'physical_exam'
     options = list_appointment_types(db=appointment_db)
     assert all(option.appointment_type != 'physical_exam' for option in options)
+
+
+def test_delete_appointment_type_from_body_prefers_database_id(
+    appointment_db,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr('backend.routes.availability_routes.ensure_database_ready', lambda: None)
+
+    option = AppointmentTypeOption(appointment_type='server_only_name', duration_minutes=30)
+    appointment_db.add(option)
+    appointment_db.commit()
+    appointment_db.refresh(option)
+
+    payload = DeleteAppointmentTypeRequest(
+        appointment_type_id=option.id,
+        appointment_type='stale_ui_name',
+        admin_email='admin@admin.edu',
+    )
+    response = delete_appointment_type_from_body(
+        data=payload,
+        db=appointment_db,
+    )
+
+    assert response.deleted_type.id == option.id
+    assert response.deleted_type.appointment_type == 'server_only_name'
+    options = list_appointment_types(db=appointment_db)
+    assert all(option.appointment_type != 'server_only_name' for option in options)
 
 
 def test_delete_appointment_type_rejects_non_admin(appointment_db, monkeypatch: pytest.MonkeyPatch) -> None:
