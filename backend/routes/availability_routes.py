@@ -1,6 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status, Request
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
@@ -1440,8 +1440,22 @@ def cancel_my_appointment(
 
 
 @router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
-def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
+def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db), request: Request = None):
     ensure_database_ready()
+
+    # Extract user email from session cookie
+    user_email = None
+    session_cookie = request.cookies.get('session') if request else None
+    if session_cookie:
+        import json, urllib.parse
+        try:
+            decoded = urllib.parse.unquote(session_cookie)
+            session_data = json.loads(decoded)
+            user_email = session_data.get('email')
+        except Exception:
+            user_email = None
+    if not user_email:
+        raise HTTPException(status_code=401, detail='User not authenticated or session missing.')
 
     try:
         duration_map = get_appointment_duration_map(db)
@@ -1488,7 +1502,7 @@ def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get
             )
 
         appointment = Appointment(
-            student_email=data.student_email,
+            student_email=user_email,  # Use email from session only
             appointment_type=data.appointment_type,
             notes=data.notes,
             start_time=start_time,
@@ -1519,17 +1533,16 @@ LynxHealth Team
 """
             )
         except Exception as e:
-            # Log or handle email failure (optional)
             pass
 
         return AppointmentResponse(
             id=appointment.id,
-            student_email=appointment.student_email or data.student_email,
-            appointment_type=appointment.appointment_type or data.appointment_type,
+            student_email=appointment.student_email,
+            appointment_type=appointment.appointment_type,
             duration_minutes=duration_minutes,
             start_time=appointment.start_time,
             end_time=appointment.end_time,
-            status=appointment.status or 'booked',
+            status=appointment.status,
             notes=appointment.notes,
         )
     except SQLAlchemyError as exc:
