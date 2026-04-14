@@ -161,6 +161,34 @@ def test_saml_callback_returns_user_role_for_non_admin_domain(monkeypatch) -> No
     assert '"role": "user"' in decoded_session
 
 
+def test_sso_acs_returns_user_session_redirect(monkeypatch) -> None:
+    class FakeSamlAuth:
+        def __init__(self, _req, _settings):
+            pass
+
+        def process_response(self):
+            return None
+
+        def get_errors(self):
+            return []
+
+        def is_authenticated(self):
+            return True
+
+        def get_attributes(self):
+            return {'Email': ['student@example.edu'], 'FirstName': ['Student'], 'LastName': ['User']}
+
+    monkeypatch.setattr(auth_routes, 'OneLogin_Saml2_Auth', FakeSamlAuth)
+    monkeypatch.setattr(auth_routes, 'get_saml_settings', lambda: {})
+
+    response = asyncio.run(auth_routes.sso_acs(_FakeRequest(path='/sso/acs')))
+    decoded_session = _decode_session_value_from_redirect(response.headers['location'])
+
+    assert response.status_code == 302
+    assert response.headers['location'].startswith('https://lynxhc.com/home?session=')
+    assert '"role": "user"' in decoded_session
+
+
 def test_saml_callback_returns_400_when_saml_errors_exist(monkeypatch) -> None:
     class FakeSamlAuth:
         def __init__(self, _req, _settings):

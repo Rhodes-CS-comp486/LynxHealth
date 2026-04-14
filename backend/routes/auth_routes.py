@@ -85,3 +85,8 @@ async def saml_callback(request: Request):
     encoded = session.replace('"', '%22').replace(' ', '%20')
 
     return RedirectResponse(url=f'https://lynxhc.com/home?session={encoded}', status_code=302)
+
+
+@router.post('/sso/acs')
+async def sso_acs(request: Request):
+    return await saml_callback(request)
