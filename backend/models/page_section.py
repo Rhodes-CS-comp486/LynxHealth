@@ -1,8 +1,12 @@
+"""
+SQLAlchemy model for page sections (editable content blocks) in the LynxHealth system.
+"""
 from sqlalchemy import Column, Integer, String, Text
 
 from backend.database import Base
 
 class PageSection(Base):
+    """Represents a content section on a page."""
     __tablename__ = 'page_sections'
 
     id = Column(Integer, primary_key=True)
