@@ -73,7 +73,7 @@ h2 { margin: 0; }
   flex: 1.1 1 0;
 }
 .week-day.no-slots-day {
-  flex: 0.75 1 0;
+  flex: 0.6 1 0;
 }
 .week-day h3 { margin: 0 0 0.6rem; font-size: 0.9rem; color: var(--muted); }
 .day-slot-list { display: grid; gap: 0.5rem; }
@@ -206,7 +206,7 @@ h2 { margin: 0; }
     flex: 1.25 1 210px;
   }
   .week-day.no-slots-day {
-    flex: 0.65 1 110px;
+    flex: 0.6 1 110px;
     min-width: 95px;
   }
   .booking-actions { flex-direction: column; }
