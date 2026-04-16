@@ -60,8 +60,21 @@ h2 { margin: 0; }
 .calendar-week-actions { display: flex; align-items: center; gap: 0.7rem; }
 .week-toggle { padding: 0.5rem 1rem; font-size: 0.85rem; }
 
-.week-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; padding-bottom: 0.25rem; }
-.week-day { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 0.7rem; min-height: 280px; }
+.week-grid { display: flex; gap: 0.75rem; padding-bottom: 0.25rem; }
+.week-day {
+  flex: 1 1 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.7rem;
+  min-height: 280px;
+}
+.week-day.has-slots-day {
+  flex: 1.1 1 0;
+}
+.week-day.no-slots-day {
+  flex: 0.6 1 0;
+}
 .week-day h3 { margin: 0 0 0.6rem; font-size: 0.9rem; color: var(--muted); }
 .day-slot-list { display: grid; gap: 0.5rem; }
 .slot-card { border: 1px solid var(--line); border-radius: 14px; padding: 0.85rem; background: #fff; }
@@ -177,7 +190,25 @@ h2 { margin: 0; }
 @media (max-width: 900px) {
   .filters { grid-template-columns: 1fr; }
   .calendar-week-header { flex-direction: column; align-items: flex-start; }
-  .week-grid { grid-template-columns: 1fr; }
+  .week-grid {
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 0.45rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .week-day {
+    flex: 1 1 180px;
+    min-width: 170px;
+    min-height: 0;
+  }
+  .week-day.has-slots-day {
+    flex: 1.25 1 210px;
+  }
+  .week-day.no-slots-day {
+    flex: 0.6 1 110px;
+    min-width: 95px;
+  }
   .booking-actions { flex-direction: column; }
 }
 

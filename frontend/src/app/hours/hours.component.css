@@ -88,6 +88,8 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin-row-controls input[type='time'] {
@@ -156,5 +158,57 @@ h2 {
 @media (max-width: 1024px) {
   .cards-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .panel {
+    padding: 1.1rem;
+    border-radius: 18px;
+  }
+
+  .section {
+    padding: 1.1rem 0 2.2rem;
+  }
+
+  .hours-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  .admin-row-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-row-controls input[type='time'] {
+    min-width: 0;
+    width: 100%;
+    max-width: 170px;
+  }
+
+  .holiday-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .holiday-form input[type='date'],
+  .holiday-form input[type='text'],
+  .holiday-form .button {
+    width: 100%;
+  }
+
+  .holiday-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .save-button {
+    width: 100%;
   }
 }
