@@ -25,11 +25,16 @@
 
         <!-- Admin toolbar -->
         <div class="admin-toolbar" *ngIf="isAdmin">
-          <button class="edit-toggle-btn" type="button" (click)="toggleEditMode()" [disabled]="isSaving">
-            {{ isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Page Content') }}
-          </button>
-          <button class="add-section-btn" type="button" *ngIf="isEditing" (click)="addSection()">
-            <span class="btn-icon">+</span> Add Section
+          <div class="admin-toolbar-actions">
+            <button class="edit-toggle-btn" type="button" (click)="toggleEditMode()" [disabled]="isSaving">
+              {{ isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Page Content') }}
+            </button>
+            <button class="add-section-btn" type="button" *ngIf="isEditing" (click)="addSection()" [disabled]="isSaving">
+              <span class="btn-icon">+</span> Add Section
+            </button>
+          </div>
+          <button class="cancel-edit-btn" type="button" *ngIf="isEditing" (click)="cancelEditMode()" [disabled]="isSaving">
+            Cancel
           </button>
         </div>
 

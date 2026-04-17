@@ -4,6 +4,27 @@
   overflow: hidden;
 }
 
+.page::before,
+.page::after {
+  content: '';
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(226, 72, 59, 0.18) 0%, rgba(226, 72, 59, 0) 65%);
+  z-index: 0;
+}
+
+.page::before {
+  top: -120px;
+  left: -120px;
+}
+
+.page::after {
+  bottom: 120px;
+  right: -160px;
+}
+
 .section {
   position: relative;
   z-index: 1;

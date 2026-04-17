@@ -51,6 +51,14 @@ h2 {
 .admin-toolbar {
   margin-bottom: 2.5rem;
   display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-toolbar-actions {
+  display: flex;
   gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
@@ -100,6 +108,31 @@ h2 {
 .add-section-btn:hover {
   background: #e2483b;
   color: #fff;
+}
+
+.cancel-edit-btn {
+  margin-left: auto;
+  background: #fff;
+  color: #e2483b;
+  border: 2px solid #e2483b;
+  border-radius: 10px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cancel-edit-btn:hover:not(:disabled) {
+  background: #e2483b;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(226, 72, 59, 0.35);
+}
+
+.cancel-edit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-icon {
