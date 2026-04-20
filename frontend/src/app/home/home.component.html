@@ -8,9 +8,9 @@
       <nav class="nav-links">
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/resources">Resources</a>
-        <a routerLink="/hours">Hours</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
+        <a routerLink="/hours">Hours</a>
+        <a routerLink="/resources">Resources</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
