@@ -42,7 +42,30 @@
               {{ appointment.start_time | date: 'h:mm a' }} to {{ appointment.end_time | date: 'h:mm a' }}
               · {{ formatAppointmentType(appointment.appointment_type) }} ({{ appointment.duration_minutes }} mins)
             </p>
-            <p><strong>Status:</strong> {{ appointment.status }}</p>
+            <p><strong>Status:</strong> {{ appointment.status | titlecase }}</p>
+
+            <ng-container *ngIf="editingAppointmentId !== appointment.id; else editNotesTemplate">
+              <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+            </ng-container>
+
+            <ng-template #editNotesTemplate>
+              <label class="notes-label" [for]="'notes-' + appointment.id"><strong>Notes:</strong></label>
+              <textarea
+                class="notes-input"
+                [id]="'notes-' + appointment.id"
+                rows="4"
+                maxlength="600"
+                [value]="draftNotesById[appointment.id] || ''"
+                (input)="updateDraftNotes(appointment.id, $any($event.target).value)"></textarea>
+              <div class="actions-row">
+                <button class="button small" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="saveNotes(appointment)">
+                  {{ savingAppointmentId === appointment.id ? 'Saving...' : 'Save notes' }}
+                </button>
+                <button class="button small ghost" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="cancelEditing()">
+                  Cancel
+                </button>
+              </div>
+            </ng-template>
 
             <div class="appointment-actions-row">
               <button
@@ -74,29 +97,6 @@
                 {{ cancelingAppointmentId === appointment.id ? 'Canceling...' : (pendingCancelAppointmentId === appointment.id ? 'Close cancel appointment' : 'Cancel appointment') }}
               </button>
             </div>
-
-            <ng-container *ngIf="editingAppointmentId !== appointment.id; else editNotesTemplate">
-              <p><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
-            </ng-container>
-
-            <ng-template #editNotesTemplate>
-              <label class="notes-label" [for]="'notes-' + appointment.id"><strong>Notes:</strong></label>
-              <textarea
-                class="notes-input"
-                [id]="'notes-' + appointment.id"
-                rows="4"
-                maxlength="600"
-                [value]="draftNotesById[appointment.id] || ''"
-                (input)="updateDraftNotes(appointment.id, $any($event.target).value)"></textarea>
-              <div class="actions-row">
-                <button class="button small" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="saveNotes(appointment)">
-                  {{ savingAppointmentId === appointment.id ? 'Saving...' : 'Save notes' }}
-                </button>
-                <button class="button small ghost" type="button" [disabled]="savingAppointmentId === appointment.id" (click)="cancelEditing()">
-                  Cancel
-                </button>
-              </div>
-            </ng-template>
 
             <section class="calendar-options-panel" *ngIf="calendarPanelAppointmentId === appointment.id">
               <h4>Add this appointment to your calendar</h4>
