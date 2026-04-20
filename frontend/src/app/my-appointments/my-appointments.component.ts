@@ -1,4 +1,4 @@
-import { DatePipe, NgFor, NgIf } from '@angular/common';
+import { DatePipe, NgFor, NgIf, TitleCasePipe } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
@@ -38,7 +38,7 @@ interface RescheduleDayGroup {
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
-  imports: [RouterLink, NgIf, NgFor, DatePipe],
+  imports: [RouterLink, NgIf, NgFor, DatePipe, TitleCasePipe],
   templateUrl: './my-appointments.component.html',
   styleUrl: './my-appointments.component.css'
 })
