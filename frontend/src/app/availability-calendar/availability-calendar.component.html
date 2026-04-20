@@ -128,7 +128,7 @@
     [attr.aria-hidden]="!(role === 'user' && (selectedBookingSlot || confirmedBooking))">
     <div class="booking-drawer-header">
       <h3 id="booking-drawer-title">{{ confirmedBooking ? 'Booking Confirmed' : 'Confirm Appointment' }}</h3>
-      <button class="button small ghost" type="button" (click)="closeBookingDrawer()" [disabled]="isBooking">
+      <button class="button small ghost" type="button" (click)="closeBookingDrawer()">
         Close
       </button>
     </div>
