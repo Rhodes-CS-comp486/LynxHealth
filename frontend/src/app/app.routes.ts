@@ -6,6 +6,7 @@ import { CreateAppointmentsComponent } from './create-appointments/create-appoin
 import { AvailabilityCalendarComponent } from './availability-calendar/availability-calendar.component';
 import { MyAppointmentsComponent } from './my-appointments/my-appointments.component';
 import { ResourcesComponent } from './resources/resources.component';
+import { AppointmentScheduleComponent } from './appointment-schedule/appointment-schedule.component';
 
 export const routes: Routes = [
   {
@@ -28,6 +29,10 @@ export const routes: Routes = [
   {
     path: 'create-appointments',
     component: CreateAppointmentsComponent
+  },
+  {
+    path: 'appointment-schedule',
+    component: AppointmentScheduleComponent
   },
   {
     path: 'availability-calendar',

@@ -8,6 +8,7 @@
       <nav class="nav-links">
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
+        <a *ngIf="role === 'admin'" routerLink="/appointment-schedule">Appointment Schedule</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
         <a routerLink="/hours">Hours</a>
         <a routerLink="/resources">Resources</a>
@@ -34,6 +35,7 @@
           <button class="button button-primary action-button" routerLink="/resources">View Health Center Information</button>
         </div>
         <div class="hero-actions" *ngIf="role === 'admin'">
+          <a class="button button-primary action-button" routerLink="/appointment-schedule">Appointment Schedule</a>
           <a class="button button-primary action-button" routerLink="/create-appointments">Manage Appointment Slots</a>
           <a class="button button-primary action-button" routerLink="/hours">View Hours & Closures</a>
           <button class="button button-primary action-button" routerLink="/resources">View Health Center Information</button>
