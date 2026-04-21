@@ -8,7 +8,9 @@ export interface AppointmentTypeOption {
 
 @Injectable({ providedIn: 'root' })
 export class AppointmentTypeOptionsService {
+  // Cache the last successful result so repeat visits do not refetch the same options.
   private appointmentTypes: AppointmentTypeOption[] | null = null;
+  // Reuse an in-flight request so concurrent callers share one network round trip.
   private pendingRequest: Promise<AppointmentTypeOption[]> | null = null;
 
   async getAppointmentTypes(): Promise<AppointmentTypeOption[]> {
@@ -39,6 +41,7 @@ export class AppointmentTypeOptionsService {
       });
 
       if (!response.ok) {
+        // Treat a failed lookup as "no options" so booking screens can still render safely.
         this.appointmentTypes = [];
         return [];
       }
