@@ -77,6 +77,7 @@ interface TimeCell {
   styleUrl: './create-appointments.component.css'
 })
 export class CreateAppointmentsComponent implements OnInit, OnDestroy {
+  // Poll periodically so the admin view stays in sync with booking changes made elsewhere.
   private readonly autoRefreshIntervalMs = 5000;
   private autoRefreshTimer: number | null = null;
   private isDestroyed = false;
@@ -121,6 +122,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
+    // Filter once here so the template can reuse the same week-scoped list in multiple places.
     return this.bookedAppointments.filter((appointment) => {
       const appointmentStart = new Date(appointment.start_time);
       return (
@@ -293,6 +295,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Close the custom picker when the user clicks anywhere outside this component.
     if (!this.elementRef.nativeElement.contains(target)) {
       this.isDurationWheelOpen = false;
     }
@@ -465,6 +468,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
       this.blockedTimes = await response.json() as BlockedTime[];
       this.blockedMap = new Map<string, number>();
+      // Index blocked slots by calendar cell key so rendering can do constant-time lookups.
       for (const blocked of this.blockedTimes) {
         this.blockedMap.set(this.getSlotKey(new Date(blocked.start_time)), blocked.id);
       }
@@ -558,6 +562,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.bookedAppointments = await response.json() as BookedAppointment[];
       this.bookedSlotKeys = new Set<string>();
 
+      // Expand each appointment into its covered 15-minute cells so overlap checks stay simple.
       for (const appointment of this.bookedAppointments) {
         const start = new Date(appointment.start_time);
         const end = new Date(appointment.end_time);
@@ -587,6 +592,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.stopAutoRefresh();
+    // Refresh all schedule inputs together so the grid reflects hours, bookings, and blocks consistently.
     this.autoRefreshTimer = window.setInterval(() => {
       void this.loadBookedAppointments();
       void this.loadClinicHours();
@@ -619,6 +625,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       dayDate.setDate(this.weekStart.getDate() + i);
       dayDate.setHours(0, 0, 0, 0);
 
+      // Skip past weekdays so admins only manage current and future availability.
       if (dayDate < today) {
         continue;
       }
@@ -631,6 +638,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.timeSlots = this.buildTimeSlotsForWeek();
+    // Each row represents one 15-minute time across all visible weekdays.
     this.calendarRows = this.timeSlots.map((slot) =>
       this.calendarDays.map((day) => {
         const key = `${day.key}T${slot}`;
@@ -645,6 +653,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
         const slotMinutes = this.toMinutes(slot);
         const dayOpenMinutes = this.toMinutes(dayHours?.open_time);
         const dayCloseMinutes = this.toMinutes(dayHours?.close_time);
+        // A cell is interactive only when it falls on an open, non-holiday day within configured hours.
         const isWithinDayHours = (
           isOpenDay
           && slotMinutes !== null
@@ -697,6 +706,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       return [];
     }
 
+    // Build one shared vertical time axis from the earliest opening through the latest closing time.
     const earliestOpen = openTimes.sort()[0];
     const latestClose = closeTimes.sort()[closeTimes.length - 1];
     const slots: string[] = [];
@@ -778,6 +788,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const cursor = new Date(start);
     cursor.setSeconds(0, 0);
 
+    // Match the UI's 15-minute grid so appointments can mark every occupied cell.
     while (cursor < end) {
       keys.push(this.getSlotKey(cursor));
       cursor.setMinutes(cursor.getMinutes() + 15);
@@ -825,6 +836,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    // Existing appointments are flagged when updated hours would place them before open, after close,
+    // or across the fixed lunch break. The appointment is not changed automatically; this is a warning.
     if (startMinutes < dayOpen || endMinutes > dayClose) {
       return true;
     }
