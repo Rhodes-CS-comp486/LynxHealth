@@ -34,6 +34,15 @@
 .calendar-header h1 { margin: 0 0 0.35rem; font-size: 1.45rem; }
 .calendar-actions { display: flex; align-items: center; gap: 0.75rem; }
 .section-copy { margin: 0; color: var(--muted); max-width: 680px; }
+.section-break {
+  margin: 1.25rem 0 0.85rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.section-break h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
 
 .type-panel { display: grid; gap: 1rem; margin-bottom: 1.25rem; padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-strong); }
 .type-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }

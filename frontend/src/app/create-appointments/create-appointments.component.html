@@ -25,14 +25,17 @@
       <div class="container calendar-panel">
         <div class="calendar-header">
           <div>
-            <h1>Block Off Appointment Times</h1>
-            <p class="section-copy">Only configured operating hours are editable. Booked and lunch slots cannot be blocked.</p>
+            <h1>Manage Appointment Availability</h1>
           </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>
             <strong>{{ calendarDays[0]?.date | date: 'MMM d' }} - {{ calendarDays[4]?.date | date: 'MMM d, y' }}</strong>
             <button class="button ghost" type="button" (click)="nextWeek()">Next week</button>
           </div>
+        </div>
+
+        <div class="section-break">
+          <h2>Manage Appointment Offerings</h2>
         </div>
 
         <div class="type-panel" *ngIf="role === 'admin'">
@@ -134,6 +137,11 @@
               </div>
             </article>
           </div>
+        </div>
+
+        <div class="section-break" *ngIf="role === 'admin'">
+          <h2>Block Off Appointment Times</h2>
+          <p class="section-copy">Only configured operating hours are editable. Booked and lunch slots cannot be blocked.</p>
         </div>
 
         <div class="table-wrap" *ngIf="role === 'admin' && calendarDays.length > 0; else nonAdmin">
