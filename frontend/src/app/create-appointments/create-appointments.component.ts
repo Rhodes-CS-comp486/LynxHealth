@@ -1,5 +1,5 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
@@ -105,6 +105,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   newAppointmentType = '';
   newAppointmentDurationMinutes = 15;
   readonly durationWheelOptions = Array.from({ length: 24 }, (_, index) => (index + 1) * 5);
+  isDurationWheelOpen = false;
   isDeleteMode = false;
   appointmentTypePendingConfirmation: AppointmentTypeOption | null = null;
   deletedTypeWarning: DeletedAppointmentTypeResponse | null = null;
@@ -112,6 +113,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   constructor(
     private readonly cdr: ChangeDetectorRef,
     private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   get bookedAppointmentsForVisibleWeek(): BookedAppointment[] {
@@ -273,6 +275,27 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   selectDuration(duration: number): void {
     this.newAppointmentDurationMinutes = duration;
+    this.isDurationWheelOpen = false;
+  }
+
+  toggleDurationWheel(): void {
+    this.isDurationWheelOpen = !this.isDurationWheelOpen;
+  }
+
+  @HostListener('document:click', ['$event'])
+  handleDocumentClick(event: MouseEvent): void {
+    if (!this.isDurationWheelOpen) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    if (!this.elementRef.nativeElement.contains(target)) {
+      this.isDurationWheelOpen = false;
+    }
   }
 
   toggleDeleteMode(): void {

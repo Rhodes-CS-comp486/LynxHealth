@@ -83,22 +83,36 @@
 
             <label>
               <span>Duration</span>
-              <div
-                class="duration-wheel"
-                role="listbox"
-                aria-label="Appointment duration in minutes"
-                [attr.aria-activedescendant]="'duration-option-' + newAppointmentDurationMinutes">
+              <div class="duration-picker">
                 <button
+                  class="duration-picker-trigger"
                   type="button"
-                  class="duration-option"
-                  *ngFor="let duration of durationWheelOptions"
-                  [id]="'duration-option-' + duration"
-                  [class.selected]="newAppointmentDurationMinutes === duration"
-                  [attr.aria-selected]="newAppointmentDurationMinutes === duration"
                   [disabled]="isSaving"
-                  (click)="selectDuration(duration)">
-                  {{ duration }} mins
+                  [attr.aria-expanded]="isDurationWheelOpen"
+                  aria-haspopup="listbox"
+                  (click)="toggleDurationWheel()">
+                  <span>{{ newAppointmentDurationMinutes }} mins</span>
+                  <span aria-hidden="true">{{ isDurationWheelOpen ? '▲' : '▼' }}</span>
                 </button>
+
+                <div
+                  *ngIf="isDurationWheelOpen"
+                  class="duration-wheel"
+                  role="listbox"
+                  aria-label="Appointment duration in minutes"
+                  [attr.aria-activedescendant]="'duration-option-' + newAppointmentDurationMinutes">
+                  <button
+                    type="button"
+                    class="duration-option"
+                    *ngFor="let duration of durationWheelOptions"
+                    [id]="'duration-option-' + duration"
+                    [class.selected]="newAppointmentDurationMinutes === duration"
+                    [attr.aria-selected]="newAppointmentDurationMinutes === duration"
+                    [disabled]="isSaving"
+                    (click)="selectDuration(duration)">
+                    {{ duration }} mins
+                  </button>
+                </div>
               </div>
             </label>
 

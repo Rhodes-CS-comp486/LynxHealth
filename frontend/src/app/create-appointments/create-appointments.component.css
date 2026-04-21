@@ -42,7 +42,30 @@
 .type-form label { display: grid; gap: 0.35rem; min-width: 180px; font-weight: 600; color: #433631; }
 .type-form input,
 .type-form select { border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 0.75rem 0.9rem; font: inherit; color: inherit; }
+.duration-picker {
+  position: relative;
+}
+
+.duration-picker-trigger {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
 .duration-wheel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 10;
   max-height: 170px;
   overflow-y: auto;
   border: 1px solid var(--line);
