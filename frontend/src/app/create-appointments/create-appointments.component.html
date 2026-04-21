@@ -63,10 +63,10 @@
             </div>
           </section>
 
-          <div class="confirmation-panel" *ngIf="adminMessage">
-            <p>{{ adminMessage }}</p>
+          <div class="confirmation-panel" *ngIf="typeMessage">
+            <p>{{ typeMessage }}</p>
           </div>
-          <p class="error error-alert" *ngIf="adminError" role="alert" aria-live="polite">{{ adminError }}</p>
+          <p class="error error-alert" *ngIf="typeError" role="alert" aria-live="polite">{{ typeError }}</p>
 
           <form class="type-form" (ngSubmit)="createAppointmentType()">
             <label>
@@ -138,6 +138,10 @@
           <div>
             <h2>Block Off Appointment Times</h2>
             <p class="section-copy">Only configured operating hours are editable. Booked and lunch slots cannot be blocked.</p>
+            <div class="confirmation-panel block-confirmation" *ngIf="blockMessage">
+              <p>{{ blockMessage }}</p>
+            </div>
+            <p class="error error-alert block-error" *ngIf="blockError" role="alert" aria-live="polite">{{ blockError }}</p>
           </div>
           <div class="calendar-actions">
             <button class="button ghost" type="button" (click)="previousWeek()">Previous week</button>

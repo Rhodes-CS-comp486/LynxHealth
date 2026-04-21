@@ -8,6 +8,7 @@
 .booked-list { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
 .booked-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 0.85rem; }
 .booked-card p { margin: 0 0 0.35rem; }
+.warning { color: #b45309; font-weight: 700; }
 .booked-card .notes { margin-top: 0.55rem; color: #433631; }
 
 @media (max-width: 1024px) {

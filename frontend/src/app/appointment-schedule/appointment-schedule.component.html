@@ -38,6 +38,9 @@
             <p><strong>{{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}</strong> to {{ appointment.end_time | date: 'h:mm a' }}</p>
             <p>{{ appointment.duration_minutes }} mins · {{ formatAppointmentType(appointment.appointment_type) }}</p>
             <p>Student: {{ appointment.student_email }}</p>
+            <p class="warning" *ngIf="isAppointmentOutsideCurrentRules(appointment)">
+              ⚠ Conflict: this appointment is outside current operating hours/closures.
+            </p>
             <p class="notes"><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
           </article>
         </div>
