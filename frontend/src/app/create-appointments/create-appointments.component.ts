@@ -104,6 +104,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   isSaving = false;
   newAppointmentType = '';
   newAppointmentDurationMinutes = 15;
+  readonly durationWheelOptions = Array.from({ length: 24 }, (_, index) => (index + 1) * 5);
   isDeleteMode = false;
   appointmentTypePendingConfirmation: AppointmentTypeOption | null = null;
   deletedTypeWarning: DeletedAppointmentTypeResponse | null = null;
@@ -268,6 +269,10 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     } finally {
       this.isSaving = false;
     }
+  }
+
+  selectDuration(duration: number): void {
+    this.newAppointmentDurationMinutes = duration;
   }
 
   toggleDeleteMode(): void {
