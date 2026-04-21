@@ -100,8 +100,10 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   bookedSlotKeys = new Set<string>();
   appointmentTypeOptions: AppointmentTypeOption[] = [];
 
-  adminMessage = '';
-  adminError = '';
+  typeMessage = '';
+  typeError = '';
+  blockMessage = '';
+  blockError = '';
   isSaving = false;
   newAppointmentType = '';
   newAppointmentDurationMinutes = 15;
@@ -147,7 +149,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.startAutoRefresh();
 
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can block appointment times.';
+      this.blockError = 'Only admins can block appointment times.';
     }
   }
 
@@ -172,47 +174,47 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   async toggleBlocked(cell: TimeCell): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can block appointment times.';
+      this.blockError = 'Only admins can block appointment times.';
       return;
     }
 
     if (cell.isPast) {
-      this.adminMessage = '';
-      this.adminError = 'Past time slots cannot be updated.';
+      this.blockMessage = '';
+      this.blockError = 'Past time slots cannot be updated.';
       return;
     }
 
     if (cell.isBooked) {
-      this.adminMessage = '';
-      this.adminError = 'Booked appointment times cannot be blocked.';
+      this.blockMessage = '';
+      this.blockError = 'Booked appointment times cannot be blocked.';
       return;
     }
 
     if (cell.isLunchBreak) {
-      this.adminMessage = '';
-      this.adminError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
+      this.blockMessage = '';
+      this.blockError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
       return;
     }
 
     if (cell.isOutOfHours) {
-      this.adminMessage = '';
-      this.adminError = 'This time is outside configured clinic hours.';
+      this.blockMessage = '';
+      this.blockError = 'This time is outside configured clinic hours.';
       return;
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.blockError = '';
+    this.blockMessage = '';
 
     try {
       if (cell.blockedId) {
         await this.unblockTime(cell.blockedId);
         this.blockedMap.delete(cell.key);
-        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
+        this.blockMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
       } else {
         const blockedId = await this.blockTime(cell.date, cell.time);
         this.blockedMap.set(cell.key, blockedId);
-        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
+        this.blockMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
       }
 
       this.buildCalendar();
@@ -220,9 +222,9 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       await this.loadBookedAppointments();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = error.message;
+        this.blockError = error.message;
       } else {
-        this.adminError = 'Unable to update blocked time.';
+        this.blockError = 'Unable to update blocked time.';
       }
     } finally {
       this.isSaving = false;
@@ -231,13 +233,13 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   async createAppointmentType(): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can add appointment types.';
+      this.typeError = 'Only admins can add appointment types.';
       return;
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
     this.deletedTypeWarning = null;
 
     try {
@@ -262,13 +264,13 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.newAppointmentType = '';
       this.newAppointmentDurationMinutes = 15;
       this.appointmentTypeOptionsService.clearCache();
-      this.adminMessage = `${this.formatAppointmentType(created.appointment_type)} (${created.duration_minutes} mins) is now available for booking.`;
+      this.typeMessage = `${this.formatAppointmentType(created.appointment_type)} (${created.duration_minutes} mins) is now available for booking.`;
       await this.loadAppointmentTypes();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = this.formatAppointmentTypeAdminError(error.message);
+        this.typeError = this.formatAppointmentTypeAdminError(error.message);
       } else {
-        this.adminError = 'We could not add that appointment type right now. Please try again.';
+        this.typeError = 'We could not add that appointment type right now. Please try again.';
       }
     } finally {
       this.isSaving = false;
@@ -306,8 +308,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     if (!this.isDeleteMode) {
       this.appointmentTypePendingConfirmation = null;
     }
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
   }
 
   requestDeleteAppointmentType(option: AppointmentTypeOption): void {
@@ -316,8 +318,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.appointmentTypePendingConfirmation = option;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
   }
 
   cancelDeleteAppointmentType(): void {
@@ -327,7 +329,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   async confirmDeleteAppointmentType(): Promise<void> {
     const option = this.appointmentTypePendingConfirmation;
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can delete appointment types.';
+      this.typeError = 'Only admins can delete appointment types.';
       return;
     }
 
@@ -336,8 +338,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
     this.deletedTypeWarning = null;
 
     try {
@@ -363,14 +365,14 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.isDeleteMode = false;
       this.deletedTypeWarning = deleted;
       this.appointmentTypeOptionsService.clearCache();
-      this.adminMessage = `${this.formatAppointmentType(deleted.deleted_type.appointment_type)} has been removed from the booking options.`;
+      this.typeMessage = `${this.formatAppointmentType(deleted.deleted_type.appointment_type)} has been removed from the booking options.`;
       await this.loadAppointmentTypes();
       await this.loadBookedAppointments();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = error.message;
+        this.typeError = error.message;
       } else {
-        this.adminError = 'Unable to delete appointment type.';
+        this.typeError = 'Unable to delete appointment type.';
       }
     } finally {
       this.isSaving = false;
