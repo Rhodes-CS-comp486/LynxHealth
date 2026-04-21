@@ -43,6 +43,12 @@
   margin: 0 0 0.35rem;
   font-size: 1.15rem;
 }
+.section-break-schedule {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
 
 .type-panel { display: grid; gap: 1rem; margin-bottom: 1.25rem; padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-strong); }
 .type-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
@@ -222,6 +228,7 @@
 
 @media (max-width: 1024px) {
   .calendar-header { flex-direction: column; }
+  .section-break-schedule { flex-direction: column; }
   .type-panel-header { flex-direction: column; align-items: stretch; }
   .type-form { flex-direction: column; align-items: stretch; }
   .booked-list { grid-template-columns: 1fr; }
