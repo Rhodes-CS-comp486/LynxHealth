@@ -90,8 +90,11 @@ npm install
 ## Technologies we used
 
 Languages: Python, SQL, Typescript, HTML, CSS
+
 Technologies: GitHub, Trello and Google Drive (for planning)
-Personal tools: Visual Studio Code, PyCharm
+
+Personal tools (IDEs): Visual Studio Code, PyCharm
+
 AI Usage: Codex, Claude
 
 ## API Summary
