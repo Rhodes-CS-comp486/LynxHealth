@@ -1,3 +1,19 @@
+"""
+Availability, appointment, and clinic-hours endpoints for the LynxHealth API.
+
+This module owns the bulk of the scheduling domain:
+
+* Clinic hours and holiday overrides (admin configures, everyone reads)
+* Admin-managed appointment types and their durations
+* Admin "blocked times" that remove specific 15-minute slots from availability
+* Student-facing slot generation and appointment booking / rescheduling /
+  cancellation flows, including ICS calendar export
+
+Validation helpers at the top of the file enforce the business rules shared by
+every endpoint (clinic operating days, 15-minute boundaries, lunch closure,
+two-week booking horizon, etc.).
+"""
+
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -7,13 +23,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import (
-    SessionLocal,
     ensure_availability_schema,
     ensure_clinic_holidays_schema,
     ensure_clinic_hours_schema,
     ensure_appointment_schema,
     ensure_appointment_type_option_schema,
 )
+from backend.dependencies import get_db
 from backend.models.availability import Availability
 from backend.models.clinic_holiday import ClinicHoliday
 from backend.models.clinic_hours import ClinicHours
@@ -39,6 +55,7 @@ DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
 
 
 def format_invalid_appointment_type_characters(invalid_characters: list[str]) -> str:
+    """Build a user-facing error message listing disallowed characters in a type name."""
     if len(invalid_characters) == 1:
         return f"Please use only letters, numbers, spaces, or hyphens in the type name. Remove '{invalid_characters[0]}'."
 
@@ -48,6 +65,12 @@ def format_invalid_appointment_type_characters(invalid_characters: list[str]) ->
 
 
 def normalize_appointment_type_name(value: str) -> str:
+    """Validate and slugify an appointment type name (lowercase, underscores).
+
+    Raises ``ValueError`` if the name is empty, contains disallowed characters,
+    is longer than 50 characters, or collides with the reserved ``'blocked'``
+    sentinel used for admin-blocked availability slots.
+    """
     normalized = ' '.join(value.strip().lower().split())
 
     if not normalized:
@@ -74,6 +97,12 @@ def normalize_appointment_type_name(value: str) -> str:
 
 
 def normalize_stored_appointment_type_name(value: str | None) -> str | None:
+    """Best-effort normalization for appointment types already sitting in the database.
+
+    Unlike :func:`normalize_appointment_type_name` this never raises: legacy rows
+    that wouldn't pass the strict validator fall back to a lowercase compacted
+    form so lookups still work without rejecting existing data.
+    """
     if value is None:
         return None
 
@@ -98,6 +127,11 @@ def normalize_appointment_type_lookup_name(value: str) -> str:
 
 
 def get_appointment_type_lookup_keys(value: str | None) -> set[str]:
+    """Produce every plausible spelling of an appointment type for loose matching.
+
+    Used when looking up stored rows by a user-provided name — tolerates
+    mixed case, underscores vs. hyphens vs. spaces, and whitespace.
+    """
     if value is None:
         return set()
 
@@ -125,6 +159,11 @@ def get_appointment_type_lookup_keys(value: str | None) -> set[str]:
 
 
 def normalize_appointment_notes(value: str | None) -> str | None:
+    """Trim appointment notes and enforce the ``MAX_APPOINTMENT_NOTES_LENGTH`` cap.
+
+    Returns ``None`` when the trimmed value is empty. Raises ``ValueError``
+    if the text exceeds the maximum allowed length.
+    """
     if value is None:
         return None
 
@@ -507,6 +546,12 @@ def format_calendar_summary_from_type(appointment_type: str | None) -> str:
 
 
 def ensure_database_ready() -> None:
+    """Run all schema migrations, raising 503 if the database is unreachable.
+
+    Call this at the top of every endpoint that touches the database so the
+    client gets a clean error when Postgres is misconfigured instead of a
+    generic 500.
+    """
     try:
         ensure_availability_schema()
         ensure_appointment_schema()
@@ -521,6 +566,10 @@ def ensure_database_ready() -> None:
 
 
 def get_default_daily_hours() -> dict[int, DailyHoursSettingResponse]:
+    """Default weekday hours used before an admin saves custom clinic hours.
+
+    Monday–Friday are open 9:00 AM – 4:00 PM; Saturday and Sunday are closed.
+    """
     defaults: dict[int, DailyHoursSettingResponse] = {}
     for day_of_week in range(7):
         weekday_open = day_of_week < 5
@@ -580,6 +629,11 @@ def is_clinic_closed_on(
     holiday_lookup: dict[date, HolidaySettingResponse],
     annual_holidays: set[tuple[int, int]] | None = None,
 ) -> bool:
+    """Return ``True`` when ``day`` is a holiday or falls on a closed weekday.
+
+    ``annual_holidays`` contains ``(month, day)`` pairs that recur every year
+    regardless of the original holiday date.
+    """
     annual_holidays = annual_holidays or set()
     if day in holiday_lookup:
         return True
@@ -599,6 +653,7 @@ def get_clinic_day_bounds(
     holiday_lookup: dict[date, HolidaySettingResponse],
     annual_holidays: set[tuple[int, int]] | None = None,
 ) -> tuple[datetime, datetime] | None:
+    """Return ``(open_datetime, close_datetime)`` for ``day`` or ``None`` if closed."""
     if is_clinic_closed_on(day, daily_hours_map, holiday_lookup, annual_holidays):
         return None
     day_hours = daily_hours_map[day.weekday()]
@@ -620,19 +675,17 @@ def get_appointment_duration_map(db: Session) -> dict[str, int]:
     }
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def is_lunch_break_slot(slot_time: time) -> bool:
+    """Return ``True`` if ``slot_time`` falls inside the 12 PM – 1 PM lunch closure."""
     return LUNCH_BREAK_START_HOUR <= slot_time.hour < LUNCH_BREAK_END_HOUR
 
 
 def iterate_slot_starts(start_time: datetime, end_time: datetime) -> set[datetime]:
+    """Return every 15-minute slot start within ``[start_time, end_time)``.
+
+    Used to decompose a multi-slot appointment or blocked range into the
+    set of individual 15-minute boundaries it occupies.
+    """
     slots: set[datetime] = set()
     current = start_time.replace(second=0, microsecond=0)
 
@@ -670,6 +723,15 @@ def validate_appointment_window(
     holiday_lookup: dict[date, HolidaySettingResponse] | None = None,
     annual_holidays: set[tuple[int, int]] | None = None,
 ) -> datetime:
+    """Validate a proposed appointment window and return its end datetime.
+
+    Enforces every scheduling rule in one place: must be in the future, must
+    start on a 15-minute boundary, clinic must be open on that day, must fit
+    fully inside the day's operating hours, must not overlap the lunch
+    closure, and must fall within the :data:`BOOKING_RANGE_DAYS` horizon.
+
+    Raises ``HTTPException`` with status 400 for any violation.
+    """
     normalized_start = start_time.replace(second=0, microsecond=0)
     end_time = normalized_start + timedelta(minutes=duration_minutes)
     range_end = now + timedelta(days=BOOKING_RANGE_DAYS)
@@ -767,6 +829,11 @@ def validate_slot_datetime(
     holiday_lookup: dict[date, HolidaySettingResponse] | None = None,
     annual_holidays: set[tuple[int, int]] | None = None,
 ) -> tuple[datetime, datetime]:
+    """Validate an admin-blocked 15-minute slot and return ``(start, end)`` datetimes.
+
+    Uses the same open/closed/lunch rules as ``validate_appointment_window``
+    but scoped to a single 15-minute slot (``DEFAULT_SLOT_DURATION_MINUTES``).
+    """
     daily_hours_map = daily_hours_map or get_default_daily_hours()
     holiday_lookup = holiday_lookup or {}
     annual_holidays = annual_holidays or set()
@@ -811,6 +878,7 @@ def validate_slot_datetime(
 
 @router.get('/clinic-hours', response_model=ClinicHoursResponse)
 def get_clinic_hours(db: Session = Depends(get_db)):
+    """Return the currently-configured weekly hours and upcoming holiday closures."""
     ensure_database_ready()
 
     try:
@@ -830,6 +898,7 @@ def get_clinic_hours(db: Session = Depends(get_db)):
 
 @router.put('/clinic-hours', response_model=ClinicHoursResponse)
 def update_clinic_hours(data: UpdateClinicHoursRequest, db: Session = Depends(get_db)):
+    """Replace the entire weekly schedule and holiday list (admin only)."""
     ensure_database_ready()
 
     try:
@@ -895,6 +964,7 @@ def update_clinic_hours(data: UpdateClinicHoursRequest, db: Session = Depends(ge
 
 @router.post('/slots', response_model=BlockedTimeResponse, status_code=status.HTTP_201_CREATED)
 def create_blocked_time(data: CreateBlockedTimeRequest, db: Session = Depends(get_db)):
+    """Block a single 15-minute slot so it cannot be booked (admin only)."""
     ensure_database_ready()
 
     try:
@@ -954,6 +1024,7 @@ def remove_blocked_time(
     admin_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Unblock a previously-blocked slot by id (admin only)."""
     normalized_email = admin_email.strip().lower()
     if not normalized_email.endswith('@admin.edu'):
         raise HTTPException(
@@ -987,6 +1058,7 @@ def remove_blocked_time(
 
 @router.get('/blocked-times', response_model=list[BlockedTimeResponse])
 def list_blocked_times(db: Session = Depends(get_db)):
+    """Return every upcoming admin-blocked slot, ordered by start time."""
     ensure_database_ready()
 
     try:
@@ -1008,6 +1080,13 @@ def list_availability_slots(
     students_only: bool = Query(default=False),
     db: Session = Depends(get_db),
 ):
+    """Generate every open 15-minute slot across the next ``SLOT_RANGE_DAYS`` days.
+
+    Slots that are already booked, admin-blocked, inside the lunch closure, or
+    fall on non-operating days are filtered out. The ``students_only`` query
+    parameter is accepted for backwards compatibility and currently has no
+    effect on the generated list.
+    """
     del students_only
     ensure_database_ready()
 
@@ -1068,6 +1147,7 @@ def list_availability_slots(
 
 @router.get('/appointment-types', response_model=list[AppointmentTypeOptionResponse])
 def list_appointment_types(db: Session = Depends(get_db)):
+    """Return every appointment type option alongside its duration in minutes."""
     ensure_database_ready()
 
     try:
@@ -1091,6 +1171,7 @@ def list_appointment_types(db: Session = Depends(get_db)):
 
 @router.post('/appointment-types', response_model=AppointmentTypeOptionResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment_type(data: CreateAppointmentTypeRequest, db: Session = Depends(get_db)):
+    """Create a new appointment type (admin only). Returns 409 on duplicates."""
     ensure_database_ready()
 
     try:
@@ -1135,6 +1216,12 @@ def delete_appointment_type_by_identifier(
     appointment_type: str | None = None,
     appointment_type_id: int | None = None,
 ):
+    """Delete an appointment type by id or name and return a diff of impacted appointments.
+
+    Callable from multiple route shapes (query string, path, request body) so
+    the admin UI can route the same intent through whichever method fits the
+    client. Lookups tolerate mixed spelling via ``get_appointment_type_lookup_keys``.
+    """
     normalized_email = admin_email.strip().lower()
     if not normalized_email.endswith('@admin.edu'):
         raise HTTPException(
@@ -1246,6 +1333,12 @@ def list_calendar_slots(
     appointment_type: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Return every bookable start time for a given appointment type.
+
+    Walks each open day inside the requested window (up to 14 days) and emits
+    a start every 15 minutes as long as the full duration of the requested
+    type fits without overlapping a booked, blocked, or lunch slot.
+    """
     ensure_database_ready()
 
     try:
@@ -1328,6 +1421,7 @@ def list_my_appointments(
     student_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Return the caller's upcoming appointments (students only, case-insensitive match)."""
     normalized_email = student_email.strip().lower()
     if not normalized_email:
         raise HTTPException(
@@ -1366,6 +1460,7 @@ def list_appointments(
     admin_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Return every upcoming appointment across the clinic (admin only)."""
     normalized_email = admin_email.strip().lower()
     if not normalized_email.endswith('@admin.edu'):
         raise HTTPException(
@@ -1398,6 +1493,7 @@ def cancel_my_appointment(
     student_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Cancel the caller's own appointment. Only the student who booked it may cancel."""
     normalized_email = student_email.strip().lower()
     if not normalized_email:
         raise HTTPException(
@@ -1440,6 +1536,11 @@ def cancel_my_appointment(
 
 @router.post('/appointments', response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 def create_appointment(data: CreateAppointmentRequest, db: Session = Depends(get_db)):
+    """Book a new appointment for a student.
+
+    Validates the requested window, then rejects with 409 if the slot is
+    already admin-blocked or booked by another student.
+    """
     ensure_database_ready()
 
     try:
@@ -1522,6 +1623,7 @@ def reschedule_appointment(
     data: RescheduleAppointmentRequest,
     db: Session = Depends(get_db),
 ):
+    """Move an upcoming appointment to a new start time (owning student only)."""
     ensure_database_ready()
 
     try:
@@ -1604,6 +1706,7 @@ def update_appointment_notes(
     data: UpdateAppointmentNotesRequest,
     db: Session = Depends(get_db),
 ):
+    """Update free-text notes on the caller's own upcoming appointment."""
     ensure_database_ready()
 
     try:
@@ -1648,6 +1751,7 @@ def download_appointment_ics(
     student_email: str = Query(...),
     db: Session = Depends(get_db),
 ):
+    """Stream an ``.ics`` calendar file for the caller's appointment."""
     normalized_email = student_email.strip().lower()
     if not normalized_email:
         raise HTTPException(

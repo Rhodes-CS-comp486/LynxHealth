@@ -1,3 +1,10 @@
+/**
+ * Client-side route table for the LynxHealth SPA.
+ *
+ * The default path (`''`) redirects to the login screen, unknown paths fall
+ * through to login as well, and legacy URLs like `/creatappointments` are
+ * preserved via explicit redirects.
+ */
 import { Routes } from '@angular/router';
 import { HomeComponent } from './home/home.component';
 import { HoursComponent } from './hours/hours.component';

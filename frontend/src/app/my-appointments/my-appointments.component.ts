@@ -4,6 +4,14 @@ import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
 import { getClientSession } from '../session';
 
+/**
+ * "My Appointments" screen.
+ *
+ * Shows the logged-in student every upcoming appointment they have booked,
+ * with inline controls to cancel, reschedule (into fresh calendar slots
+ * fetched on demand), edit notes, and download an ``.ics`` calendar file.
+ */
+
 type RescheduleViewMode = 'quick' | 'card';
 
 interface BookedAppointment {
@@ -34,6 +42,7 @@ interface RescheduleDayGroup {
   dateKey: string;
   slots: CalendarSlot[];
 }
+
 
 @Component({
   selector: 'app-my-appointments',
