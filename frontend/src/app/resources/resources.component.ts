@@ -3,6 +3,14 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+/**
+ * Public "Resources" information page.
+ *
+ * Pulls its content from ``/api/pages/resources/sections`` (seeded by the
+ * backend on first load). Admins get inline controls to edit headings,
+ * reorder sections, and add/remove content blocks.
+ */
+
 interface PageSection {
   id?: number;
   page: string;

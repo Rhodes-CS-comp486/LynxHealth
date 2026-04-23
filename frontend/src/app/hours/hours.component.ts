@@ -4,6 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { getClientSession, SessionRole } from '../session';
 
+/**
+ * "Hours & Closures" screen.
+ *
+ * Shows clinic weekly hours and upcoming holidays to every user, and gives
+ * admins inline editing with a save workflow, auto-refresh polling, and a
+ * localStorage cache so the page renders immediately on return visits.
+ */
+
 interface DailyHours {
   day_of_week: number;
   day_name: string;
@@ -23,6 +31,7 @@ interface ClinicHoursResponse {
   daily_hours: DailyHours[];
   holidays: Holiday[];
 }
+
 
 @Component({
   selector: 'app-hours',

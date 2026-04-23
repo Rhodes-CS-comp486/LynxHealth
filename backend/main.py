@@ -1,3 +1,11 @@
+"""
+Application entry point for the LynxHealth FastAPI backend.
+
+This module constructs the FastAPI ``app`` instance, registers CORS middleware,
+wires up database initialization on startup, and mounts the routers that serve
+authentication, availability/appointment, and page-content endpoints.
+"""
+
 import logging
 
 from fastapi import FastAPI
@@ -32,6 +40,12 @@ logger = logging.getLogger(__name__)
 
 @app.on_event('startup')
 def initialize_database() -> None:
+    """Create any missing tables and run idempotent schema migrations.
+
+    Runs once when the FastAPI app starts. Any database failure is logged but
+    does not abort startup, so the service can still report its status via
+    the root endpoint even when the database is misconfigured.
+    """
     try:
         user.Base.metadata.create_all(bind=engine)
         appointment.Base.metadata.create_all(bind=engine)
@@ -51,6 +65,7 @@ def initialize_database() -> None:
 
 @app.get('/')
 def root():
+    """Lightweight health/ping endpoint used to confirm the API is reachable."""
     return {'status': 'Health Center API Running'}
 
 

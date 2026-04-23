@@ -3,6 +3,13 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { getClientSession, saveClientSession, SessionRole } from '../session';
 
+/**
+ * Landing screen after login.
+ *
+ * Also acts as the SAML assertion landing page: if the redirect carries a
+ * ``?session=...`` query parameter it is decoded, persisted via
+ * {@link saveClientSession}, and the URL is cleaned up with ``replaceState``.
+ */
 @Component({
   selector: 'app-home',
   standalone: true,

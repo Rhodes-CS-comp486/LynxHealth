@@ -1,9 +1,18 @@
+"""
+Page-content endpoints for admin-editable CMS sections.
+
+Each page (e.g. ``resources``) owns an ordered list of ``PageSection`` rows
+that the frontend renders as headers + body copy. Admins can create, reorder,
+and delete sections; when a page has no sections yet, a hard-coded default
+set is seeded so first-time visitors see meaningful content.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backend.database import SessionLocal
+from backend.dependencies import get_db
 from backend.models.page_section import PageSection
 
 router = APIRouter(tags=['pages'])
@@ -118,14 +127,6 @@ class PageSectionResponse(BaseModel):
     display_order: int
 
     model_config = ConfigDict(from_attributes=True)
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 RESOURCES_DEFAULT_SECTIONS: list[dict] = [
@@ -307,6 +308,13 @@ RESOURCES_DEFAULT_SECTIONS: list[dict] = [
 
 
 def seed_default_sections(page: str, db: Session) -> list[PageSection]:
+    """Populate a brand-new ``resources`` page with the hardcoded defaults.
+
+    Called lazily by ``get_page_sections`` when a page is queried but has no
+    rows in the database yet. Returns ``[]`` for any page other than
+    ``'resources'`` so other pages simply stay empty until an admin adds
+    their first section.
+    """
     if page != 'resources':
         return []
 
@@ -331,6 +339,7 @@ def seed_default_sections(page: str, db: Session) -> list[PageSection]:
 
 @router.get('/{page}/sections', response_model=list[PageSectionResponse])
 def get_page_sections(page: str, db: Session = Depends(get_db)):
+    """Return all sections for ``page`` in display order, seeding defaults if empty."""
     try:
         sections = db.query(PageSection).filter(
             PageSection.page == page,
@@ -349,6 +358,7 @@ def get_page_sections(page: str, db: Session = Depends(get_db)):
 
 @router.put('/{page}/sections', response_model=list[PageSectionResponse])
 def update_page_sections(page: str, data: BulkUpdateRequest, db: Session = Depends(get_db)):
+    """Replace every section on ``page`` with the provided list (admin only)."""
     try:
         db.query(PageSection).filter(PageSection.page == page).delete()
 
@@ -379,6 +389,7 @@ def update_page_sections(page: str, data: BulkUpdateRequest, db: Session = Depen
 
 @router.post('/{page}/sections', response_model=PageSectionResponse, status_code=status.HTTP_201_CREATED)
 def add_page_section(page: str, data: AddSectionRequest, db: Session = Depends(get_db)):
+    """Append a new section to ``page`` (admin only); auto-increments display order."""
     try:
         max_order = db.query(PageSection.display_order).filter(
             PageSection.page == page,
@@ -412,6 +423,7 @@ def delete_page_section(
     section_id: int,
     db: Session = Depends(get_db),
 ):
+    """Delete a single section. Returns 404 if the id does not belong to ``page``."""
     try:
         section = db.query(PageSection).filter(
             PageSection.id == section_id,

@@ -1,3 +1,12 @@
+/**
+ * Student-facing booking calendar.
+ *
+ * Fetches bookable start times for the selected appointment type from
+ * ``/api/availability/calendar`` and arranges them into the current week's
+ * day columns. Submitting a slot kicks off a POST to
+ * ``/api/availability/appointments``.
+ */
+
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -37,6 +46,7 @@ interface AppointmentBookingResponse {
   status: string;
   notes: string | null;
 }
+
 
 @Component({
   selector: 'app-availability-calendar',

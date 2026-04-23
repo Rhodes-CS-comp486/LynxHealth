@@ -1,3 +1,12 @@
+/**
+ * Admin "Create Appointments" screen.
+ *
+ * Renders the calendar grid of 15-minute slots, lets admins toggle slots
+ * between available and blocked, manage the appointment-type catalog, and
+ * view upcoming bookings. Polls the backend every few seconds so other
+ * admins' edits show up without a manual refresh.
+ */
+
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -68,6 +77,7 @@ interface TimeCell {
   isPast: boolean;
   isOutOfHours: boolean;
 }
+
 
 @Component({
   selector: 'app-create-appointments',

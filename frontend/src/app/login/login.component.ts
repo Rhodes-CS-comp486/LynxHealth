@@ -3,6 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { saveClientSession } from '../session';
 
+/**
+ * Entry screen of the SPA.
+ *
+ * Production login goes through SAML SSO via ``loginWithSaml``. The
+ * ``testAdminLogin`` / ``testUserLogin`` helpers short-circuit the SSO flow
+ * so developers can exercise each role locally without an IdP handy.
+ */
 @Component({
   selector: 'app-login',
   standalone: true,

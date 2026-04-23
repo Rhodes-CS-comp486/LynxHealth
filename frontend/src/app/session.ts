@@ -1,3 +1,11 @@
+/**
+ * Client-side session helpers for LynxHealth.
+ *
+ * The backend ships the logged-in user's identity to the browser via a
+ * query-string payload after SAML SSO. This module normalizes that payload
+ * into a stable {@link LynxSession} shape, persists it in localStorage, and
+ * exposes it to Angular components without introducing a full auth service.
+ */
 export type SessionRole = 'admin' | 'user';
 
 interface StoredSessionShape {
@@ -70,6 +78,10 @@ function getStoredSessionValue(): string | null {
   return localStorage.getItem(SESSION_STORAGE_KEY);
 }
 
+/**
+ * Return the currently persisted session, or a blank default session when
+ * nothing has been stored yet or the stored payload is unparseable.
+ */
 export function getClientSession(): LynxSession {
   const storedValue = getStoredSessionValue();
   if (!storedValue) {
@@ -83,6 +95,11 @@ export function getClientSession(): LynxSession {
   }
 }
 
+/**
+ * Parse a JSON session blob (usually from the SAML callback redirect),
+ * normalize it, persist it to localStorage, and return the normalized value.
+ * Returns ``null`` on the server side or when the payload cannot be parsed.
+ */
 export function saveClientSession(rawSession: string): LynxSession | null {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
     return null;
