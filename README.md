@@ -87,6 +87,13 @@ npm install
 - These actions write a local mock session directly (no backend SAML round-trip).
 - Use this mode when SAML is unavailable and you still need to test role-specific UI behavior.
 
+## Technologies we used
+
+Languages: Python, SQL, Typescript, HTML, CSS
+Technologies: GitHub, Trello and Google Drive (for planning)
+Personal tools: Visual Studio Code, PyCharm
+AI Usage: Codex, Claude
+
 ## API Summary
 
 Backend base URL in local dev: `http://localhost:8000`  
