@@ -26,8 +26,6 @@
         <p class="section-copy">Review upcoming bookings and update notes shared with the health center.</p>
 
         <p class="error" *ngIf="error">{{ error }}</p>
-        <p class="success" *ngIf="successMessage">{{ successMessage }}</p>
-        <p class="success" *ngIf="saveSuccess">{{ saveSuccess }}</p>
         <p class="error" *ngIf="saveError">{{ saveError }}</p>
         <p class="section-copy" *ngIf="isLoading">Loading your appointments...</p>
 
@@ -253,4 +251,27 @@
       </div>
     </section>
   </main>
+
+  <div
+    class="drawer-backdrop"
+    *ngIf="actionConfirmationMessage"
+    (click)="closeActionConfirmation()"
+    aria-hidden="true"></div>
+  <aside
+    class="action-confirmation-drawer"
+    [class.open]="actionConfirmationMessage !== ''"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="action-confirmation-title"
+    [attr.aria-hidden]="!actionConfirmationMessage">
+    <div class="action-confirmation-header">
+      <h3 id="action-confirmation-title">{{ actionConfirmationTitle || 'Update Confirmed' }}</h3>
+      <button class="button small ghost" type="button" (click)="closeActionConfirmation()">
+        Close
+      </button>
+    </div>
+    <div class="action-confirmation-details">
+      <p>{{ actionConfirmationMessage }}</p>
+    </div>
+  </aside>
 </div>

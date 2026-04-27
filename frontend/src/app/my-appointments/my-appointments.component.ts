@@ -64,10 +64,10 @@ export class MyAppointmentsComponent implements OnInit {
   rescheduleWeekIndex = 0;
   selectedRescheduleStartTime: string | null = null;
   rescheduleViewMode: RescheduleViewMode = 'quick';
-  successMessage = '';
+  actionConfirmationTitle = '';
+  actionConfirmationMessage = '';
   error = '';
   saveError = '';
-  saveSuccess = '';
   editingAppointmentId: number | null = null;
   savingAppointmentId: number | null = null;
   draftNotesById: Record<number, string> = {};
@@ -213,7 +213,7 @@ export class MyAppointmentsComponent implements OnInit {
     this.selectedRescheduleStartTime = null;
     this.rescheduleViewMode = 'quick';
     this.error = '';
-    this.successMessage = '';
+    this.closeActionConfirmation();
 
     try {
       const response = await fetch(
@@ -312,7 +312,7 @@ export class MyAppointmentsComponent implements OnInit {
 
     this.reschedulingAppointmentId = appointment.id;
     this.error = '';
-    this.successMessage = '';
+    this.closeActionConfirmation();
 
     try {
       const response = await fetch(`/api/availability/appointments/${appointment.id}/reschedule`, {
@@ -336,7 +336,10 @@ export class MyAppointmentsComponent implements OnInit {
         .map((item) => (item.id === updated.id ? updated : item))
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
       this.closeReschedulePanel();
-      this.successMessage = 'Appointment rescheduled.';
+      this.openActionConfirmation(
+        'Appointment Rescheduled',
+        'Your appointment was rescheduled successfully.'
+      );
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
@@ -357,7 +360,7 @@ export class MyAppointmentsComponent implements OnInit {
     this.pendingCancelAppointmentId = null;
     this.cancelingAppointmentId = appointmentId;
     this.error = '';
-    this.successMessage = '';
+    this.closeActionConfirmation();
 
     try {
       const response = await fetch(
@@ -373,7 +376,10 @@ export class MyAppointmentsComponent implements OnInit {
       }
 
       this.appointments = this.appointments.filter((appointment) => appointment.id !== appointmentId);
-      this.successMessage = 'Appointment has been cancelled.';
+      this.openActionConfirmation(
+        'Appointment Cancelled',
+        'Your appointment has been cancelled successfully.'
+      );
     } catch (error) {
       if (error instanceof Error) {
         this.error = error.message;
@@ -405,7 +411,7 @@ export class MyAppointmentsComponent implements OnInit {
 
     this.pendingCancelAppointmentId = appointmentId;
     this.error = '';
-    this.successMessage = '';
+    this.closeActionConfirmation();
   }
 
   dismissCancelConfirmation(): void {
@@ -426,7 +432,7 @@ export class MyAppointmentsComponent implements OnInit {
     this.closeReschedulePanel();
     this.calendarPanelAppointmentId = null;
     this.saveError = '';
-    this.saveSuccess = '';
+    this.closeActionConfirmation();
     this.draftNotesById[appointment.id] = appointment.notes || '';
   }
 
@@ -442,7 +448,7 @@ export class MyAppointmentsComponent implements OnInit {
   async saveNotes(appointment: BookedAppointment): Promise<void> {
     this.savingAppointmentId = appointment.id;
     this.saveError = '';
-    this.saveSuccess = '';
+    this.closeActionConfirmation();
 
     try {
       const response = await fetch(`/api/availability/appointments/${appointment.id}/notes`, {
@@ -466,7 +472,10 @@ export class MyAppointmentsComponent implements OnInit {
         item.id === updated.id ? updated : item
       ));
       this.editingAppointmentId = null;
-      this.saveSuccess = 'Appointment notes updated.';
+      this.openActionConfirmation(
+        'Notes Updated',
+        'Your appointment notes were updated successfully.'
+      );
     } catch (error) {
       if (error instanceof Error) {
         this.saveError = error.message;
@@ -532,6 +541,16 @@ export class MyAppointmentsComponent implements OnInit {
     const diff = day === 0 ? -6 : 1 - day;
     start.setDate(start.getDate() + diff);
     return this.toLocalDateKey(start);
+  }
+
+  closeActionConfirmation(): void {
+    this.actionConfirmationTitle = '';
+    this.actionConfirmationMessage = '';
+  }
+
+  private openActionConfirmation(title: string, message: string): void {
+    this.actionConfirmationTitle = title;
+    this.actionConfirmationMessage = message;
   }
 
 }
