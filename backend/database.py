@@ -35,6 +35,11 @@ _clinic_holidays_schema_checked = False
 
 
 def ensure_availability_schema() -> None:
+    """Backfill missing columns and supporting indexes on the ``availability`` table.
+
+    Runs at most once per process (guarded by a module-level flag and lock).
+    Skips quietly if the table does not yet exist so first-run setups are safe.
+    """
     global _availability_schema_checked
 
     if _availability_schema_checked:
@@ -76,6 +81,11 @@ def ensure_availability_schema() -> None:
 
 
 def ensure_appointment_schema() -> None:
+    """Backfill missing columns and supporting indexes on the ``appointments`` table.
+
+    Idempotent and process-local (guarded by a module-level flag and lock).
+    Skips quietly if the table does not yet exist.
+    """
     global _appointment_schema_checked
 
     if _appointment_schema_checked:
@@ -113,6 +123,11 @@ def ensure_appointment_schema() -> None:
 
 
 def ensure_appointment_type_option_schema() -> None:
+    """Backfill missing columns and unique index on ``appointment_type_options``.
+
+    Idempotent and process-local (guarded by a module-level flag and lock).
+    Skips quietly if the table does not yet exist.
+    """
     global _appointment_type_option_schema_checked
 
     if _appointment_type_option_schema_checked:
@@ -146,6 +161,11 @@ def ensure_appointment_type_option_schema() -> None:
 
 
 def ensure_clinic_hours_schema() -> None:
+    """Backfill missing columns and unique index on the ``clinic_hours`` table.
+
+    Idempotent and process-local (guarded by a module-level flag and lock).
+    Skips quietly if the table does not yet exist.
+    """
     global _clinic_hours_schema_checked
 
     if _clinic_hours_schema_checked:
@@ -181,6 +201,11 @@ def ensure_clinic_hours_schema() -> None:
 
 
 def ensure_clinic_holidays_schema() -> None:
+    """Backfill missing columns and unique index on the ``clinic_holidays`` table.
+
+    Idempotent and process-local (guarded by a module-level flag and lock).
+    Skips quietly if the table does not yet exist.
+    """
     global _clinic_holidays_schema_checked
 
     if _clinic_holidays_schema_checked:

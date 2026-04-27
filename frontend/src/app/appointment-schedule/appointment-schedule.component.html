@@ -1,0 +1,50 @@
+<div class="page">
+  <header class="site-header">
+    <div class="container nav">
+      <div class="brand" routerLink="/home">
+        <span class="brand-mark">LH</span>
+        <span class="brand-text">Lynx Health</span>
+      </div>
+      <nav class="nav-links">
+        <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
+        <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
+        <a *ngIf="role === 'admin'" routerLink="/appointment-schedule">Appointment Schedule</a>
+        <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
+        <a routerLink="/hours">Hours</a>
+        <a routerLink="/resources">Resources</a>
+      </nav>
+      <div class="nav-actions">
+        <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
+        <a class="button small" routerLink="/login">Log Out</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container schedule-panel">
+        <h1>Appointment Schedule</h1>
+        <p class="section-copy">Upcoming student appointments are listed here.</p>
+
+        <p class="error" *ngIf="error">{{ error }}</p>
+        <p class="loading" *ngIf="isLoading">Loading appointments...</p>
+
+        <p class="empty-state" *ngIf="!isLoading && !error && appointments.length === 0">
+          No upcoming student appointments.
+        </p>
+
+        <div class="booked-list" *ngIf="appointments.length > 0">
+          <article class="booked-card" *ngFor="let appointment of appointments">
+            <p><strong>{{ appointment.start_time | date: 'EEE, MMM d, y, h:mm a' }}</strong> to {{ appointment.end_time | date: 'h:mm a' }}</p>
+            <p>{{ appointment.duration_minutes }} mins · {{ formatAppointmentType(appointment.appointment_type) }}</p>
+            <p>Student: {{ appointment.student_email }}</p>
+            <p class="warning" *ngIf="isAppointmentOutsideCurrentRules(appointment)">
+              ⚠ Conflict: this appointment is outside current operating hours/closures.
+            </p>
+            <p class="notes"><strong>Notes:</strong> {{ appointment.notes || 'No notes provided.' }}</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

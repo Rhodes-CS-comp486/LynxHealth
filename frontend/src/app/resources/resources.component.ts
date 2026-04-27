@@ -3,6 +3,14 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+/**
+ * Public "Resources" information page.
+ *
+ * Pulls its content from ``/api/pages/resources/sections`` (seeded by the
+ * backend on first load). Admins get inline controls to edit headings,
+ * reorder sections, and add/remove content blocks.
+ */
+
 interface PageSection {
   id?: number;
   page: string;
@@ -30,8 +38,10 @@ export class ResourcesComponent implements OnInit {
   sections: PageSection[] = [];
   addedSections: PageSection[] = [];
   sectionMap: { [key: string]: PageSection } = {};
+  private originalSections: PageSection[] = [];
+  private originalAddedSections: PageSection[] = [];
 
-  private readonly apiUrl = 'http://localhost:8000/pages';
+  private readonly apiUrl = '/api/pages';
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
 
@@ -70,6 +80,7 @@ export class ResourcesComponent implements OnInit {
         }
       }
 
+      this.clearEditSnapshot();
       this.refreshView();
     } catch (error) {
       console.error('Failed to load sections:', error);
@@ -80,6 +91,7 @@ export class ResourcesComponent implements OnInit {
     if (this.isEditing) {
       this.saveAllSections();
     } else {
+      this.captureEditSnapshot();
       this.isEditing = true;
       this.refreshView();
 
@@ -88,6 +100,24 @@ export class ResourcesComponent implements OnInit {
         this.populateEditors();
       }, 50);
     }
+  }
+
+  cancelEditMode(): void {
+    if (!this.isEditing || this.isSaving) {
+      return;
+    }
+
+    const confirmed = confirm('Cancel editing? Any changes you made will not be saved.');
+    if (!confirmed) {
+      return;
+    }
+
+    this.sections = this.cloneSections(this.originalSections);
+    this.addedSections = this.cloneSections(this.originalAddedSections);
+    this.rebuildSectionMap();
+    this.isEditing = false;
+    this.clearEditSnapshot();
+    this.refreshView();
   }
 
   private populateEditors(): void {
@@ -170,6 +200,7 @@ export class ResourcesComponent implements OnInit {
 
       this.isEditing = false;
       this.isSaving = false;
+      this.clearEditSnapshot();
       await this.loadSections();
     } catch (error) {
       console.error('Failed to save sections:', error);
@@ -199,7 +230,7 @@ export class ResourcesComponent implements OnInit {
     }, 100);
   }
 
-  async removeSection(key: string): Promise<void> {
+  removeSection(key: string): void {
     const section = this.sectionMap[key];
     if (!section) return;
 
@@ -207,28 +238,12 @@ export class ResourcesComponent implements OnInit {
       return;
     }
 
-    if (section.id) {
-      try {
-        const response = await fetch(`${this.apiUrl}/resources/sections/${section.id}`, {
-          method: 'DELETE'
-        });
-
-        if (!response.ok) {
-          console.error('Failed to delete section:', response.status);
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to delete section:', error);
-        return;
-      }
-    }
-
     this.sections = this.sections.filter(s => s.section_key !== key);
     delete this.sectionMap[key];
     this.refreshView();
   }
 
-  async removeAddedSection(index: number): Promise<void> {
+  removeAddedSection(index: number): void {
     const section = this.addedSections[index];
     const name = section.header || 'this section';
 
@@ -236,25 +251,8 @@ export class ResourcesComponent implements OnInit {
       return;
     }
 
-    if (section.id) {
-      try {
-        const response = await fetch(`${this.apiUrl}/resources/sections/${section.id}`, {
-          method: 'DELETE'
-        });
-
-        if (!response.ok) {
-          console.error('Failed to delete section:', response.status);
-          return;
-        }
-
-        this.addedSections.splice(index, 1);
-        this.refreshView();
-      } catch (error) {
-        console.error('Failed to delete section:', error);
-      }
-    } else {
-      this.addedSections.splice(index, 1);
-    }
+    this.addedSections.splice(index, 1);
+    this.refreshView();
   }
 
   private refreshView(): void {
@@ -404,6 +402,27 @@ export class ResourcesComponent implements OnInit {
 
   trackBySectionKey(_index: number, section: PageSection): string {
     return section.section_key;
+  }
+
+  private captureEditSnapshot(): void {
+    this.originalSections = this.cloneSections(this.sections);
+    this.originalAddedSections = this.cloneSections(this.addedSections);
+  }
+
+  private rebuildSectionMap(): void {
+    this.sectionMap = {};
+    for (const section of this.sections) {
+      this.sectionMap[section.section_key] = section;
+    }
+  }
+
+  private clearEditSnapshot(): void {
+    this.originalSections = [];
+    this.originalAddedSections = [];
+  }
+
+  private cloneSections(sections: PageSection[]): PageSection[] {
+    return sections.map((section) => ({ ...section }));
   }
 
   private getRole(): 'admin' | 'user' {

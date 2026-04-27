@@ -1,3 +1,16 @@
+"""
+SAML-based authentication routes for the LynxHealth backend.
+
+
+To get started with Single Sign On (SSO), contact Douglas Walker or Mark Miller for
+any questions about set up, implementation, or permissions.
+
+Exposes both ``/saml/*`` and ``/sso/*`` aliases so the service can be wired up
+to identity providers that use either naming convention. After a successful
+SAML assertion the user's email, name, and inferred role are encoded into the
+redirect URL so the Angular frontend can initialize its session.
+"""
+
 import json
 import logging
 import os
@@ -11,18 +24,26 @@ logger = logging.getLogger(__name__)
 
 
 def get_user_role_from_email(email: str | None) -> str:
+    """Return ``'admin'`` for ``@admin.edu`` addresses and ``'user'`` otherwise."""
     if email and email.endswith('@admin.edu'):
         return 'admin'
     return 'user'
 
 
 def get_saml_settings():
+    """Load the SAML service-provider settings from ``backend/saml/settings.json``."""
     settings_path = os.path.join(os.path.dirname(__file__), '..', 'saml', 'settings.json')
     with open(settings_path) as f:
         return json.load(f)
 
 
 async def prepare_saml_request(request: Request):
+    """Assemble the request dict expected by ``OneLogin_Saml2_Auth``.
+
+    Normalizes host, scheme, and port using ``X-Forwarded-*`` headers so the
+    SAML assertion consumer URL matches what the identity provider sees when
+    the app is deployed behind a reverse proxy.
+    """
     form_data = await request.form()
     host = request.headers.get('x-forwarded-host') or request.headers.get('host', 'localhost:8000')
     forwarded_proto = request.headers.get('x-forwarded-proto')
@@ -46,6 +67,7 @@ async def prepare_saml_request(request: Request):
 
 @router.get('/saml/login')
 async def saml_login(request: Request):
+    """Kick off the SAML SSO flow by redirecting to the identity provider's login URL."""
     req = await prepare_saml_request(request)
     auth = OneLogin_Saml2_Auth(req, get_saml_settings())
     login_url = auth.login()
@@ -54,11 +76,18 @@ async def saml_login(request: Request):
 
 @router.get('/sso/login')
 async def sso_login(request: Request):
+    """Alias for ``/saml/login`` to support identity providers that post to ``/sso/*``."""
     return await saml_login(request)
 
 
 @router.post('/saml/callback')
 async def saml_callback(request: Request):
+    """Assertion Consumer Service endpoint.
+
+    Validates the SAML response, extracts the user's email/name attributes,
+    derives the role, and redirects the browser to ``/home`` with the
+    session payload embedded in the query string.
+    """
     req = await prepare_saml_request(request)
     auth = OneLogin_Saml2_Auth(req, get_saml_settings())
     try:
@@ -89,4 +118,5 @@ async def saml_callback(request: Request):
 
 @router.post('/sso/acs')
 async def sso_acs(request: Request):
+    """Alias for ``/saml/callback`` used by providers that post to ``/sso/acs``."""
     return await saml_callback(request)

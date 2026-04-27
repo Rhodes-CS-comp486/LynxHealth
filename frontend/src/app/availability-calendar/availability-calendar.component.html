@@ -8,9 +8,10 @@
       <nav class="nav-links">
         <a *ngIf="role === 'user'" routerLink="/availability-calendar">New Appointment</a>
         <a *ngIf="role === 'user'" routerLink="/my-appointments">My Appointments</a>
-        <a routerLink="/resources">Resources</a>
-        <a routerLink="/hours">Hours</a>
+        <a *ngIf="role === 'admin'" routerLink="/appointment-schedule">Appointment Schedule</a>
         <a *ngIf="role === 'admin'" routerLink="/create-appointments">Manage Availability</a>
+        <a routerLink="/hours">Hours</a>
+        <a routerLink="/resources">Resources</a>
       </nav>
       <div class="nav-actions">
         <span class="role-pill">{{ role === "admin" ? "Admin" : "User" }}</span>
@@ -88,7 +89,11 @@
         </div>
 
         <div class="week-grid" *ngIf="selectedAppointmentType && (filteredSlots.length > 0 || confirmedBooking)">
-          <article class="week-day" *ngFor="let day of visibleWeekDays">
+          <article
+            class="week-day"
+            *ngFor="let day of visibleWeekDays"
+            [class.no-slots-day]="slotsForDay(day.key).length === 0"
+            [class.has-slots-day]="slotsForDay(day.key).length > 0">
             <h3>{{ day.label }}</h3>
             <div class="day-slot-list" *ngIf="slotsForDay(day.key).length > 0; else noDaySlots">
               <article class="slot-card" *ngFor="let slot of slotsForDay(day.key)">
@@ -124,7 +129,7 @@
     [attr.aria-hidden]="!(role === 'user' && (selectedBookingSlot || confirmedBooking))">
     <div class="booking-drawer-header">
       <h3 id="booking-drawer-title">{{ confirmedBooking ? 'Booking Confirmed' : 'Confirm Appointment' }}</h3>
-      <button class="button small ghost" type="button" (click)="closeBookingDrawer()" [disabled]="isBooking">
+      <button class="button small ghost" type="button" (click)="closeBookingDrawer()">
         Close
       </button>
     </div>

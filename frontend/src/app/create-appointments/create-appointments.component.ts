@@ -1,5 +1,14 @@
+/**
+ * Admin "Create Appointments" screen.
+ *
+ * Renders the calendar grid of 15-minute slots, lets admins toggle slots
+ * between available and blocked, manage the appointment-type catalog, and
+ * view upcoming bookings. Polls the backend every few seconds so other
+ * admins' edits show up without a manual refresh.
+ */
+
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AppointmentTypeOptionsService } from '../appointment-type-options.service';
@@ -69,6 +78,7 @@ interface TimeCell {
   isOutOfHours: boolean;
 }
 
+
 @Component({
   selector: 'app-create-appointments',
   standalone: true,
@@ -77,6 +87,7 @@ interface TimeCell {
   styleUrl: './create-appointments.component.css'
 })
 export class CreateAppointmentsComponent implements OnInit, OnDestroy {
+  // Poll periodically so the admin view stays in sync with booking changes made elsewhere.
   private readonly autoRefreshIntervalMs = 5000;
   private autoRefreshTimer: number | null = null;
   private isDestroyed = false;
@@ -99,11 +110,15 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   bookedSlotKeys = new Set<string>();
   appointmentTypeOptions: AppointmentTypeOption[] = [];
 
-  adminMessage = '';
-  adminError = '';
+  typeMessage = '';
+  typeError = '';
+  blockMessage = '';
+  blockError = '';
   isSaving = false;
   newAppointmentType = '';
   newAppointmentDurationMinutes = 15;
+  readonly durationWheelOptions = Array.from({ length: 24 }, (_, index) => (index + 1) * 5);
+  isDurationWheelOpen = false;
   isDeleteMode = false;
   appointmentTypePendingConfirmation: AppointmentTypeOption | null = null;
   deletedTypeWarning: DeletedAppointmentTypeResponse | null = null;
@@ -111,6 +126,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   constructor(
     private readonly cdr: ChangeDetectorRef,
     private readonly appointmentTypeOptionsService: AppointmentTypeOptionsService,
+    private readonly elementRef: ElementRef<HTMLElement>,
   ) {}
 
   get bookedAppointmentsForVisibleWeek(): BookedAppointment[] {
@@ -118,6 +134,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
+    // Filter once here so the template can reuse the same week-scoped list in multiple places.
     return this.bookedAppointments.filter((appointment) => {
       const appointmentStart = new Date(appointment.start_time);
       return (
@@ -142,7 +159,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     this.startAutoRefresh();
 
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can block appointment times.';
+      this.blockError = 'Only admins can block appointment times.';
     }
   }
 
@@ -167,47 +184,47 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   async toggleBlocked(cell: TimeCell): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can block appointment times.';
+      this.blockError = 'Only admins can block appointment times.';
       return;
     }
 
     if (cell.isPast) {
-      this.adminMessage = '';
-      this.adminError = 'Past time slots cannot be updated.';
+      this.blockMessage = '';
+      this.blockError = 'Past time slots cannot be updated.';
       return;
     }
 
     if (cell.isBooked) {
-      this.adminMessage = '';
-      this.adminError = 'Booked appointment times cannot be blocked.';
+      this.blockMessage = '';
+      this.blockError = 'Booked appointment times cannot be blocked.';
       return;
     }
 
     if (cell.isLunchBreak) {
-      this.adminMessage = '';
-      this.adminError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
+      this.blockMessage = '';
+      this.blockError = '12:00 PM to 1:00 PM is reserved for lunch and is always blocked.';
       return;
     }
 
     if (cell.isOutOfHours) {
-      this.adminMessage = '';
-      this.adminError = 'This time is outside configured clinic hours.';
+      this.blockMessage = '';
+      this.blockError = 'This time is outside configured clinic hours.';
       return;
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.blockError = '';
+    this.blockMessage = '';
 
     try {
       if (cell.blockedId) {
         await this.unblockTime(cell.blockedId);
         this.blockedMap.delete(cell.key);
-        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
+        this.blockMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} is now available.`;
       } else {
         const blockedId = await this.blockTime(cell.date, cell.time);
         this.blockedMap.set(cell.key, blockedId);
-        this.adminMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
+        this.blockMessage = `${cell.timeLabel} on ${new Date(cell.date).toLocaleDateString()} has been blocked.`;
       }
 
       this.buildCalendar();
@@ -215,9 +232,9 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       await this.loadBookedAppointments();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = error.message;
+        this.blockError = error.message;
       } else {
-        this.adminError = 'Unable to update blocked time.';
+        this.blockError = 'Unable to update blocked time.';
       }
     } finally {
       this.isSaving = false;
@@ -226,13 +243,13 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
   async createAppointmentType(): Promise<void> {
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can add appointment types.';
+      this.typeError = 'Only admins can add appointment types.';
       return;
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
     this.deletedTypeWarning = null;
 
     try {
@@ -257,16 +274,42 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.newAppointmentType = '';
       this.newAppointmentDurationMinutes = 15;
       this.appointmentTypeOptionsService.clearCache();
-      this.adminMessage = `${this.formatAppointmentType(created.appointment_type)} (${created.duration_minutes} mins) is now available for booking.`;
+      this.typeMessage = `${this.formatAppointmentType(created.appointment_type)} (${created.duration_minutes} mins) is now available for booking.`;
       await this.loadAppointmentTypes();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = this.formatAppointmentTypeAdminError(error.message);
+        this.typeError = this.formatAppointmentTypeAdminError(error.message);
       } else {
-        this.adminError = 'We could not add that appointment type right now. Please try again.';
+        this.typeError = 'We could not add that appointment type right now. Please try again.';
       }
     } finally {
       this.isSaving = false;
+    }
+  }
+
+  selectDuration(duration: number): void {
+    this.newAppointmentDurationMinutes = duration;
+    this.isDurationWheelOpen = false;
+  }
+
+  toggleDurationWheel(): void {
+    this.isDurationWheelOpen = !this.isDurationWheelOpen;
+  }
+
+  @HostListener('document:click', ['$event'])
+  handleDocumentClick(event: MouseEvent): void {
+    if (!this.isDurationWheelOpen) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    // Close the custom picker when the user clicks anywhere outside this component.
+    if (!this.elementRef.nativeElement.contains(target)) {
+      this.isDurationWheelOpen = false;
     }
   }
 
@@ -275,8 +318,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     if (!this.isDeleteMode) {
       this.appointmentTypePendingConfirmation = null;
     }
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
   }
 
   requestDeleteAppointmentType(option: AppointmentTypeOption): void {
@@ -285,8 +328,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.appointmentTypePendingConfirmation = option;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
   }
 
   cancelDeleteAppointmentType(): void {
@@ -296,7 +339,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
   async confirmDeleteAppointmentType(): Promise<void> {
     const option = this.appointmentTypePendingConfirmation;
     if (this.role !== 'admin') {
-      this.adminError = 'Only admins can delete appointment types.';
+      this.typeError = 'Only admins can delete appointment types.';
       return;
     }
 
@@ -305,8 +348,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
-    this.adminError = '';
-    this.adminMessage = '';
+    this.typeError = '';
+    this.typeMessage = '';
     this.deletedTypeWarning = null;
 
     try {
@@ -332,14 +375,14 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.isDeleteMode = false;
       this.deletedTypeWarning = deleted;
       this.appointmentTypeOptionsService.clearCache();
-      this.adminMessage = `${this.formatAppointmentType(deleted.deleted_type.appointment_type)} has been removed from the booking options.`;
+      this.typeMessage = `${this.formatAppointmentType(deleted.deleted_type.appointment_type)} has been removed from the booking options.`;
       await this.loadAppointmentTypes();
       await this.loadBookedAppointments();
     } catch (error) {
       if (error instanceof Error) {
-        this.adminError = error.message;
+        this.typeError = error.message;
       } else {
-        this.adminError = 'Unable to delete appointment type.';
+        this.typeError = 'Unable to delete appointment type.';
       }
     } finally {
       this.isSaving = false;
@@ -437,6 +480,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
 
       this.blockedTimes = await response.json() as BlockedTime[];
       this.blockedMap = new Map<string, number>();
+      // Index blocked slots by calendar cell key so rendering can do constant-time lookups.
       for (const blocked of this.blockedTimes) {
         this.blockedMap.set(this.getSlotKey(new Date(blocked.start_time)), blocked.id);
       }
@@ -530,6 +574,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       this.bookedAppointments = await response.json() as BookedAppointment[];
       this.bookedSlotKeys = new Set<string>();
 
+      // Expand each appointment into its covered 15-minute cells so overlap checks stay simple.
       for (const appointment of this.bookedAppointments) {
         const start = new Date(appointment.start_time);
         const end = new Date(appointment.end_time);
@@ -559,6 +604,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.stopAutoRefresh();
+    // Refresh all schedule inputs together so the grid reflects hours, bookings, and blocks consistently.
     this.autoRefreshTimer = window.setInterval(() => {
       void this.loadBookedAppointments();
       void this.loadClinicHours();
@@ -591,6 +637,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       dayDate.setDate(this.weekStart.getDate() + i);
       dayDate.setHours(0, 0, 0, 0);
 
+      // Skip past weekdays so admins only manage current and future availability.
       if (dayDate < today) {
         continue;
       }
@@ -603,6 +650,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     }
 
     this.timeSlots = this.buildTimeSlotsForWeek();
+    // Each row represents one 15-minute time across all visible weekdays.
     this.calendarRows = this.timeSlots.map((slot) =>
       this.calendarDays.map((day) => {
         const key = `${day.key}T${slot}`;
@@ -617,6 +665,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
         const slotMinutes = this.toMinutes(slot);
         const dayOpenMinutes = this.toMinutes(dayHours?.open_time);
         const dayCloseMinutes = this.toMinutes(dayHours?.close_time);
+        // A cell is interactive only when it falls on an open, non-holiday day within configured hours.
         const isWithinDayHours = (
           isOpenDay
           && slotMinutes !== null
@@ -669,6 +718,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       return [];
     }
 
+    // Build one shared vertical time axis from the earliest opening through the latest closing time.
     const earliestOpen = openTimes.sort()[0];
     const latestClose = closeTimes.sort()[closeTimes.length - 1];
     const slots: string[] = [];
@@ -750,6 +800,7 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
     const cursor = new Date(start);
     cursor.setSeconds(0, 0);
 
+    // Match the UI's 15-minute grid so appointments can mark every occupied cell.
     while (cursor < end) {
       keys.push(this.getSlotKey(cursor));
       cursor.setMinutes(cursor.getMinutes() + 15);
@@ -797,6 +848,8 @@ export class CreateAppointmentsComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    // Existing appointments are flagged when updated hours would place them before open, after close,
+    // or across the fixed lunch break. The appointment is not changed automatically; this is a warning.
     if (startMinutes < dayOpen || endMinutes > dayClose) {
       return true;
     }
