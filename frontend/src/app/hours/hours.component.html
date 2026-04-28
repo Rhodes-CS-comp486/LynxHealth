@@ -34,25 +34,39 @@
           </div>
 
           <p *ngIf="error" class="error">{{ error }}</p>
-          <p *ngIf="message" class="success">{{ message }}</p>
         </div>
 
         <div class="cards-grid">
-          <section class="hours-card">
-            <h2>Operating Hours & Closures</h2>
+          <section class="hours-card" [class.admin-surface]="role === 'admin'">
+            <div class="card-heading">
+              <h2>Operating Hours & Closures</h2>
+              <p class="card-copy" *ngIf="role === 'admin'">Set which weekdays are open and define the clinic's standard visit window for each day.</p>
+            </div>
             <div *ngFor="let day of weekdayHours" class="hours-row" [class.muted]="!day.is_open">
-              <div>
+              <div class="day-name-stack">
                 <strong>{{ day.day_name }}</strong>
               </div>
 
               <ng-container *ngIf="role === 'admin'; else dayText">
                 <div class="admin-row-controls">
-                  <label>
+                  <label class="toggle-chip">
                     <input type="checkbox" [(ngModel)]="day.is_open" (ngModelChange)="markDirty()" /> Open
                   </label>
-                  <input type="time" [(ngModel)]="day.open_time" (ngModelChange)="markDirty()" [disabled]="!day.is_open" />
-                  <span>to</span>
-                  <input type="time" [(ngModel)]="day.close_time" (ngModelChange)="markDirty()" [disabled]="!day.is_open" />
+                  <input
+                    class="time-input"
+                    type="time"
+                    [(ngModel)]="day.open_time"
+                    (ngModelChange)="markDirty()"
+                    [disabled]="!day.is_open"
+                    [attr.aria-label]="day.day_name + ' opening time'" />
+                  <span class="time-divider">to</span>
+                  <input
+                    class="time-input"
+                    type="time"
+                    [(ngModel)]="day.close_time"
+                    (ngModelChange)="markDirty()"
+                    [disabled]="!day.is_open"
+                    [attr.aria-label]="day.day_name + ' closing time'" />
                 </div>
               </ng-container>
 
@@ -62,24 +76,39 @@
             </div>
           </section>
 
-          <section class="holiday-panel">
-            <h2>All-Day Closures</h2>
+          <section class="holiday-panel" [class.admin-surface]="role === 'admin'">
+            <div class="card-heading">
+              <h2>All-Day Closures</h2>
+              <p class="card-copy" *ngIf="role === 'admin'">Add full-day closures for breaks, holidays, and special shutdown dates so students never see those days as bookable.</p>
+            </div>
 
             <div class="holiday-form" *ngIf="role === 'admin'">
-              <input type="date" [(ngModel)]="newHolidayDate" />
-              <input type="text" [(ngModel)]="newHolidayName" placeholder="Holiday name" maxlength="80" />
+              <label class="holiday-field">
+                <span>Date</span>
+                <input type="date" [(ngModel)]="newHolidayDate" />
+              </label>
+              <label class="holiday-field holiday-name-field">
+                <span>Closure Name</span>
+                <input type="text" [(ngModel)]="newHolidayName" placeholder="Name" maxlength="80" />
+              </label>
               <label class="annual-toggle">
                 <input type="checkbox" [(ngModel)]="newHolidayIsAnnual" (ngModelChange)="markDirty()" [ngModelOptions]="{standalone: true}" />
                 Annual
               </label>
-              <button class="button small" type="button" (click)="addHoliday()">Add All-Day Closure</button>
+              <button class="button small" type="button" (click)="addHoliday()">Add New Closure</button>
             </div>
 
             <div *ngIf="holidays.length === 0" class="muted-text">No all-day closures configured.</div>
 
             <div *ngFor="let holiday of holidays; let i = index" class="holiday-row">
-              <span>{{ holiday.holiday_date }} — {{ holiday.name }} <em *ngIf="holiday.is_annual">(Annual)</em></span>
-              <button *ngIf="role === 'admin'" class="button ghost small" type="button" (click)="removeHoliday(i)">Remove</button>
+              <div class="holiday-copy">
+                <strong>{{ holiday.name }}</strong>
+                <span class="holiday-date">{{ holiday.holiday_date }}</span>
+              </div>
+              <div class="holiday-actions">
+                <span class="holiday-badge" *ngIf="holiday.is_annual">Annual</span>
+                <button *ngIf="role === 'admin'" class="button ghost small" type="button" (click)="removeHoliday(i)">Remove</button>
+              </div>
             </div>
           </section>
         </div>
@@ -92,4 +121,30 @@
       </div>
     </section>
   </main>
+
+  <div
+    class="feedback-backdrop"
+    *ngIf="holidayFeedbackMessage"
+    (click)="closeHolidayFeedback()"
+    aria-hidden="true"></div>
+  <aside
+    class="feedback-drawer"
+    [class.open]="holidayFeedbackMessage !== ''"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="holiday-feedback-title"
+    [attr.aria-hidden]="!holidayFeedbackMessage">
+    <div class="feedback-drawer-header">
+      <h3 id="holiday-feedback-title">{{ holidayFeedbackTitle }}</h3>
+      <button class="button small ghost" type="button" (click)="closeHolidayFeedback()">
+        Close
+      </button>
+    </div>
+    <div
+      class="feedback-details"
+      [class.error]="holidayFeedbackTone === 'error'"
+      [class.success]="holidayFeedbackTone === 'success'">
+      <p>{{ holidayFeedbackMessage }}</p>
+    </div>
+  </aside>
 </div>

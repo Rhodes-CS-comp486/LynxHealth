@@ -45,6 +45,33 @@
   font-size: 0.8rem;
 }
 
+.action-confirmation-drawer .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.4rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--red-500);
+  color: white;
+  font-weight: 600;
+  font-family: 'Space Grotesk', 'Source Sans 3', sans-serif;
+  box-shadow: 0 16px 30px rgba(226, 72, 59, 0.3);
+}
+
+.action-confirmation-drawer .button.ghost {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.action-confirmation-drawer .button.small {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
 .section {
   position: relative;
   z-index: 1;
@@ -84,6 +111,13 @@ h1 {
   border-radius: 12px;
   color: #065f46;
   background: #d1fae5;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 12, 10, 0.4);
+  z-index: 20;
 }
 
 .empty-state {
@@ -323,6 +357,52 @@ h1 {
   cursor: not-allowed;
 }
 
+.action-confirmation-drawer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(420px, 92vw);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1.2rem;
+  z-index: 21;
+  transform: translate(-50%, -50%) translateX(-140%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.action-confirmation-drawer.open {
+  transform: translate(-50%, -50%) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.action-confirmation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.action-confirmation-header h3 {
+  margin: 0;
+}
+
+.action-confirmation-details {
+  border: 1px solid #bfe6cb;
+  background: #f1fbf5;
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.action-confirmation-details p {
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .slot-grid {
     display: grid;
@@ -347,5 +427,14 @@ h1 {
 
   .reschedule-card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .action-confirmation-drawer {
+    width: min(92vw, 420px);
+    transform: translate(-50%, -50%) translateX(-140%);
+  }
+
+  .action-confirmation-drawer.open {
+    transform: translate(-50%, -50%) translateX(0);
   }
 }

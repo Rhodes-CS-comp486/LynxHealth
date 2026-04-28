@@ -31,6 +31,67 @@
   padding: 2.5rem 0 4rem;
 }
 
+.section .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--red-500);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.62rem 0.98rem;
+  font-size: 0.86rem;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(226, 72, 59, 0.2);
+}
+
+.section .button.small {
+  padding: 0.34rem 0.66rem;
+  font-size: 0.74rem;
+}
+
+.section .button.ghost {
+  background: #fff;
+  color: var(--red-600);
+  border: 1px solid var(--red-200);
+  box-shadow: none;
+}
+
+.section .button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedback-drawer .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--red-500);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.62rem 0.98rem;
+  font-size: 0.86rem;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(226, 72, 59, 0.2);
+}
+
+.feedback-drawer .button.small {
+  padding: 0.34rem 0.66rem;
+  font-size: 0.74rem;
+}
+
+.feedback-drawer .button.ghost {
+  background: #fff;
+  color: var(--red-600);
+  border: 1px solid var(--red-200);
+  box-shadow: none;
+}
+
 .panel {
   background: var(--card);
   border-radius: 28px;
@@ -86,6 +147,25 @@ h2 {
   border-radius: 20px;
   padding: 1.25rem;
   border: 1px solid var(--line);
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.admin-surface {
+  background: linear-gradient(180deg, #fffdfa 0%, #fff7f3 100%);
+  box-shadow: 0 0 0 1px rgba(226, 72, 59, 0.05), 0 18px 36px rgba(27, 17, 12, 0.08);
+}
+
+.card-heading {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.card-copy {
+  margin: 0;
+  color: var(--muted);
+  max-width: 50ch;
 }
 
 .hours-row {
@@ -93,28 +173,63 @@ h2 {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--line);
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
-.hours-row:last-child {
-  border-bottom: none;
+.day-name-stack {
+  min-width: 104px;
 }
 
 .hours-row.muted {
   color: var(--muted);
+  background: #f7f2ef;
 }
 
 .admin-row-controls {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
-.admin-row-controls input[type='time'] {
-  min-width: 120px;
+.toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.36rem 0.58rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 700;
+  color: #433631;
+  font-size: 0.74rem;
+}
+
+.time-divider {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.time-input,
+.holiday-field input[type='date'],
+.holiday-field input[type='text'] {
+  min-width: 112px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  padding: 0.62rem 0.75rem;
+  font: inherit;
+}
+
+.time-input {
+  min-width: 104px;
+  padding: 0.5rem 0.62rem;
+  font-size: 0.84rem;
 }
 
 .holiday-panel {
@@ -130,34 +245,110 @@ h2 {
 }
 
 .holiday-form {
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.3rem;
+  flex-wrap: wrap;
+  align-items: end;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.holiday-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.holiday-field span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.holiday-name-field {
+  flex: 1 1 220px;
 }
 
 .annual-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.45rem;
   font-weight: 600;
+  padding: 0.48rem 0.72rem;
+  min-height: 2.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8rem;
+}
+
+.holiday-form .button.small {
+  min-height: 2.4rem;
+  padding: 0.48rem 0.72rem;
+  font-size: 0.8rem;
 }
 
 .holiday-row {
   justify-content: space-between;
-  border-top: 1px solid var(--line);
-  padding: 0.65rem 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.holiday-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.holiday-date {
+  color: var(--muted);
+}
+
+.holiday-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.holiday-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: #fff2dd;
+  color: #a35b00;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .error {
-  color: #c53030;
   margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  color: #991b1b;
+  background: #fee2e2;
 }
 
 .success {
-  color: #2f855a;
   margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  color: #065f46;
+  background: #d1fae5;
 }
 
 .muted-text {
   color: var(--muted);
+  padding: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: var(--bg-strong);
 }
 
 .actions {
@@ -170,10 +361,73 @@ h2 {
   color: #fff;
   border: 1px solid transparent;
   border-radius: 999px;
-  padding: 1rem 1.8rem;
-  font-size: 1rem;
+  padding: 0.72rem 1.08rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  box-shadow: 0 10px 20px rgba(226, 72, 59, 0.28);
+  box-shadow: 0 10px 18px rgba(226, 72, 59, 0.18);
+}
+
+.feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 12, 10, 0.4);
+  z-index: 20;
+}
+
+.feedback-drawer {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(420px, 92vw);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 1.2rem;
+  z-index: 21;
+  transform: translate(-50%, -50%) translateX(-140%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.feedback-drawer.open {
+  transform: translate(-50%, -50%) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.feedback-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.feedback-drawer-header h3 {
+  margin: 0;
+}
+
+.feedback-details {
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.feedback-details.success {
+  border: 1px solid #bfe6cb;
+  background: #f1fbf5;
+  color: #1f6b3d;
+}
+
+.feedback-details.error {
+  border: 1px solid #efb3ad;
+  background: linear-gradient(180deg, #fff7f6 0%, #fff1ef 100%);
+  color: #991b1b;
+}
+
+.feedback-details p {
+  margin: 0;
 }
 
 @media (max-width: 1024px) {
@@ -201,9 +455,10 @@ h2 {
   .admin-row-controls {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
-  .admin-row-controls input[type='time'] {
+  .time-input {
     min-width: 0;
     width: 100%;
     max-width: 170px;
@@ -214,9 +469,10 @@ h2 {
     align-items: stretch;
   }
 
-  .holiday-form input[type='date'],
-  .holiday-form input[type='text'],
-  .holiday-form .button {
+  .holiday-form .button,
+  .holiday-field,
+  .holiday-field input[type='date'],
+  .holiday-field input[type='text'] {
     width: 100%;
   }
 
@@ -225,11 +481,29 @@ h2 {
     align-items: flex-start;
   }
 
+  .holiday-actions,
+  .toggle-chip {
+    width: 100%;
+  }
+
+  .annual-toggle {
+    justify-content: center;
+  }
+
   .actions {
     justify-content: stretch;
   }
 
   .save-button {
     width: 100%;
+  }
+
+  .feedback-drawer {
+    width: min(92vw, 420px);
+    transform: translate(-50%, -50%) translateX(-140%);
+  }
+
+  .feedback-drawer.open {
+    transform: translate(-50%, -50%) translateX(0);
   }
 }
