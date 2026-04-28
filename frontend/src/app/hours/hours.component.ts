@@ -42,7 +42,6 @@ interface ClinicHoursResponse {
 })
 export class HoursComponent implements OnInit, OnDestroy {
   private refreshTimer: number | null = null;
-  private saveStateTimer: number | null = null;
 
   readonly session = getClientSession();
   readonly role: SessionRole = this.session.role;
@@ -53,10 +52,11 @@ export class HoursComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   isSaving = false;
-  saveState: 'idle' | 'saving' = 'idle';
   hasUnsavedChanges = false;
   error = '';
-  message = '';
+  holidayFeedbackTitle = '';
+  holidayFeedbackMessage = '';
+  holidayFeedbackTone: 'success' | 'error' = 'success';
 
   newHolidayDate = '';
   newHolidayName = '';
@@ -67,8 +67,8 @@ export class HoursComponent implements OnInit, OnDestroy {
   }
 
   get saveButtonLabel(): string {
-    if (this.saveState === 'saving') {
-      return 'Saving!';
+    if (this.isSaving) {
+      return 'Saving...';
     }
     return 'Save Hours & Closures';
   }
@@ -85,10 +85,6 @@ export class HoursComponent implements OnInit, OnDestroy {
     if (this.refreshTimer !== null && typeof window !== 'undefined') {
       window.clearInterval(this.refreshTimer);
       this.refreshTimer = null;
-    }
-    if (this.saveStateTimer !== null && typeof window !== 'undefined') {
-      window.clearTimeout(this.saveStateTimer);
-      this.saveStateTimer = null;
     }
   }
 
@@ -132,24 +128,34 @@ export class HoursComponent implements OnInit, OnDestroy {
   }
 
   addHoliday(): void {
-    this.message = '';
     this.error = '';
+    this.closeHolidayFeedback();
 
     const normalizedName = this.newHolidayName.trim();
     if (!this.newHolidayDate || !normalizedName) {
-      this.error = 'Enter both a holiday date and holiday name.';
+      this.openHolidayFeedback(
+        'Missing Closure Details',
+        'Enter both a holiday date and holiday name.',
+        'error'
+      );
       return;
     }
 
     if (this.holidays.some((holiday) => holiday.holiday_date === this.newHolidayDate)) {
-      this.error = 'That date is already blocked as a holiday.';
+      this.openHolidayFeedback(
+        'Closure Already Added',
+        'That date is already blocked as a holiday.',
+        'error'
+      );
       return;
     }
+
+    const holidayDate = this.newHolidayDate;
 
     this.holidays = [
       ...this.holidays,
       {
-        holiday_date: this.newHolidayDate,
+        holiday_date: holidayDate,
         name: normalizedName,
         is_annual: this.newHolidayIsAnnual
       }
@@ -159,9 +165,15 @@ export class HoursComponent implements OnInit, OnDestroy {
     this.newHolidayName = '';
     this.newHolidayIsAnnual = false;
     this.hasUnsavedChanges = true;
+    this.openHolidayFeedback(
+      'Closure Added',
+      `${normalizedName} was added for ${this.formatHolidayDateForMessage(holidayDate)}. Save Hours & Closures to publish this change.`,
+      'success'
+    );
   }
 
   removeHoliday(index: number): void {
+    this.closeHolidayFeedback();
     this.holidays = this.holidays.filter((_, itemIndex) => itemIndex !== index);
     this.hasUnsavedChanges = true;
   }
@@ -171,21 +183,18 @@ export class HoursComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.message = '';
     this.error = '';
+    this.closeHolidayFeedback();
 
     for (const day of this.dailyHours) {
       if (day.is_open && (!day.open_time || !day.close_time || day.close_time <= day.open_time)) {
         this.error = `Please provide valid opening and closing times for ${day.day_name}.`;
         this.isSaving = false;
-        this.saveState = 'idle';
         return;
       }
     }
 
     this.isSaving = true;
-    this.saveState = 'saving';
-    this.queueSaveStateReset();
     this.cdr.detectChanges();
 
     try {
@@ -212,8 +221,12 @@ export class HoursComponent implements OnInit, OnDestroy {
         .map((holiday) => ({ ...holiday, is_annual: !!holiday.is_annual }))
         .sort((a, b) => this.compareHolidays(a, b));
       this.saveCachedClinicHours(payload);
-      this.message = 'Clinic hours and holidays were updated.';
       this.hasUnsavedChanges = false;
+      this.openHolidayFeedback(
+        'Hours & Closures Saved',
+        'Clinic hours and holidays were updated.',
+        'success'
+      );
       this.cdr.detectChanges();
     } catch (error) {
       if (error instanceof Error) {
@@ -221,6 +234,8 @@ export class HoursComponent implements OnInit, OnDestroy {
       } else {
         this.error = 'Unable to save clinic hours.';
       }
+    } finally {
+      this.isSaving = false;
       this.cdr.detectChanges();
     }
   }
@@ -231,6 +246,12 @@ export class HoursComponent implements OnInit, OnDestroy {
     const suffix = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour % 12 === 0 ? 12 : hour % 12;
     return `${displayHour}:${minute} ${suffix}`;
+  }
+
+  closeHolidayFeedback(): void {
+    this.holidayFeedbackTitle = '';
+    this.holidayFeedbackMessage = '';
+    this.holidayFeedbackTone = 'success';
   }
 
   private async tryReadError(response: Response): Promise<string | null> {
@@ -289,24 +310,6 @@ export class HoursComponent implements OnInit, OnDestroy {
     this.hasUnsavedChanges = true;
   }
 
-  private queueSaveStateReset(): void {
-    if (typeof window === 'undefined') {
-      this.saveState = 'idle';
-      this.isSaving = false;
-      this.cdr.detectChanges();
-      return;
-    }
-    if (this.saveStateTimer !== null) {
-      window.clearTimeout(this.saveStateTimer);
-    }
-    this.saveStateTimer = window.setTimeout(() => {
-      this.saveState = 'idle';
-      this.isSaving = false;
-      this.saveStateTimer = null;
-      this.cdr.detectChanges();
-    }, 1000);
-  }
-
   private compareHolidays(left: Holiday, right: Holiday): number {
     const [leftYear, leftMonth, leftDay] = left.holiday_date.split('-').map(Number);
     const [rightYear, rightMonth, rightDay] = right.holiday_date.split('-').map(Number);
@@ -318,6 +321,25 @@ export class HoursComponent implements OnInit, OnDestroy {
       return leftDay - rightDay;
     }
     return leftYear - rightYear;
+  }
+
+  private openHolidayFeedback(title: string, message: string, tone: 'success' | 'error'): void {
+    this.holidayFeedbackTitle = title;
+    this.holidayFeedbackMessage = message;
+    this.holidayFeedbackTone = tone;
+  }
+
+  private formatHolidayDateForMessage(value: string): string {
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+      return value;
+    }
+
+    return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 
   private getDefaultDailyHours(): DailyHours[] {
