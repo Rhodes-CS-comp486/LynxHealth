@@ -41,6 +41,7 @@ router = APIRouter(tags=['availability'])
 OPEN_TIME = time(9, 0)
 DEFAULT_SLOT_DURATION_MINUTES = 15
 SLOT_INCREMENT_MINUTES = 15
+APPOINTMENT_DURATION_INCREMENT_MINUTES = 5
 SLOT_RANGE_DAYS = 28
 BOOKING_RANGE_DAYS = 14
 BLOCKED_APPOINTMENT_TYPE = 'blocked'
@@ -48,7 +49,7 @@ LUNCH_BREAK_START_HOUR = 12
 LUNCH_BREAK_END_HOUR = 13
 DAY_END_TIME = time(16, 0)
 MAX_APPOINTMENT_NOTES_LENGTH = 600
-MIN_APPOINTMENT_DURATION_MINUTES = 15
+MIN_APPOINTMENT_DURATION_MINUTES = 5
 MAX_APPOINTMENT_DURATION_MINUTES = 240
 MAX_HOLIDAY_NAME_LENGTH = 80
 DAY_NAMES = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
@@ -355,9 +356,9 @@ class CreateAppointmentTypeRequest(BaseModel):
     @classmethod
     def validate_duration_minutes(cls, value: int) -> int:
         if value < MIN_APPOINTMENT_DURATION_MINUTES or value > MAX_APPOINTMENT_DURATION_MINUTES:
-            raise ValueError('Duration must be between 15 and 240 minutes.')
-        if value % SLOT_INCREMENT_MINUTES != 0:
-            raise ValueError('Duration must be in 15-minute increments.')
+            raise ValueError('Duration must be between 5 and 240 minutes.')
+        if value % APPOINTMENT_DURATION_INCREMENT_MINUTES != 0:
+            raise ValueError('Duration must be in 5-minute increments.')
         return value
 
 
@@ -710,7 +711,7 @@ def get_appointment_duration_minutes(appointment: Appointment, duration_map: dic
 
     if appointment.start_time and appointment.end_time:
         delta = appointment.end_time - appointment.start_time
-        return max(SLOT_INCREMENT_MINUTES, int(delta.total_seconds() // 60))
+        return max(APPOINTMENT_DURATION_INCREMENT_MINUTES, int(delta.total_seconds() // 60))
 
     return SLOT_INCREMENT_MINUTES
 
