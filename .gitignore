@@ -209,3 +209,4 @@ __marimo__/
 venv/
 __pychache__/
 .env
+.DS_Store
